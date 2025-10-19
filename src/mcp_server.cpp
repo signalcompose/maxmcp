@@ -1146,3 +1146,22 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
         };
     }
 }
+
+std::string MCPServer::handle_request_string(const std::string& request_str) {
+    try {
+        json req = json::parse(request_str);
+        json response = handle_request(req);
+        return response.dump();
+    } catch (const std::exception& e) {
+        // Return JSON-RPC error
+        json error_response = {
+            {"jsonrpc", "2.0"},
+            {"error", {
+                {"code", -32700},
+                {"message", std::string("Parse error: ") + e.what()}
+            }},
+            {"id", nullptr}
+        };
+        return error_response.dump();
+    }
+}

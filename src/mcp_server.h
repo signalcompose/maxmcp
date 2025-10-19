@@ -94,6 +94,17 @@ public:
      * @return true if IO thread is active
      */
     bool is_running() const { return running_.load(); }
+
+    /**
+     * @brief Handle MCP request from string
+     *
+     * Public API for external objects (maxmcp.server) to send requests.
+     * Parses JSON string, routes to internal handler, returns JSON string response.
+     *
+     * @param request_str JSON-RPC request string
+     * @return JSON-RPC response string
+     */
+    std::string handle_request_string(const std::string& request_str);
 };
 
 #endif // MCP_SERVER_H
