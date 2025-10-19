@@ -3,6 +3,7 @@
 
 # Build directories
 build/
+build-*/
 bin/
 lib/
 *.build/
@@ -150,3 +151,6 @@ yarn.lock
 
 # Max SDK (downloaded, not committed)
 max-sdk/
+
+# Reports (internal use, not committed)
+reports/

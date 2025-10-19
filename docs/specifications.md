@@ -1,5 +1,9 @@
 # MaxMCP - Complete Design Specification
 
+**Version**: 1.0.0-alpha
+**Last Updated**: 2025-10-19
+**Status**: Phase 1 MVP Complete
+
 > **Comprehensive specification for new project**
 > A new Claude Code instance can read this document and immediately begin implementation.
 
@@ -134,28 +138,35 @@ class MaxMCP {
 ### 3. MCP Tools Implementation
 
 #### Required Tools List
-1. **Patch Management**
-   - `list_active_patches()` - List active patches
+
+**Phase 1 MVP (Implemented)** ✅:
+1. **Console Logging**
+   - ✅ `get_console_log(lines, clear)` - Retrieve Max Console messages
+
+2. **Patch Management**
+   - ✅ `list_active_patches()` - List active patches
+
+3. **Object Operations**
+   - ✅ `add_max_object(patch_id, obj_type, position, varname)` - Add Max object to patch
+
+**Phase 2 (Planned)**:
+4. **Patch Management (Extended)**
    - `get_patch_info(patch_id)` - Get patch details
    - `get_frontmost_patch()` - Get frontmost patch
 
-2. **Object Operations**
-   - `add_max_object(patch_id, position, obj_type, varname, args)`
+5. **Object Operations (Extended)**
    - `remove_max_object(patch_id, varname)`
    - `set_object_attribute(patch_id, varname, attr_name, value)`
 
-3. **Connection Management**
+6. **Connection Management**
    - `connect_max_objects(patch_id, src, outlet, dst, inlet)`
    - `disconnect_max_objects(patch_id, src, outlet, dst, inlet)`
 
-4. **Patch Information**
+7. **Patch Information**
    - `get_objects_in_patch(patch_id)`
    - `get_avoid_rect_position(patch_id)`
 
-5. **Console Logging** ⭐ NEW
-   - `get_console_log(lines, filter, clear)` - Retrieve Max Console messages
-
-6. **Documentation**
+8. **Documentation** (Optional)
    - `list_all_objects()`
    - `get_object_doc(object_name)`
 

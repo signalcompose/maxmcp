@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
+project(MaxMCP)
 
 # Build mode: "server" or "client"
 # Set via: cmake -B build -S . -DBUILD_MODE=client
