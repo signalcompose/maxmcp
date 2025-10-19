@@ -1,0 +1,35 @@
+{
+  "name": "MaxMCP",
+  "version": "0.1.0",
+  "author": "signalcompose",
+  "description": "MCP Server for Max/MSP - Control Max patches with Claude Code using natural language",
+  "homepage": "https://github.com/signalcompose/MaxMCP",
+  "repository": "https://github.com/signalcompose/MaxMCP.git",
+  "max_version_min": "9.0.0",
+  "license": "MIT",
+  "externals": {
+    "maxmcp": {
+      "description": "MaxMCP client object - registers patch with MCP server for Claude Code control",
+      "platforms": ["mac"]
+    },
+    "maxmcp.server": {
+      "description": "MaxMCP server object - MCP protocol server enabling Claude Code to control Max",
+      "platforms": ["mac"]
+    }
+  },
+  "filelist": {
+    "externals": [
+      "maxmcp.mxo",
+      "maxmcp.server.mxo"
+    ],
+    "help": [
+      "maxmcp.maxhelp"
+    ],
+    "examples": [
+      "01-getting-started.maxpat",
+      "02-synth-creation.maxpat",
+      "03-multi-patch.maxpat",
+      "04-effect-chain.maxpat"
+    ]
+  }
+}
