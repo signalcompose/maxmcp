@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 
+# Build mode: "server" or "client"
+# Set via: cmake -B build -S . -DBUILD_MODE=client
+set(BUILD_MODE "client" CACHE STRING "Build mode: server or client")
+
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,17 +45,47 @@ include_directories(
 # Find nlohmann/json
 find_package(nlohmann_json 3.11.0 REQUIRED)
 
-# Source files for maxmcp.server external
-set(PROJECT_SRC
-    src/maxmcp_server.cpp
-    src/maxmcp_server.h
-    src/mcp_server.cpp
-    src/mcp_server.h
+# Shared utility files
+set(UTILS_SRC
     src/utils/uuid_generator.cpp
     src/utils/uuid_generator.h
     src/utils/console_logger.cpp
     src/utils/console_logger.h
+    src/utils/patch_registry.cpp
+    src/utils/patch_registry.h
 )
+
+# Source files for maxmcp.server external
+set(SERVER_SRC
+    src/maxmcp_server.cpp
+    src/maxmcp_server.h
+    src/mcp_server.cpp
+    src/mcp_server.h
+    ${UTILS_SRC}
+)
+
+# Source files for maxmcp client external
+set(CLIENT_SRC
+    src/maxmcp.cpp
+    src/maxmcp.h
+    ${UTILS_SRC}
+)
+
+# Select source files based on build mode
+if(BUILD_MODE STREQUAL "server")
+    set(PROJECT_SRC ${SERVER_SRC})
+    set(OUTPUT_NAME "maxmcp.server")
+    message(STATUS "Building maxmcp.server external")
+elseif(BUILD_MODE STREQUAL "client")
+    set(PROJECT_SRC ${CLIENT_SRC})
+    set(OUTPUT_NAME "maxmcp")
+    message(STATUS "Building maxmcp client external")
+else()
+    message(FATAL_ERROR "Invalid BUILD_MODE: ${BUILD_MODE}. Must be 'server' or 'client'")
+endif()
+
+# Override output name
+set(${PROJECT_NAME}_EXTERN_OUTPUT_NAME "${OUTPUT_NAME}" CACHE STRING "External output name" FORCE)
 
 # Create external library
 add_library(

@@ -8,6 +8,9 @@
 */
 
 #include "maxmcp.h"
+#include "utils/uuid_generator.h"
+#include "utils/patch_registry.h"
+#include "utils/console_logger.h"
 
 // Global class pointer
 static t_class* maxmcp_class = nullptr;
@@ -58,12 +61,32 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
     x = (t_maxmcp*)object_alloc(maxmcp_class);
 
     if (x) {
-        // Post initialization message to Max console
-        object_post((t_object*)x, "MaxMCP initialized!");
+        // Initialize patch metadata using placement new for std::string
+        new (&x->patch_id) std::string(generate_uuid(8));
+        new (&x->display_name) std::string("Untitled");
+        new (&x->patcher_name) std::string("unknown");
 
-        // Log number of arguments if any
-        if (argc > 0) {
-            object_post((t_object*)x, "Created with %ld argument(s)", argc);
+        // Get patcher name if available
+        t_object* patcher = nullptr;
+        object_obex_lookup(x, gensym("#P"), &patcher);
+        if (patcher) {
+            t_symbol* patcher_name = object_attr_getsym(patcher, gensym("name"));
+            if (patcher_name && patcher_name->s_name) {
+                x->patcher_name = patcher_name->s_name;
+                x->display_name = patcher_name->s_name;
+            }
+        }
+
+        // Register with global patch registry
+        PatchRegistry::register_patch(x);
+
+        // Post initialization message
+        object_post((t_object*)x, "maxmcp client initialized (ID: %s)", x->patch_id.c_str());
+
+        // Parse arguments if provided (optional display_name)
+        if (argc > 0 && atom_gettype(argv) == A_SYM) {
+            x->display_name = atom_getsym(argv)->s_name;
+            object_post((t_object*)x, "Display name: %s", x->display_name.c_str());
         }
     }
 
@@ -78,10 +101,16 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
  * @param x Pointer to MaxMCP object
  */
 void maxmcp_free(t_maxmcp* x) {
-    // Cleanup will be added in future tasks
-    // For now, just log destruction
     if (x) {
-        object_post((t_object*)x, "MaxMCP destroyed");
+        // Unregister from global patch registry
+        PatchRegistry::unregister_patch(x);
+
+        object_post((t_object*)x, "maxmcp client destroyed (ID: %s)", x->patch_id.c_str());
+
+        // Explicitly destroy std::string members (placement delete)
+        x->patch_id.~basic_string();
+        x->display_name.~basic_string();
+        x->patcher_name.~basic_string();
     }
 }
 

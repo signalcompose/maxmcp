@@ -7,6 +7,7 @@
 
 #include "mcp_server.h"
 #include "utils/console_logger.h"
+#include "utils/patch_registry.h"
 #include <iostream>
 #include <sstream>
 
@@ -161,13 +162,8 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
         return ConsoleLogger::get_logs(lines, clear);
 
     } else if (tool == "list_active_patches") {
-        // Stub for now (will be implemented in Task 1.4)
-        return {
-            {"result", {
-                {"patches", json::array()},
-                {"count", 0}
-            }}
-        };
+        // Get list of active patches from global registry
+        return PatchRegistry::list_patches();
 
     } else {
         return {

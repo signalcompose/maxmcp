@@ -12,14 +12,19 @@
 
 #include "ext.h"          // Max SDK standard include
 #include "ext_obex.h"     // Required for new style Max object
+#include <string>
 
 /**
- * @brief MaxMCP object structure
+ * @brief MaxMCP client object structure
  *
- * Contains all instance data for a MaxMCP external object.
+ * Client object that registers with global patch registry.
+ * Each instance represents a patch controlled by Claude Code.
  */
 typedef struct _maxmcp {
-    t_object ob;          ///< Max object header (must be first)
+    t_object ob;              ///< Max object header (must be first)
+    std::string patch_id;     ///< Auto-generated unique ID (8-char UUID)
+    std::string display_name; ///< User-friendly name for patch
+    std::string patcher_name; ///< Max patcher filename
 } t_maxmcp;
 
 // Function prototypes
