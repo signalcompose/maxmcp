@@ -176,14 +176,14 @@ If the following situations are detected, **immediately stop work** and report t
 
 **Commit/PR/ISSUE Language**:
 - ✅ **Title (1st line)**: **MUST be in English** (Conventional Commits)
-- ✅ **Body (2nd line onwards)**: **MUST be in Japanese**
+- ✅ **Body (2nd line onwards)**: **MUST be in English** (MaxMCP project uses English for all communication)
 
 #### Format
 
 ```
 <type>(<scope>): <subject>  ← English
 
-<body>  ← Japanese
+<body>  ← English
 
 <footer>
 ```
@@ -201,10 +201,10 @@ If the following situations are detected, **immediately stop work** and report t
 ```bash
 feat(tools): implement add_object MCP tool
 
-MCP toolでMax objectを動的に作成する機能を実装
-- オブジェクトタイプと引数をパース
-- メインスレッドにdefer
-- 位置とvarnameを設定
+Implement MCP tool for creating Max objects dynamically.
+- Parse object type and arguments
+- Defer to main thread
+- Set position and varname
 
 Closes #123
 
@@ -216,11 +216,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 #### ❌ Incorrect Example (NEVER DO THIS)
 
 ```bash
-# NG: Body in English
+# NG: Body in Japanese (MaxMCP uses English only)
 feat(tools): implement add_object MCP tool
 
-- Parse object type and arguments  ← English is prohibited!
-- Defer to main thread  ← English is prohibited!
+MCP toolでMax objectを動的に作成する機能を実装  ← Japanese is prohibited in MaxMCP!
+- オブジェクトタイプと引数をパース  ← Japanese is prohibited!
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -229,14 +229,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 #### 🚨 Violation Response
 
-4. **Commit/PR body is in English**
-   → **Absolutely unacceptable violation**
-   → Immediately report to user and suggest correction
+4. **Commit/PR body is in Japanese**
+   → **Unacceptable violation for MaxMCP project**
+   → Immediately report to user and suggest correction (use English)
 
 ### PR (Pull Request) Rules
 
 **PR Title**: English
-**PR Body**: Japanese or English
+**PR Body**: English
 
 **PR Template**: `.github/pull_request_template.md` provides comprehensive checklist.
 
@@ -258,9 +258,16 @@ git checkout -b feature/123-add-object-tool
 git add .
 git commit -m "feat(tools): implement add_object MCP tool
 
-MCP toolを実装...
+Implement MCP tool for creating Max objects dynamically.
+- Parse object type and arguments
+- Defer to main thread
+- Set position and varname
 
-Closes #123"
+Closes #123
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
 
 # 4. Push
 git push -u origin feature/123-add-object-tool
