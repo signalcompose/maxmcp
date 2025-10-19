@@ -61,21 +61,23 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
     x = (t_maxmcp*)object_alloc(maxmcp_class);
 
     if (x) {
-        // Initialize patch metadata using placement new for std::string
-        new (&x->patch_id) std::string(generate_uuid(8));
-        new (&x->display_name) std::string("Untitled");
-        new (&x->patcher_name) std::string("unknown");
-
-        // Get patcher reference and name
+        // Get patcher reference and name FIRST (needed for patch ID generation)
         x->patcher = nullptr;
         object_obex_lookup(x, gensym("#P"), &x->patcher);
+
+        // Initialize patch metadata using placement new for std::string
+        std::string patcher_name_str = "Untitled";
         if (x->patcher) {
             t_symbol* patcher_name = object_attr_getsym(x->patcher, gensym("name"));
             if (patcher_name && patcher_name->s_name) {
-                x->patcher_name = patcher_name->s_name;
-                x->display_name = patcher_name->s_name;
+                patcher_name_str = patcher_name->s_name;
             }
         }
+
+        // Generate patch ID: {patchname}_{uuid8}
+        new (&x->patch_id) std::string(generate_patch_id(patcher_name_str, 8));
+        new (&x->display_name) std::string(remove_extension(patcher_name_str));
+        new (&x->patcher_name) std::string(patcher_name_str);
 
         // Register with global patch registry
         PatchRegistry::register_patch(x);

@@ -68,3 +68,81 @@ TEST(UUIDGenerator, LargeLength) {
     auto uuid = generate_uuid(10000);
     EXPECT_EQ(uuid.length(), 10000);
 }
+
+/**
+ * Test: Remove extension from filename
+ */
+TEST(UUIDGenerator, RemoveExtension) {
+    EXPECT_EQ(remove_extension("synth.maxpat"), "synth");
+    EXPECT_EQ(remove_extension("effect.maxhelp"), "effect");
+    EXPECT_EQ(remove_extension("patch.txt"), "patch");
+    EXPECT_EQ(remove_extension("noextension"), "noextension");
+    EXPECT_EQ(remove_extension("multiple.dots.maxpat"), "multiple.dots");
+}
+
+/**
+ * Test: Generate patch ID format
+ */
+TEST(UUIDGenerator, PatchIDFormat) {
+    auto patch_id = generate_patch_id("synth.maxpat", 8);
+
+    // Should start with "synth_"
+    EXPECT_TRUE(patch_id.rfind("synth_", 0) == 0) << "Patch ID should start with 'synth_'";
+
+    // Total length should be "synth" (5) + "_" (1) + uuid (8) = 14
+    EXPECT_EQ(patch_id.length(), 14);
+
+    // UUID part should be 8 characters
+    std::string uuid_part = patch_id.substr(6); // After "synth_"
+    EXPECT_EQ(uuid_part.length(), 8);
+}
+
+/**
+ * Test: Patch ID with different filenames
+ */
+TEST(UUIDGenerator, PatchIDVariousNames) {
+    auto id1 = generate_patch_id("myeffect.maxpat", 8);
+    EXPECT_TRUE(id1.rfind("myeffect_", 0) == 0);
+
+    auto id2 = generate_patch_id("master.maxpat", 8);
+    EXPECT_TRUE(id2.rfind("master_", 0) == 0);
+
+    auto id3 = generate_patch_id("test", 8); // No extension
+    EXPECT_TRUE(id3.rfind("test_", 0) == 0);
+}
+
+/**
+ * Test: Untitled patch handling
+ */
+TEST(UUIDGenerator, UntitledPatch) {
+    auto patch_id = generate_patch_id("Untitled", 8);
+
+    // Should use "patch" as default name
+    EXPECT_TRUE(patch_id.rfind("patch_", 0) == 0);
+}
+
+/**
+ * Test: Empty patcher name handling
+ */
+TEST(UUIDGenerator, EmptyPatcherName) {
+    auto patch_id = generate_patch_id("", 8);
+
+    // Should use "patch" as default name
+    EXPECT_TRUE(patch_id.rfind("patch_", 0) == 0);
+}
+
+/**
+ * Test: Patch ID uniqueness (multiple calls with same patcher name)
+ */
+TEST(UUIDGenerator, PatchIDUniqueness) {
+    std::set<std::string> patch_ids;
+    const int count = 100;
+
+    for (int i = 0; i < count; i++) {
+        auto patch_id = generate_patch_id("synth.maxpat", 8);
+        patch_ids.insert(patch_id);
+    }
+
+    // All 100 patch IDs should be unique
+    EXPECT_EQ(patch_ids.size(), count) << "Duplicate patch IDs detected";
+}
