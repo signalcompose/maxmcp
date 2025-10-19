@@ -49,7 +49,44 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 
 ### Architecture Approach
 
-**Single C++ External**: All MCP server functionality integrated into one compiled external object for Max/MSP.
+**Two-Object Design**: Separation of server and client responsibilities.
+
+- **maxmcp.server.mxo**: Singleton MCP server handling stdio communication
+- **maxmcp.mxo**: Client objects in each patch for registration
+
+### stdio Communication Protocol
+
+**maxmcp.server.mxo** implements MCP JSON-RPC over stdio:
+
+**Input (stdin)**:
+- Line-based JSON-RPC requests from Claude Code
+- Each message is a single line terminated by `\n`
+- Non-blocking reader thread with qelem for main thread processing
+
+**Output (stdout)**:
+- Line-based JSON-RPC responses
+- Each message is a single line terminated by `\n`
+- Flushed immediately after write
+
+**Example Request**:
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"add_max_object","arguments":{"patch_id":"synth_a7f2","obj_type":"cycle~","x":100,"y":100,"varname":"osc1","arguments":[440]}},"id":1}
+```
+
+**Example Response**:
+```json
+{"jsonrpc":"2.0","result":{"status":"success","patch_id":"synth_a7f2","varname":"osc1"},"id":1}
+```
+
+**Error Response**:
+```json
+{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error"},"id":null}
+```
+
+**Thread Safety**:
+1. stdin reader thread runs in background
+2. qelem defers JSON processing to Max main thread
+3. All Max API calls occur on main thread only
 
 ---
 

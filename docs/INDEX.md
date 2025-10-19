@@ -75,6 +75,16 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 ## 📖 Additional Resources
 
+### 7. [Server Usage Guide](server-usage.md)
+**Purpose**: Detailed guide for maxmcp.server.mxo operation
+**Audience**: Developers, Claude Code users
+**Contents**:
+- Server executable configuration
+- stdio communication protocol
+- Available MCP tools reference
+- Thread safety and lifecycle
+- Debugging and troubleshooting
+
 ### Research Documentation
 - **Directory**: [`research/`](research/)
 - **Purpose**: Store research findings from web searches and investigations
@@ -163,6 +173,7 @@ Documentation should be updated when:
 | Understand system design | [Architecture](architecture.md) |
 | Start development | [Development Guide](development-guide.md) |
 | See implementation roadmap | [Implementation Plan](implementation-plan.md) |
+| Configure MCP server | [Server Usage Guide](server-usage.md) |
 | Find research notes | [Research Directory](research/) |
 
 ---

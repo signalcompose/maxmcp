@@ -443,6 +443,110 @@ maxmcp_free() called
 MCP server stopped
 ```
 
+### 4.3 stdio Communication Flow
+
+**maxmcp.server.mxo** implements MCP JSON-RPC protocol over stdio for Claude Code integration.
+
+```
+┌─────────────────┐
+│  Claude Code    │
+│  (MCP Client)   │
+└────────┬────────┘
+         │
+         │ stdin (write)
+         ├──────────────────────────────────────┐
+         │ {"jsonrpc":"2.0",                    │
+         │  "method":"tools/call",              │
+         │  "params":{                          │
+         │    "name":"add_max_object",          │
+         │    "arguments":{...}                 │
+         │  },                                  │
+         │  "id":1}                             │
+         └──────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────┐
+│  maxmcp.server.mxo                              │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │ stdin reader thread (background)         │  │
+│  │ - Non-blocking std::getline()            │  │
+│  │ - Accumulate lines in input_buffer       │  │
+│  │ - Trigger qelem on complete line         │  │
+│  └──────────────┬───────────────────────────┘  │
+│                 │                               │
+│                 ▼ qelem_set()                   │
+│  ┌──────────────────────────────────────────┐  │
+│  │ maxmcp_server_stdin_qelem_fn()           │  │
+│  │ (runs on Max main thread)                │  │
+│  │ - Process buffered input                 │  │
+│  │ - Call maxmcp_server_handle_request()    │  │
+│  └──────────────┬───────────────────────────┘  │
+│                 │                               │
+│                 ▼                               │
+│  ┌──────────────────────────────────────────┐  │
+│  │ maxmcp_server_handle_request()           │  │
+│  │ - Parse JSON-RPC                         │  │
+│  │ - Route to MCPServer::handle_request_str │  │
+│  └──────────────┬───────────────────────────┘  │
+│                 │                               │
+│                 ▼                               │
+│  ┌──────────────────────────────────────────┐  │
+│  │ MCPServer::handle_request_string()       │  │
+│  │ - json::parse()                          │  │
+│  │ - Call internal handle_request(json)     │  │
+│  │ - Route to tool: add_max_object()        │  │
+│  │ - Return json.dump()                     │  │
+│  └──────────────┬───────────────────────────┘  │
+│                 │                               │
+│                 ▼                               │
+│  ┌──────────────────────────────────────────┐  │
+│  │ maxmcp_server_send_response()            │  │
+│  │ - std::cout << response << std::endl     │  │
+│  │ - std::cout.flush()                      │  │
+│  └──────────────┬───────────────────────────┘  │
+└─────────────────┼───────────────────────────────┘
+                  │
+                  │ stdout (read)
+                  ├──────────────────────────────────────┐
+                  │ {"jsonrpc":"2.0",                    │
+                  │  "result":{                          │
+                  │    "status":"success",               │
+                  │    "patch_id":"synth_a7f2",          │
+                  │    "varname":"osc1"                  │
+                  │  },                                  │
+                  │  "id":1}                             │
+                  └──────────────────────────────────────┘
+                  │
+                  ▼
+         ┌────────────────┐
+         │  Claude Code   │
+         │  (MCP Client)  │
+         └────────────────┘
+```
+
+**Key Design Points**:
+
+1. **Thread Safety**:
+   - stdin reader thread reads input asynchronously
+   - qelem defers processing to Max main thread
+   - All Max API calls occur on main thread only
+
+2. **Line-Based Protocol**:
+   - Each JSON-RPC message is a single line
+   - `std::getline()` reads complete messages
+   - Newline-delimited for stream parsing
+
+3. **Non-Blocking I/O**:
+   - stdin thread doesn't block Max audio thread
+   - qelem provides asynchronous main thread execution
+   - Response flushed immediately after write
+
+4. **Error Handling**:
+   - JSON parse errors return JSON-RPC error response
+   - Tool execution errors caught and returned as JSON
+   - Server continues running on individual request failures
+
 ---
 
 ## 5. Design Rationale
