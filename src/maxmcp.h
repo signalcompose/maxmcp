@@ -32,5 +32,6 @@ typedef struct _maxmcp {
 void* maxmcp_new(t_symbol* s, long argc, t_atom* argv);
 void maxmcp_free(t_maxmcp* x);
 void maxmcp_assist(t_maxmcp* x, void* b, long m, long a, char* s);
+void maxmcp_notify(t_maxmcp* x, t_symbol* s, t_symbol* msg, void* sender, void* data);
 
 #endif // MAXMCP_H

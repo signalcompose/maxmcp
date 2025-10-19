@@ -37,6 +37,9 @@ void ext_main(void* r) {
     // Add assist method for inlet/outlet descriptions
     class_addmethod(c, (method)maxmcp_assist, "assist", A_CANT, 0);
 
+    // Add notify method for patcher lifecycle events
+    class_addmethod(c, (method)maxmcp_notify, "notify", A_CANT, 0);
+
     // Register the class
     class_register(CLASS_BOX, c);
     maxmcp_class = c;
@@ -82,6 +85,11 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
         // Register with global patch registry
         PatchRegistry::register_patch(x);
 
+        // Subscribe to patcher notifications (for lifecycle management)
+        if (x->patcher) {
+            object_attach_byptr_register(x, x->patcher, CLASS_NOBOX);
+        }
+
         // Post initialization message
         object_post((t_object*)x, "maxmcp client initialized (ID: %s)", x->patch_id.c_str());
 
@@ -104,6 +112,11 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
  */
 void maxmcp_free(t_maxmcp* x) {
     if (x) {
+        // Detach from patcher notifications
+        if (x->patcher) {
+            object_detach_byptr(x, x->patcher);
+        }
+
         // Unregister from global patch registry
         PatchRegistry::unregister_patch(x);
 
@@ -132,5 +145,34 @@ void maxmcp_assist(t_maxmcp* x, void* b, long m, long a, char* s) {
         snprintf(s, 256, "Control messages");
     } else {
         snprintf(s, 256, "Status output");
+    }
+}
+
+/**
+ * @brief Notification handler for patcher lifecycle events
+ *
+ * Called when patcher sends notifications (e.g., close, free).
+ * Handles automatic cleanup and unregistration.
+ *
+ * @param x Pointer to MaxMCP object
+ * @param s Sender symbol
+ * @param msg Notification message (e.g., "free")
+ * @param sender Sender object
+ * @param data Additional data (unused)
+ */
+void maxmcp_notify(t_maxmcp* x, t_symbol* s, t_symbol* msg, void* sender, void* data) {
+    if (!x || !msg) {
+        return;
+    }
+
+    // Check if notification is from our patcher
+    if (sender == x->patcher) {
+        // Handle patcher close/free event
+        if (msg == gensym("free")) {
+            // Unregister from global patch registry
+            PatchRegistry::unregister_patch(x);
+
+            object_post((t_object*)x, "maxmcp: patcher closing, unregistered (ID: %s)", x->patch_id.c_str());
+        }
     }
 }
