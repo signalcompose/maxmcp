@@ -164,9 +164,23 @@ If the following situations are detected, **immediately stop work** and report t
 ### Branch Protection
 
 - **Direct push to main/develop prohibited**
-- **PR required** (0 reviews for solo development, can be changed for team/OSS)
-- **Rules apply even to admins** (will be enabled with `enforce_admins: true` when transitioning to team/OSS)
+- **PR required with 1 review** (admin can bypass via `enforce_admins: false`)
+- **Admin bypass enabled** (`enforce_admins: false` for solo development)
+  - When transitioning to team/OSS: set `enforce_admins: true` to apply rules to all users
 - **Merge commit required** (`required_linear_history: false`)
+
+**Current Settings**:
+```json
+{
+  "required_approving_review_count": 1,
+  "enforce_admins": false,
+  "required_linear_history": false
+}
+```
+
+**Effect**:
+- Admin (solo developer): Can merge PRs without review
+- Other contributors (future): Must get 1 approval before merging
 
 ### Commit Message Convention
 
