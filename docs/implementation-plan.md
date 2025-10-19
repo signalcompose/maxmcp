@@ -1134,24 +1134,31 @@ void on_patcher_close(t_maxmcp* x, t_symbol* s,
 - [ ] Positions are correct
 - [ ] `get_avoid_rect_position()` returns non-overlapping position
 
-#### Task 2.7: Documentation Tools (Optional)
-**Duration**: 1 day
+#### Task 2.7: Documentation Tools (DEFERRED TO PHASE 3)
+**Duration**: 1 day (deferred)
 **Dependencies**: None (parallel with other tasks)
+**Status**: ⏸️ **DEFERRED TO PHASE 3**
 
-**Tools to Implement**:
+**Tools to Implement** (Phase 3):
 1. `list_all_objects()` - Return Max object catalog
 2. `get_object_doc(object_name)` - Return object documentation
 
-**Options**:
+**Options Under Consideration**:
 - Embed docs.json (6MB) - Increases binary size
 - Load docs.json at runtime - Requires file distribution
 - Fetch from Max installation - Requires finding Max path
 
-**Decision**: Defer to Phase 3, use Max's built-in help for now
+**Decision Rationale**:
+- Phase 2 focuses on core MCP tools for patch manipulation
+- Documentation tools are enhancement features, not MVP requirements
+- Users can rely on Max's built-in help system (Command+B, reference lookup)
+- Deferred to Phase 3 to maintain Phase 2 timeline and focus
 
-**Definition of Done**:
-- [ ] Decision documented in architecture.md
-- [ ] Placeholder tools return "not implemented"
+**Phase 3 Definition of Done**:
+- [ ] Decision finalized in architecture.md
+- [ ] Implementation approach selected (embed vs runtime vs fetch)
+- [ ] Tools implemented and tested
+- [ ] Integration with Max's help system documented
 
 #### Task 2.8: Comprehensive Testing
 **Duration**: 2 days
@@ -1265,6 +1272,9 @@ def test_full_workflow():
 4. Example patches (3-4 examples)
 5. Documentation (README, Max reference XML)
 6. Installation instructions
+7. **Documentation Tools** (deferred from Task 2.7)
+   - `list_all_objects()` - Max object catalog
+   - `get_object_doc()` - Object documentation
 
 **Success Criteria**: Users can install via Max Package Manager and use immediately
 
