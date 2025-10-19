@@ -459,17 +459,45 @@ void ext_main(void* r) {
 - [ ] "MaxMCP initialized!" appears in Max console
 - [ ] No crashes or memory leaks
 
-#### Task 1.3: stdio MCP Server
-**Duration**: 2 days
+#### Task 1.3: Server Object & Console Logger (REVISED)
+**Duration**: 2-3 days
 **Dependencies**: Task 1.2
 
-**Steps**:
-1. Create `mcp_server.cpp` with IO thread
-2. Implement JSON-RPC request/response handling
-3. Add stdin/stdout communication
-4. Implement `tools/list` and `tools/call` endpoints
+**Overview**: Implement `[maxmcp.server]` singleton object with console logging and basic MCP server.
 
-**File Structure**:
+**Steps**:
+
+**Step 1: Create ConsoleLogger utility**
+```cpp
+// src/utils/console_logger.h
+class ConsoleLogger {
+private:
+    static std::deque<std::string> log_buffer_;
+    static const size_t MAX_BUFFER_SIZE = 1000;
+    static std::mutex mutex_;
+
+public:
+    static void log(const char* message);
+    static json get_logs(size_t count = 50, bool clear = false);
+    static void clear();
+};
+
+// src/utils/console_logger.cpp
+void ConsoleLogger::log(const char* message) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    log_buffer_.push_back(std::string(message));
+
+    // Ring buffer: keep only latest MAX_BUFFER_SIZE entries
+    if (log_buffer_.size() > MAX_BUFFER_SIZE) {
+        log_buffer_.pop_front();
+    }
+
+    // Also output to Max Console
+    post("%s", message);
+}
+```
+
+**Step 2: Create MCP Server class**
 ```cpp
 // src/mcp_server.h
 class MCPServer {
@@ -477,10 +505,12 @@ private:
     std::thread io_thread_;
     std::atomic<bool> running_;
 
+    json handle_request(const json& req);
+    json execute_tool(const std::string& tool, const json& params);
+
 public:
     void start();
     void stop();
-    json handle_request(const json& req);
 };
 
 // src/mcp_server.cpp
@@ -491,54 +521,266 @@ void MCPServer::start() {
             std::string line;
             if (!std::getline(std::cin, line)) break;
 
-            auto request = json::parse(line);
-            auto response = handle_request(request);
-
-            std::cout << response.dump() << "\n" << std::flush;
+            try {
+                auto request = json::parse(line);
+                auto response = handle_request(request);
+                std::cout << response.dump() << "\n" << std::flush;
+            } catch (const std::exception& e) {
+                ConsoleLogger::log(e.what());
+            }
         }
     });
 }
-```
 
-**Definition of Done**:
-- [ ] MCP server starts on object creation
-- [ ] Responds to JSON-RPC requests
-- [ ] `tools/list` returns available tools
-- [ ] No thread-related crashes
+json MCPServer::handle_request(const json& req) {
+    std::string method = req["method"];
 
-#### Task 1.4: Implement list_active_patches()
-**Duration**: 1 day
-**Dependencies**: Task 1.3
-
-**Steps**:
-1. Create global registry for active patches
-2. Register patch on `maxmcp_new()`
-3. Generate simple patch_id (e.g., "patch_1", "patch_2")
-4. Implement `list_active_patches()` tool
-5. Return JSON array of patches
-
-**Implementation**:
-```cpp
-// Global registry
-static std::vector<t_maxmcp*> active_patches;
-
-json tool_list_active_patches(const json& params) {
-    json patches = json::array();
-    for (auto* patch : active_patches) {
-        patches.push_back({
-            {"patch_id", patch->patch_id},
-            {"display_name", patch->display_name}
-        });
+    if (method == "tools/list") {
+        return {
+            {"jsonrpc", "2.0"},
+            {"result", {
+                {"tools", json::array({
+                    {
+                        {"name", "get_console_log"},
+                        {"description", "Retrieve recent Max Console messages"}
+                    }
+                })}
+            }}
+        };
+    } else if (method == "tools/call") {
+        std::string tool_name = req["params"]["name"];
+        return execute_tool(tool_name, req["params"]["arguments"]);
     }
-    return {{"result", patches}};
+
+    return {{"error", "Unknown method"}};
+}
+
+json MCPServer::execute_tool(const std::string& tool, const json& params) {
+    if (tool == "get_console_log") {
+        size_t lines = params.value("lines", 50);
+        bool clear = params.value("clear", false);
+        return ConsoleLogger::get_logs(lines, clear);
+    }
+
+    return {{"error", "Unknown tool"}};
 }
 ```
 
+**Step 3: Create maxmcp.server object**
+```cpp
+// src/maxmcp_server.h
+typedef struct _maxmcp_server {
+    t_object ob;
+    void* outlet_log;  // Optional: for Max patch logging
+} t_maxmcp_server;
+
+// Global singleton instance
+static t_maxmcp_server* g_server_instance = nullptr;
+
+// src/maxmcp_server.cpp
+void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
+    // Singleton check
+    if (g_server_instance != nullptr) {
+        object_error(nullptr, "maxmcp.server already exists!");
+        return nullptr;
+    }
+
+    t_maxmcp_server* x = (t_maxmcp_server*)object_alloc(maxmcp_server_class);
+
+    if (x) {
+        // Create outlet for log messages (optional)
+        x->outlet_log = outlet_new(x, NULL);
+
+        // Start MCP server
+        MCPServer::get_instance()->start();
+
+        ConsoleLogger::log("MaxMCP Server started");
+        g_server_instance = x;
+    }
+
+    return x;
+}
+
+void maxmcp_server_free(t_maxmcp_server* x) {
+    if (x) {
+        MCPServer::get_instance()->stop();
+        ConsoleLogger::log("MaxMCP Server stopped");
+        g_server_instance = nullptr;
+    }
+}
+```
+
+**Step 4: Update CMakeLists.txt**
+Add new source files:
+```cmake
+set(PROJECT_SRC
+    src/maxmcp.cpp
+    src/maxmcp.h
+    src/maxmcp_server.cpp
+    src/maxmcp_server.h
+    src/mcp_server.cpp
+    src/mcp_server.h
+    src/utils/uuid_generator.cpp
+    src/utils/uuid_generator.h
+    src/utils/console_logger.cpp
+    src/utils/console_logger.h
+)
+```
+
 **Definition of Done**:
-- [ ] Multiple patches can be registered
-- [ ] `list_active_patches()` returns all active patches
-- [ ] JSON format matches MCP spec
-- [ ] Unit test passes
+- [ ] ConsoleLogger captures all messages (ring buffer)
+- [ ] MCPServer singleton pattern implemented
+- [ ] `[maxmcp.server]` object loads in Max
+- [ ] Only one instance allowed (error on duplicate)
+- [ ] MCP server starts on object creation
+- [ ] Responds to `tools/list` request
+- [ ] `get_console_log` tool works
+- [ ] Server stops cleanly on object destruction
+- [ ] No thread-related crashes
+- [ ] Zero compiler warnings
+
+#### Task 1.4: Client Object & Patch Registry (REVISED)
+**Duration**: 1-2 days
+**Dependencies**: Task 1.3
+
+**Overview**: Update `[maxmcp]` client object to register with server and implement global patch registry.
+
+**Steps**:
+
+**Step 1: Create PatchRegistry utility**
+```cpp
+// src/utils/patch_registry.h
+class PatchRegistry {
+private:
+    static std::vector<t_maxmcp*> patches_;
+    static std::mutex mutex_;
+
+public:
+    static void register_patch(t_maxmcp* patch);
+    static void unregister_patch(t_maxmcp* patch);
+    static json list_patches();
+    static t_maxmcp* find_patch(const std::string& patch_id);
+};
+
+// src/utils/patch_registry.cpp
+void PatchRegistry::register_patch(t_maxmcp* patch) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    patches_.push_back(patch);
+    ConsoleLogger::log("Patch registered: " + patch->patch_id);
+}
+
+json PatchRegistry::list_patches() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    json patches = json::array();
+
+    for (auto* patch : patches_) {
+        patches.push_back({
+            {"patch_id", patch->patch_id},
+            {"display_name", patch->display_name},
+            {"patcher_name", patch->patcher_name}
+        });
+    }
+
+    return {
+        {"result", {
+            {"patches", patches},
+            {"count", patches.size()}
+        }}
+    };
+}
+```
+
+**Step 2: Update maxmcp client object**
+```cpp
+// src/maxmcp.cpp
+void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
+    // Check server exists
+    if (g_server_instance == nullptr) {
+        object_error(nullptr,
+            "maxmcp.server not found! Create [maxmcp.server] first");
+        return nullptr;
+    }
+
+    t_maxmcp* x = (t_maxmcp*)object_alloc(maxmcp_class);
+
+    if (x) {
+        // Get patcher reference
+        x->patcher = (t_object*)gensym("#P")->s_thing;
+
+        // Generate patch ID (simple for now)
+        static int patch_counter = 0;
+        x->patch_id = "patch_" + std::to_string(++patch_counter);
+        x->display_name = x->patch_id;
+
+        // Register with global registry
+        PatchRegistry::register_patch(x);
+
+        ConsoleLogger::log("MaxMCP client initialized: " + x->patch_id);
+    }
+
+    return x;
+}
+
+void maxmcp_free(t_maxmcp* x) {
+    if (x) {
+        PatchRegistry::unregister_patch(x);
+        ConsoleLogger::log("MaxMCP client destroyed: " + x->patch_id);
+    }
+}
+```
+
+**Step 3: Add list_active_patches tool to MCP server**
+```cpp
+// src/mcp_server.cpp
+json MCPServer::execute_tool(const std::string& tool, const json& params) {
+    if (tool == "get_console_log") {
+        // ... existing code
+    } else if (tool == "list_active_patches") {
+        return PatchRegistry::list_patches();
+    }
+
+    return {{"error", "Unknown tool"}};
+}
+
+// Update tools/list to include new tool
+json MCPServer::handle_request(const json& req) {
+    if (method == "tools/list") {
+        return {
+            {"jsonrpc", "2.0"},
+            {"result", {
+                {"tools", json::array({
+                    {
+                        {"name", "get_console_log"},
+                        {"description", "Retrieve recent Max Console messages"}
+                    },
+                    {
+                        {"name", "list_active_patches"},
+                        {"description", "List all registered MaxMCP client patches"}
+                    }
+                })}
+            }}
+        };
+    }
+    // ...
+}
+```
+
+**Step 4: Update CMakeLists.txt**
+Add patch_registry files:
+```cmake
+src/utils/patch_registry.cpp
+src/utils/patch_registry.h
+```
+
+**Definition of Done**:
+- [ ] PatchRegistry implemented with thread-safe access
+- [ ] `[maxmcp]` checks for server existence
+- [ ] Client registers on creation
+- [ ] Client unregisters on destruction
+- [ ] `list_active_patches()` MCP tool works
+- [ ] Multiple clients can coexist
+- [ ] Server deletion warning (if clients exist)
+- [ ] Zero compiler warnings
 
 #### Task 1.5: Implement add_max_object()
 **Duration**: 2 days
