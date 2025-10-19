@@ -59,6 +59,17 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Testing strategy
 - Build and deployment
 
+### 6. [Implementation Plan](implementation-plan.md)
+**Purpose**: Detailed 4-phase implementation roadmap
+**Audience**: Developers, project managers
+**Contents**:
+- Phase-by-phase task breakdown
+- Timeline estimates and dependencies
+- Risk analysis and mitigation
+- Definition of Done for each phase
+- Testing strategies
+- Success metrics
+
 ---
 
 ## 📖 Additional Resources
@@ -142,6 +153,7 @@ Documentation should be updated when:
 | Know what we're building | [Requirements](requirements.md) |
 | Understand system design | [Architecture](architecture.md) |
 | Start development | [Development Guide](development-guide.md) |
+| See implementation roadmap | [Implementation Plan](implementation-plan.md) |
 | Find research notes | [Research Directory](research/) |
 
 ---

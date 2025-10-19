@@ -1,6 +1,6 @@
-# MaxMCP v2.0 - Quick Start Guide
+# MaxMCP - Quick Start Guide
 
-> **For Claude Code**: Start by reading `MAXMCP_V2_DESIGN.md` for complete specifications.
+> **For Claude Code**: Start by reading documentation in `docs/` directory for complete specifications.
 
 ---
 
@@ -25,11 +25,10 @@ Claude Code (MCP Client)
 Max/MSP Patches
 ```
 
-### What We're Replacing
-- ❌ Python MCP Server
-- ❌ Node.js Socket.IO Server
-- ❌ 6 JavaScript files (max_mcp_node.js, mcp-router.js, etc.)
-- ✅ **1 C++ external object**
+### Architecture Approach
+- ✅ **Single C++ external object**
+- ✅ **stdio-based MCP protocol**
+- ✅ **No external dependencies at runtime**
 
 ---
 

@@ -1,4 +1,4 @@
-# MaxMCP v2.0 - Complete Redesign Specification
+# MaxMCP - Complete Design Specification
 
 > **Comprehensive specification for new project**
 > A new Claude Code instance can read this document and immediately begin implementation.
@@ -43,18 +43,9 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
     this.patcher           this.patcher
 ```
 
-### Comparison with Old Architecture
-| Component | Old | New |
-|-----------|-----|-----|
-| Python MCP Server | ✓ | **REMOVED** |
-| Node.js Socket.IO | ✓ | **REMOVED** |
-| max_mcp_node.js | ✓ | **REMOVED** |
-| max_mcp.js | ✓ | **REMOVED** |
-| mcp-router.js | ✓ | **REMOVED** |
-| mcp_client.js | ✓ | **REMOVED** |
-| **[maxmcp] C++ External** | ✗ | **NEW** |
+### Architecture Approach
 
-**Result**: 6 files → 1 file (99% reduction)
+**Single C++ External**: All MCP server functionality integrated into one compiled external object for Max/MSP.
 
 ---
 
@@ -337,7 +328,7 @@ MaxMCP/
 ```json
 {
   "name": "MaxMCP",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "author": "Hiroshi Yamato",
   "description": "Native MCP server for Max/MSP - Control your patches with Claude Code using natural language",
   "website": "https://github.com/dropcontrol/MaxMCP",

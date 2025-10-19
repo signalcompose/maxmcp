@@ -1,4 +1,4 @@
-# CLAUDE.md - MaxMCP v2.0
+# CLAUDE.md - MaxMCP
 
 This file contains project-specific instructions for Claude Code (claude.ai/code).
 
@@ -6,11 +6,11 @@ This file contains project-specific instructions for Claude Code (claude.ai/code
 
 ## Project Overview
 
-**MaxMCP v2.0** is a native C++ MCP (Model Context Protocol) server for Max/MSP, enabling Claude Code to control Max/MSP patches using natural language.
+**MaxMCP** is a native C++ MCP (Model Context Protocol) server for Max/MSP, enabling Claude Code to control Max/MSP patches using natural language.
 
 ### Mission
 
-Replace the complex Python + Node.js + 6 JS files setup with a single, efficient C++ Max external.
+Create a single, efficient C++ Max external that enables natural language control of Max/MSP patches through the Model Context Protocol.
 
 ### Key Features
 

@@ -187,6 +187,11 @@
       "rule": "allow",
       "pattern": "Bash(cat:*)",
       "reason": "Allow reading file contents"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(cat ~/.cvi/config)",
+      "reason": "Allow reading voice configuration for [VOICE] tag language detection"
     }
   ],
 

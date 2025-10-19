@@ -1,6 +1,10 @@
-# MaxMCP v2.0 - Native MCP Server for Max/MSP
+# MaxMCP - Native MCP Server for Max/MSP
 
 Control your Max/MSP patches with Claude Code using natural language.
+
+## Inspiration
+
+This project was inspired by the [MaxMSP-MCP-Server-multipatch](https://github.com/your-username/MaxMSP-MCP-Server-multipatch) implementation. We reimagined the architecture with a native C++ approach for improved performance and simplified deployment.
 
 ## Overview
 
@@ -32,9 +36,9 @@ Max/MSP Patches
 - **JSON Library**: nlohmann/json
 - **Distribution**: Max Package
 
-## What We're Replacing
+## Architecture Evolution
 
-This v2.0 implementation replaces:
+This implementation reimagines the previous approach:
 - ❌ Python MCP Server
 - ❌ Node.js Socket.IO Server
 - ❌ 6 JavaScript files (max_mcp_node.js, mcp-router.js, etc.)

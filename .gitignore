@@ -147,3 +147,6 @@ yarn.lock
 .env
 .env.local
 .env.*.local
+
+# Max SDK (downloaded, not committed)
+max-sdk/
