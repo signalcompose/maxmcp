@@ -197,6 +197,28 @@ json MCPServer::handle_request(const json& req) {
                             }},
                             {"required", json::array({"patch_id", "obj_type", "position"})}
                         }}
+                    },
+                    {
+                        {"name", "get_patch_info"},
+                        {"description", "Get detailed information about a specific patch"},
+                        {"inputSchema", {
+                            {"type", "object"},
+                            {"properties", {
+                                {"patch_id", {
+                                    {"type", "string"},
+                                    {"description", "Patch ID to query"}
+                                }}
+                            }},
+                            {"required", json::array({"patch_id"})}
+                        }}
+                    },
+                    {
+                        {"name", "get_frontmost_patch"},
+                        {"description", "Get the currently focused/frontmost patch"},
+                        {"inputSchema", {
+                            {"type", "object"},
+                            {"properties", {}}
+                        }}
                     }
                 })}
             }}
@@ -231,6 +253,25 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
     } else if (tool == "list_active_patches") {
         // Get list of active patches from global registry
         return PatchRegistry::list_patches();
+
+    } else if (tool == "get_patch_info") {
+        // Get detailed information about a patch
+        std::string patch_id = params.value("patch_id", "");
+
+        if (patch_id.empty()) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Missing required parameter: patch_id"}
+                }}
+            };
+        }
+
+        return PatchRegistry::get_patch_info(patch_id);
+
+    } else if (tool == "get_frontmost_patch") {
+        // Get the currently focused patch
+        return PatchRegistry::get_frontmost_patch();
 
     } else if (tool == "add_max_object") {
         // Parse parameters

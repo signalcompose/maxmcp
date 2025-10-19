@@ -72,7 +72,70 @@ t_maxmcp* PatchRegistry::find_patch(const std::string& patch_id) {
     return nullptr;
 }
 
-size_t PatchRegistry::count() {
+json PatchRegistry::get_patch_info(const std::string& patch_id) {
     std::lock_guard<std::mutex> lock(mutex_);
-    return patches_.size();
+
+    // Find patch
+    t_maxmcp* patch = nullptr;
+    for (auto* p : patches_) {
+        if (p && p->patch_id == patch_id) {
+            patch = p;
+            break;
+        }
+    }
+
+    if (!patch) {
+        return {
+            {"error", {
+                {"code", -32602},
+                {"message", "Patch not found: " + patch_id}
+            }}
+        };
+    }
+
+    // Return detailed patch information
+    return {
+        {"result", {
+            {"patch_id", patch->patch_id},
+            {"display_name", patch->display_name},
+            {"patcher_name", patch->patcher_name},
+            {"has_patcher_ref", patch->patcher != nullptr}
+        }}
+    };
+}
+
+json PatchRegistry::get_frontmost_patch() {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // Check if any patches are registered
+    if (patches_.empty()) {
+        return {
+            {"error", {
+                {"code", -32603},
+                {"message", "No active patches"}
+            }}
+        };
+    }
+
+    // Simplified implementation: return first patch
+    // Full implementation would use Max SDK window management APIs
+    // to determine the actual frontmost window
+    t_maxmcp* patch = patches_[0];
+
+    if (!patch) {
+        return {
+            {"error", {
+                {"code", -32603},
+                {"message", "Invalid patch reference"}
+            }}
+        };
+    }
+
+    return {
+        {"result", {
+            {"patch_id", patch->patch_id},
+            {"display_name", patch->display_name},
+            {"patcher_name", patch->patcher_name}
+        }}
+    };
 }
