@@ -5,6 +5,14 @@ project(MaxMCP)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# macOS Universal Binary (Apple Silicon + Intel)
+if(APPLE)
+    if(NOT CMAKE_OSX_ARCHITECTURES)
+        set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures" FORCE)
+        message(STATUS "Building Universal Binary: arm64 and x86_64")
+    endif()
+endif()
+
 # Max SDK Path
 set(C74_MAX_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/max-sdk")
 
