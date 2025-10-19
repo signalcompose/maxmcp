@@ -152,9 +152,59 @@ class MaxMCP {
    - `get_objects_in_patch(patch_id)`
    - `get_avoid_rect_position(patch_id)`
 
-5. **Documentation**
+5. **Console Logging** ⭐ NEW
+   - `get_console_log(lines, filter, clear)` - Retrieve Max Console messages
+
+6. **Documentation**
    - `list_all_objects()`
    - `get_object_doc(object_name)`
+
+#### Console Logging Tool Specification
+
+**Tool**: `get_console_log`
+
+**Description**: Retrieve recent Max Console messages to monitor patch state and debug operations
+
+**Parameters**:
+```json
+{
+  "lines": {
+    "type": "number",
+    "description": "Number of recent log lines (default: 50, max: 1000)",
+    "optional": true
+  },
+  "filter": {
+    "type": "string",
+    "description": "Regex filter for log messages (optional)",
+    "optional": true
+  },
+  "clear": {
+    "type": "boolean",
+    "description": "Clear log after reading (default: false)",
+    "optional": true
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "logs": [
+    "MaxMCP: Created cycle~ at [100, 100]",
+    "MaxMCP: Set varname to osc1",
+    "MaxMCP: Connected osc1[0] -> dac~[0]",
+    "dsp: audio on"
+  ],
+  "count": 4
+}
+```
+
+**Use Cases**:
+- Monitor object creation results
+- Detect connection errors
+- Debug tool execution
+- Verify patch state changes
+- Provide feedback to Claude for decision making
 
 #### MCP Tool Implementation Example
 ```cpp

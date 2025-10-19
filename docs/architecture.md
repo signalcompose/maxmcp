@@ -13,35 +13,44 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 ## 2. System Overview
 
-### 2.1 High-Level Architecture
+### 2.1 High-Level Architecture (2-Object Design)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │              Claude Code (MCP Client)                    │
 │  - Natural language processing                          │
-│  - Fuzzy patch name matching                            │
 │  - Tool orchestration                                    │
+│  - Console log monitoring                                │
 └────────────────────┬────────────────────────────────────┘
                      │
                      │ stdio (JSON-RPC)
                      │ - Line-based protocol
                      │ - Bidirectional communication
                      │
-         ┌───────────┴───────────┐
-         │                       │
-    ┌────▼────┐            ┌────▼────┐
-    │[maxmcp] │            │[maxmcp] │
-    │synth.maxpat│         │fx.maxpat│
-    └─────┬───┘            └────┬────┘
-          │                     │
-          │ Max API             │ Max API
-          │ - jpatcher_*        │ - jpatcher_*
-          │ - object_*          │ - object_*
-          │                     │
-          ▼                     ▼
-    this.patcher           this.patcher
-    (Max Patcher)          (Max Patcher)
+                ┌────▼─────────┐
+                │[maxmcp.server]│ ← Singleton MCP Server
+                │  (1 instance) │
+                └────┬──────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+   ┌────▼────┐  ┌───▼────┐  ┌───▼────┐
+   │[maxmcp] │  │[maxmcp]│  │[maxmcp]│ ← Client objects
+   │ synth   │  │  fx    │  │ master │   (multiple instances)
+   └────┬────┘  └───┬────┘  └───┬────┘
+        │           │           │
+        │ Max API   │           │ Max API
+        │           │           │
+        ▼           ▼           ▼
+   this.patcher  this.patcher  this.patcher
 ```
+
+**Key Design Decisions**:
+- **Two-object architecture**: Separation of server and client responsibilities
+- **Singleton server**: Only one `[maxmcp.server]` per Max instance
+- **Multiple clients**: Each `[maxmcp]` represents a controllable patch
+- **Centralized logging**: All Max Console output captured by server
+- **Clear dependency**: Clients cannot exist without server
 
 ### 2.2 Component Interaction Flow
 
@@ -63,46 +72,63 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 ## 3. Component Details
 
-### 3.1 MCP Server (stdio)
+### 3.1 Server Object: `[maxmcp.server]`
 
-**Responsibility**: Handle JSON-RPC communication with Claude Code
+**Responsibility**: Singleton MCP server, console logging, global patch registry
 
-**Implementation**:
+**Data Structure**:
 ```cpp
-class MCPServer {
-private:
-    std::thread io_thread_;
-    std::atomic<bool> running_;
-    MaxMCP* max_object_;
+struct t_maxmcp_server {
+    t_object ob;                        // Max object header
+    void* outlet_log;                   // Outlet for log messages (optional)
 
-public:
-    void start();  // Start IO thread
-    void stop();   // Stop IO thread gracefully
-    json handle_request(const json& req);
-    json execute_tool(const std::string& tool, const json& params);
+    std::unique_ptr<MCPServer> mcp_server;     // MCP protocol handler
+    std::unique_ptr<ConsoleLogger> logger;     // Console log capture
 };
 ```
 
-**Design Decisions**:
-- **stdio over Socket.IO**: Simpler, no port management, no network dependency
-- **Line-based protocol**: Easy buffering, clear message boundaries
-- **Separate IO thread**: Non-blocking read from stdin
-- **Defer to main thread**: All Max API calls via `defer_low()`
+**Singleton Pattern**:
+```cpp
+static t_maxmcp_server* g_server_instance = nullptr;
+
+void* maxmcp_server_new(...) {
+    if (g_server_instance != nullptr) {
+        object_error(nullptr, "maxmcp.server already exists!");
+        return nullptr;
+    }
+    // ... create instance
+    g_server_instance = x;
+    return x;
+}
+```
+
+**Responsibilities**:
+- Start/stop MCP server (stdio communication)
+- Capture all Max Console messages
+- Maintain global patch registry
+- Provide `get_console_log()` MCP tool
+- Coordinate tool execution across all patches
 
 **Thread Model**:
 ```
 IO Thread (stdin/stdout)
     ↓
+JSON-RPC Request
+    ↓
 defer_low()
     ↓
-Max Main Thread (API calls)
+Max Main Thread
+    ↓
+Tool Execution
+    ↓
+ConsoleLogger::log()
 ```
 
 ---
 
-### 3.2 MaxMCP External Object
+### 3.2 Client Object: `[maxmcp]`
 
-**Responsibility**: Lifecycle management, patch identification
+**Responsibility**: Patch identification and registration
 
 **Data Structure**:
 ```cpp
@@ -113,12 +139,22 @@ struct t_maxmcp {
     std::string display_name;           // User-facing name
     t_object* patcher;                  // Pointer to owning patcher
 
-    std::unique_ptr<MCPServer> server;  // MCP server instance
-
     // Attributes
     t_symbol* alias;                    // Custom patch ID override
     t_symbol* group;                    // Patch group name
 };
+```
+
+**Server Dependency Check**:
+```cpp
+void* maxmcp_new(...) {
+    if (g_server_instance == nullptr) {
+        object_error(nullptr,
+            "maxmcp.server not found! Create [maxmcp.server] first");
+        return nullptr;
+    }
+    // ... register with server
+}
 ```
 
 **Lifecycle**:
@@ -154,7 +190,64 @@ maxmcp_free()
 
 ---
 
-### 3.3 MCP Tools
+### 3.3 Console Logger
+
+**Responsibility**: Capture and buffer Max Console output for Claude Code
+
+**Implementation**:
+```cpp
+class ConsoleLogger {
+private:
+    static std::deque<std::string> log_buffer_;
+    static const size_t MAX_BUFFER_SIZE = 1000;
+    static std::mutex mutex_;
+
+public:
+    static void log(const char* message);
+    static json get_logs(size_t count = 50, bool clear = false);
+    static void clear();
+};
+```
+
+**Ring Buffer Design**:
+- Maximum 1000 log lines in memory
+- Oldest entries automatically discarded
+- Thread-safe access with mutex
+- Available via `get_console_log()` MCP tool
+
+**Logging Wrapper Macro**:
+```cpp
+#define MAXMCP_POST(obj, ...) \
+    do { \
+        char buf[512]; \
+        snprintf(buf, sizeof(buf), __VA_ARGS__); \
+        ConsoleLogger::log(buf); \
+        object_post(obj, "%s", buf); \
+    } while(0)
+```
+
+**Use Cases**:
+- Claude monitors patch operation results
+- Debugging tool execution
+- Error detection and recovery
+- User feedback loop
+
+**Example MCP Tool Response**:
+```json
+{
+  "logs": [
+    "MaxMCP: Created cycle~ at [100, 100]",
+    "MaxMCP: Set varname to osc1",
+    "MaxMCP: Connected osc1[0] -> dac~[0]",
+    "dsp: audio on"
+  ],
+  "count": 4
+}
+```
+
+---
+
+### 3.4 MCP Tools
 
 **Responsibility**: Implement MCP tool endpoints
 
