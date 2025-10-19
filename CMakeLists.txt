@@ -106,6 +106,18 @@ target_link_libraries(
 include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 
 #############################################################
+# INSTALLATION
+#############################################################
+
+# Install externals to package directory
+# Usage: cmake --install build --prefix package/MaxMCP
+install(
+    TARGETS ${PROJECT_NAME}
+    LIBRARY DESTINATION externals
+    BUNDLE DESTINATION externals
+)
+
+#############################################################
 # TESTING (Optional)
 #############################################################
 
