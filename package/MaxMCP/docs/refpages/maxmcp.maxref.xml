@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml-stylesheet href="./_c74_ref.xsl" type="text/xsl"?>
+
+<c74object name="maxmcp" module="max">
+	<digest>
+		MCP client for Claude Code control
+	</digest>
+	<description>
+		The maxmcp object registers your Max patch with the MaxMCP server, enabling Claude Code to control it using natural language. Once added to your patch, Claude Code can create objects, make connections, and modify your patch programmatically through the Model Context Protocol (MCP).
+	</description>
+
+	<!--METADATA-->
+	<metadatalist>
+		<metadata name="author">signalcompose</metadata>
+		<metadata name="tag">Max</metadata>
+		<metadata name="tag">MCP</metadata>
+		<metadata name="tag">AI</metadata>
+		<metadata name="tag">Automation</metadata>
+	</metadatalist>
+
+	<!--INLETS-->
+	<inletlist>
+		<inlet id="0" type="bang">
+			<digest>
+				Bang to output patch ID
+			</digest>
+			<description>
+				Sending a bang to the inlet outputs the patch's unique ID.
+			</description>
+		</inlet>
+	</inletlist>
+
+	<!--OUTLETS-->
+	<outletlist>
+		<outlet id="0" type="symbol">
+			<digest>
+				Patch ID output
+			</digest>
+			<description>
+				Outputs the patch's unique identifier (e.g., "synth_a7f2b3c1").
+			</description>
+		</outlet>
+	</outletlist>
+
+	<!--ARGUMENTS-->
+	<objarglist>
+		<objarg name="display_name" optional="1" type="symbol">
+			<digest>
+				Optional friendly name for the patch
+			</digest>
+			<description>
+				A friendly name for your patch. If omitted, the patch filename is used. This name becomes part of the patch ID (e.g., [maxmcp synth] creates "synth_{uuid8}").
+			</description>
+		</objarg>
+	</objarglist>
+
+	<!--MESSAGES-->
+	<methodlist>
+		<method name="bang">
+			<arglist />
+			<digest>
+				Output patch ID
+			</digest>
+			<description>
+				Sending a bang causes the maxmcp object to output its patch ID to the outlet.
+			</description>
+		</method>
+	</methodlist>
+
+	<!--ATTRIBUTES-->
+	<attributelist>
+	</attributelist>
+
+	<!--EXAMPLE-->
+	<examplelist>
+		<example caption="Basic Usage" img="">
+			<description>
+				Create a maxmcp object with a display name:
+			</description>
+			<code>
+[maxmcp synth]
+			</code>
+		</example>
+		<example caption="Natural Language Control" img="">
+			<description>
+				After adding maxmcp to your patch, use Claude Code with natural language:
+				<br/>
+				"Create a 440Hz oscillator connected to dac~"
+				<br/>
+				Claude Code will automatically create [cycle~ 440] and [dac~] objects and connect them.
+			</description>
+		</example>
+	</examplelist>
+
+	<!--DISCUSSION-->
+	<discussion>
+		<h4>Overview</h4>
+		<p>
+			The maxmcp object is a client for the MaxMCP server, which implements the Model Context Protocol (MCP). It enables Claude Code to control your Max patch using natural language commands.
+		</p>
+
+		<h4>How It Works</h4>
+		<p>
+			1. Add [maxmcp] to your patch with an optional display name
+			<br/>
+			2. The object automatically registers with the MaxMCP server
+			<br/>
+			3. Claude Code can now create objects, make connections, and modify your patch
+			<br/>
+			4. Use natural language to describe what you want to build
+		</p>
+
+		<h4>Patch Identification</h4>
+		<p>
+			Each maxmcp object generates a unique patch ID combining the display name (or filename) with an 8-character UUID. For example, [maxmcp synth] might create ID "synth_a7f2b3c1". This allows Claude Code to precisely target specific patches when multiple patches are open.
+		</p>
+
+		<h4>Requirements</h4>
+		<p>
+			- Max/MSP 9.0.0 or later
+			<br/>
+			- MaxMCP server running (maxmcp.server.mxo)
+			<br/>
+			- Claude Code with MCP configuration
+		</p>
+
+		<h4>Configuration</h4>
+		<p>
+			Add MaxMCP to your Claude Code MCP configuration:
+		</p>
+		<code>
+{
+  "mcpServers": {
+    "maxmcp": {
+      "command": "/path/to/maxmcp.server.mxo/Contents/MacOS/maxmcp.server",
+      "args": []
+    }
+  }
+}
+		</code>
+	</discussion>
+
+	<!--SEEALSO-->
+	<seealsolist>
+		<seealso name="01-getting-started.maxpat" />
+		<seealso name="02-synth-creation.maxpat" />
+		<seealso name="03-multi-patch.maxpat" />
+		<seealso name="04-effect-chain.maxpat" />
+	</seealsolist>
+</c74object>
