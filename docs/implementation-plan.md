@@ -1485,9 +1485,40 @@ cmake --build build --config Release
 - [ ] Benchmarks documented
 - [ ] No performance regressions
 
-#### Task 4.4: Release Documentation
+#### Task 4.4: Info.plist & Metadata Fix
+**Duration**: 0.5 days
+**Dependencies**: Task 4.1
+**Issue**: #4
+
+**Problem**: Max Console shows warning "Could not load package 'MaxMCP', your version of Max is outdated. Max 900.0.0 or higher required."
+
+**Solution**:
+Adjust Info.plist metadata in CMakeLists.txt to set correct minimum Max version:
+```cmake
+# Set proper bundle info for Max external
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+    MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+)
+```
+
+Create `Info.plist.in` with correct metadata:
+```xml
+<key>CFBundleVersion</key>
+<string>1.0.0</string>
+<key>MinimumMaxVersion</key>
+<string>8.6.0</string>
+```
+
+**Definition of Done**:
+- [ ] Info.plist.in created with correct metadata
+- [ ] CMakeLists.txt updated to use custom Info.plist
+- [ ] No version warning in Max Console
+- [ ] Issue #4 closed
+
+#### Task 4.5: Release Documentation
 **Duration**: 1 day
-**Dependencies**: Task 4.3
+**Dependencies**: Task 4.3, Task 4.4
 
 **Documents to Create**:
 1. CHANGELOG.md - Version history
@@ -1500,9 +1531,9 @@ cmake --build build --config Release
 - [ ] Release notes written
 - [ ] Documentation reviewed
 
-#### Task 4.5: GitHub Release
+#### Task 4.6: GitHub Release
 **Duration**: 0.5 days
-**Dependencies**: Task 4.4
+**Dependencies**: Task 4.5
 
 **Steps**:
 1. Tag release (v1.0.0)
@@ -1516,9 +1547,9 @@ cmake --build build --config Release
 - [ ] Binaries downloadable
 - [ ] Release notes visible
 
-#### Task 4.6: Package Manager Submission (Optional)
+#### Task 4.7: Package Manager Submission (Optional)
 **Duration**: Variable (external dependency)
-**Dependencies**: Task 4.5
+**Dependencies**: Task 4.6
 
 **Steps**:
 1. Verify package meets all requirements
@@ -1544,10 +1575,12 @@ cmake --build build --config Release
 ```
 Week 6:
 ├─ Day 1-2: Task 4.1 (Cross-platform builds)
+├─ Day 2.5: Task 4.4 (Info.plist & Metadata fix)
 ├─ Day 3-4: Task 4.2 (E2E testing)
 ├─ Day 5: Task 4.3 (Performance optimization)
-├─ Day 6: Task 4.4 (Release documentation)
-└─ Day 7: Task 4.5 (GitHub release)
+├─ Day 6: Task 4.5 (Release documentation)
+└─ Day 7: Task 4.6 (GitHub release)
+     └─ (Optional) Task 4.7 (Package Manager submission)
 ```
 
 **Total**: 7 working days
@@ -1576,6 +1609,7 @@ Week 6:
 **Completion Checklist**:
 - [ ] Universal binary (macOS) working
 - [ ] Windows x64 binary working
+- [ ] Info.plist metadata fixed (no version warning) - Issue #4
 - [ ] All E2E tests pass on all platforms
 - [ ] Performance benchmarks met
 - [ ] Release documentation complete
