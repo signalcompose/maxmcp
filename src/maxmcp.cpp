@@ -66,11 +66,11 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
         new (&x->display_name) std::string("Untitled");
         new (&x->patcher_name) std::string("unknown");
 
-        // Get patcher name if available
-        t_object* patcher = nullptr;
-        object_obex_lookup(x, gensym("#P"), &patcher);
-        if (patcher) {
-            t_symbol* patcher_name = object_attr_getsym(patcher, gensym("name"));
+        // Get patcher reference and name
+        x->patcher = nullptr;
+        object_obex_lookup(x, gensym("#P"), &x->patcher);
+        if (x->patcher) {
+            t_symbol* patcher_name = object_attr_getsym(x->patcher, gensym("name"));
             if (patcher_name && patcher_name->s_name) {
                 x->patcher_name = patcher_name->s_name;
                 x->display_name = patcher_name->s_name;
