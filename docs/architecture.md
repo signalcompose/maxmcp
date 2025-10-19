@@ -1,6 +1,5 @@
 # MaxMCP Architecture
 
-**Version**: 2.0.0
 **Last Updated**: 2025-10-19
 **Status**: Draft
 
@@ -8,7 +7,7 @@
 
 ## 1. Executive Summary
 
-MaxMCP v2.0 is a native C++ external object for Max/MSP that implements an MCP (Model Context Protocol) server. It replaces a multi-component architecture (Python + Node.js + 6 JavaScript files) with a single compiled external, reducing complexity by 99% while improving performance and reliability.
+MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model Context Protocol) server, enabling natural language control of Max/MSP patches through Claude Code.
 
 ---
 

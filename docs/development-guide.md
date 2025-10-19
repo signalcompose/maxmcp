@@ -1,6 +1,5 @@
 # MaxMCP Development Guide
 
-**Version**: 2.0.0
 **Last Updated**: 2025-10-19
 
 ---
