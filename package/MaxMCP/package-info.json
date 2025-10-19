@@ -5,7 +5,7 @@
   "description": "MCP Server for Max/MSP - Control Max patches with Claude Code using natural language",
   "homepage": "https://github.com/signalcompose/MaxMCP",
   "repository": "https://github.com/signalcompose/MaxMCP.git",
-  "max_version_min": "9.0.0",
+  "max_version_min": "900.0.0",
   "license": "MIT",
   "externals": {
     "maxmcp": {
