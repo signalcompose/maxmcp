@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.19)
-project(MaxMCP)
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
@@ -24,6 +23,9 @@ endif()
 # Include Max SDK base scripts
 include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-pretarget.cmake)
 
+# Override output name to maxmcp.server
+set(${PROJECT_NAME}_EXTERN_OUTPUT_NAME "maxmcp.server" CACHE STRING "External output name" FORCE)
+
 #############################################################
 # MAX EXTERNAL
 #############################################################
@@ -39,12 +41,16 @@ include_directories(
 # Find nlohmann/json
 find_package(nlohmann_json 3.11.0 REQUIRED)
 
-# Source files
+# Source files for maxmcp.server external
 set(PROJECT_SRC
-    src/maxmcp.cpp
-    src/maxmcp.h
+    src/maxmcp_server.cpp
+    src/maxmcp_server.h
+    src/mcp_server.cpp
+    src/mcp_server.h
     src/utils/uuid_generator.cpp
     src/utils/uuid_generator.h
+    src/utils/console_logger.cpp
+    src/utils/console_logger.h
 )
 
 # Create external library
