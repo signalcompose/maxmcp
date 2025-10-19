@@ -1,0 +1,149 @@
+# Serena MCP (必須)
+.serena
+
+# Build directories
+build/
+bin/
+lib/
+*.build/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Max/MSP compiled externals
+*.mxo
+*.mxe
+*.mxe64
+externals/*.mxo
+externals/*.mxe
+externals/*.mxe64
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDE - VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IDE - Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.xcuserstate
+project.xcworkspace/
+
+# IDE - Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~
+.tmp/
+tmp/
+
+# Logs
+*.log
+logs/
+
+# Package files
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Max Package (keep structure, ignore builds)
+!externals/.gitkeep
+!help/.gitkeep
+!examples/.gitkeep
+
+# Testing
+Testing/
+*.gcov
+*.gcda
+*.gcno
+
+# Coverage
+coverage/
+*.coverage
+htmlcov/
+
+# Documentation build
+docs/_build/
+docs/.buildinfo
+
+# Python (if used for testing)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Node.js (if used for tooling)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment
+.env
+.env.local
+.env.*.local

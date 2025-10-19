@@ -1,0 +1,202 @@
+{
+  "$schema": "https://claude.ai/settings-schema.json",
+  "description": "MaxMCP Project - Claude Code Security Configuration",
+  "comment": "Based on Gemini search results for Claude Code settings.json best practices",
+
+  "rules": [
+    {
+      "comment": "=== DENY RULES (Highest Priority) ===",
+      "comment2": "Block dangerous operations and sensitive files"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Bash(rm:*)",
+      "reason": "Prevent accidental file deletion"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Bash(sudo:*)",
+      "reason": "Prevent privilege escalation"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Bash(chmod:*)",
+      "reason": "Prevent permission changes without review"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Read(.env*)",
+      "reason": "Protect environment variables and secrets"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Read(**/secrets/**)",
+      "reason": "Protect secrets directory"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Read(**/*.key)",
+      "reason": "Protect private keys"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Read(**/*.pem)",
+      "reason": "Protect certificates"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Write(/etc/**)",
+      "reason": "Prevent system file modification"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Write(/usr/**)",
+      "reason": "Prevent system file modification"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Write(/System/**)",
+      "reason": "Prevent macOS system modification"
+    },
+    {
+      "rule": "deny",
+      "pattern": "Bash(**/Users/yamato/Src/proj_max_mcp/MaxMCP/**)",
+      "reason": "Prevent operations outside project directory"
+    },
+
+    {
+      "comment": "=== ASK RULES (Medium Priority) ===",
+      "comment2": "Require confirmation for potentially destructive operations"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Write(**)",
+      "reason": "Confirm all file writes"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Edit(**)",
+      "reason": "Confirm all file edits"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Bash(git:push*)",
+      "reason": "Confirm before pushing to remote"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Bash(git:commit*)",
+      "reason": "Review commit messages"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Bash(gh:*)",
+      "reason": "Confirm GitHub CLI operations"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Bash(npm:install*)",
+      "reason": "Review package installations"
+    },
+    {
+      "rule": "ask",
+      "pattern": "Bash(brew:install*)",
+      "reason": "Review system package installations"
+    },
+
+    {
+      "comment": "=== ALLOW RULES (Lowest Priority) ===",
+      "comment2": "Auto-approve safe, read-only operations within project"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Read(/Users/yamato/Src/proj_max_mcp/MaxMCP/**)",
+      "reason": "Allow reading project files"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Read(docs/**)",
+      "reason": "Allow reading documentation"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Read(src/**)",
+      "reason": "Allow reading source code"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Read(tests/**)",
+      "reason": "Allow reading tests"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Read(examples/**)",
+      "reason": "Allow reading examples"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Glob(**)",
+      "reason": "Allow file pattern matching"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Grep(**)",
+      "reason": "Allow searching file contents"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(ls:*)",
+      "reason": "Allow directory listing"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(pwd:*)",
+      "reason": "Allow checking working directory"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(git:status*)",
+      "reason": "Allow checking git status"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(git:log*)",
+      "reason": "Allow viewing git history"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(git:diff*)",
+      "reason": "Allow viewing git diffs"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(git:branch*)",
+      "reason": "Allow viewing branches"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(cmake:*)",
+      "reason": "Allow CMake build operations"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(make:*)",
+      "reason": "Allow Make build operations"
+    },
+    {
+      "rule": "allow",
+      "pattern": "Bash(cat:*)",
+      "reason": "Allow reading file contents"
+    }
+  ],
+
+  "notes": [
+    "This configuration follows the principle of least privilege",
+    "Deny rules override Ask rules, which override Allow rules",
+    "Sensitive files (.env, secrets/, *.key, *.pem) are explicitly denied",
+    "All writes and edits require confirmation",
+    "Git operations (push, commit) require confirmation",
+    "Read-only operations within project directory are auto-approved",
+    "For production/OSS release, consider enabling enforce_admins: true in GitHub settings"
+  ]
+}
