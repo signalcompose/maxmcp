@@ -25,6 +25,7 @@ typedef struct _maxmcp {
     std::string patch_id;     ///< Auto-generated unique ID (8-char UUID)
     std::string display_name; ///< User-friendly name for patch
     std::string patcher_name; ///< Max patcher filename
+    t_object* patcher;        ///< Reference to parent patcher object
 } t_maxmcp;
 
 // Function prototypes

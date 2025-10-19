@@ -8,11 +8,51 @@
 #include "mcp_server.h"
 #include "utils/console_logger.h"
 #include "utils/patch_registry.h"
+#include "maxmcp.h"
+#include "ext.h"
+#include "ext_obex.h"
+#include "jpatcher_api.h"
 #include <iostream>
 #include <sstream>
 
 // Static member initialization
 MCPServer* MCPServer::instance_ = nullptr;
+
+// Structure for defer_low callback data
+struct t_add_object_data {
+    t_maxmcp* patch;
+    std::string obj_type;
+    double x;
+    double y;
+    std::string varname;
+};
+
+// Defer callback for adding Max object
+static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    t_add_object_data* data = (t_add_object_data*)argv;
+
+    if (!data || !data->patch || !data->patch->patcher) {
+        delete data;
+        return;
+    }
+
+    // Create object with newobject_sprintf
+    t_object* obj = (t_object*)newobject_sprintf(data->patch->patcher, "@maxclass %s @patching_rect %.2f %.2f 50.0 20.0",
+                                                   data->obj_type.c_str(), data->x, data->y);
+
+    if (obj) {
+        // Set varname if provided
+        if (!data->varname.empty()) {
+            object_attr_setsym(obj, gensym("varname"), gensym(data->varname.c_str()));
+        }
+
+        ConsoleLogger::log(("Object created: " + data->obj_type).c_str());
+    } else {
+        ConsoleLogger::log(("Failed to create object: " + data->obj_type).c_str());
+    }
+
+    delete data;
+}
 
 MCPServer* MCPServer::get_instance() {
     if (instance_ == nullptr) {
@@ -130,6 +170,33 @@ json MCPServer::handle_request(const json& req) {
                             {"type", "object"},
                             {"properties", {}}
                         }}
+                    },
+                    {
+                        {"name", "add_max_object"},
+                        {"description", "Add a Max object to a patch"},
+                        {"inputSchema", {
+                            {"type", "object"},
+                            {"properties", {
+                                {"patch_id", {
+                                    {"type", "string"},
+                                    {"description", "Patch ID to add object to"}
+                                }},
+                                {"obj_type", {
+                                    {"type", "string"},
+                                    {"description", "Max object type (e.g., 'number', 'button', 'dac~')"}
+                                }},
+                                {"position", {
+                                    {"type", "array"},
+                                    {"items", {"type", "number"}},
+                                    {"description", "Position [x, y] in patch"}
+                                }},
+                                {"varname", {
+                                    {"type", "string"},
+                                    {"description", "Variable name for the object (optional)"}
+                                }}
+                            }},
+                            {"required", json::array({"patch_id", "obj_type", "position"})}
+                        }}
                     }
                 })}
             }}
@@ -164,6 +231,66 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
     } else if (tool == "list_active_patches") {
         // Get list of active patches from global registry
         return PatchRegistry::list_patches();
+
+    } else if (tool == "add_max_object") {
+        // Parse parameters
+        std::string patch_id = params.value("patch_id", "");
+        std::string obj_type = params.value("obj_type", "");
+        std::string varname = params.value("varname", "");
+
+        if (patch_id.empty() || obj_type.empty()) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Missing required parameters: patch_id and obj_type"}
+                }}
+            };
+        }
+
+        // Get position array
+        if (!params.contains("position") || !params["position"].is_array() || params["position"].size() < 2) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Invalid position parameter: must be array [x, y]"}
+                }}
+            };
+        }
+
+        double x = params["position"][0].get<double>();
+        double y = params["position"][1].get<double>();
+
+        // Find patch
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Patch not found: " + patch_id}
+                }}
+            };
+        }
+
+        // Create defer data
+        t_add_object_data* data = new t_add_object_data{
+            patch,
+            obj_type,
+            x,
+            y,
+            varname
+        };
+
+        // Defer to main thread (CRITICAL for thread safety)
+        defer(patch, (method)add_object_deferred, gensym("add_object"), 1, (t_atom*)data);
+
+        return {
+            {"result", {
+                {"status", "success"},
+                {"patch_id", patch_id},
+                {"obj_type", obj_type},
+                {"position", json::array({x, y})}
+            }}
+        };
 
     } else {
         return {
