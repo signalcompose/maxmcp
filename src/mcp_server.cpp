@@ -40,6 +40,22 @@ struct t_set_attribute_data {
     json value;
 };
 
+struct t_connect_objects_data {
+    t_maxmcp* patch;
+    std::string src_varname;
+    long outlet;
+    std::string dst_varname;
+    long inlet;
+};
+
+struct t_disconnect_objects_data {
+    t_maxmcp* patch;
+    std::string src_varname;
+    long outlet;
+    std::string dst_varname;
+    long inlet;
+};
+
 // Defer callback for adding Max object
 static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     t_add_object_data* data = (t_add_object_data*)argv;
@@ -170,6 +186,131 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
 
     } else {
         ConsoleLogger::log(("Unsupported value type for attribute: " + data->attribute).c_str());
+    }
+
+    delete data;
+}
+
+// Defer callback for connecting Max objects
+static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    t_connect_objects_data* data = (t_connect_objects_data*)argv;
+
+    if (!data || !data->patch || !data->patch->patcher) {
+        delete data;
+        return;
+    }
+
+    // Find source and destination boxes
+    t_object* patcher = data->patch->patcher;
+    t_object* src_box = nullptr;
+    t_object* dst_box = nullptr;
+
+    for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
+        t_symbol* varname = object_attr_getsym(box, gensym("varname"));
+
+        if (varname && varname->s_name) {
+            if (data->src_varname == varname->s_name) {
+                src_box = box;
+            }
+            if (data->dst_varname == varname->s_name) {
+                dst_box = box;
+            }
+
+            if (src_box && dst_box) break;
+        }
+    }
+
+    if (!src_box) {
+        ConsoleLogger::log(("Source object not found: " + data->src_varname).c_str());
+        delete data;
+        return;
+    }
+
+    if (!dst_box) {
+        ConsoleLogger::log(("Destination object not found: " + data->dst_varname).c_str());
+        delete data;
+        return;
+    }
+
+    // Create connection using object_method
+    // patcher connect src_box outlet dst_box inlet
+    t_atom connect_args[4];
+    atom_setobj(&connect_args[0], src_box);
+    atom_setlong(&connect_args[1], data->outlet);
+    atom_setobj(&connect_args[2], dst_box);
+    atom_setlong(&connect_args[3], data->inlet);
+
+    object_method_typed(patcher, gensym("connect"), 4, connect_args, nullptr);
+
+    std::string msg = "Connected: " + data->src_varname + "[" + std::to_string(data->outlet) + "] -> " +
+                      data->dst_varname + "[" + std::to_string(data->inlet) + "]";
+    ConsoleLogger::log(msg.c_str());
+
+    delete data;
+}
+
+// Defer callback for disconnecting Max objects
+static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    t_disconnect_objects_data* data = (t_disconnect_objects_data*)argv;
+
+    if (!data || !data->patch || !data->patch->patcher) {
+        delete data;
+        return;
+    }
+
+    // Find source and destination boxes
+    t_object* patcher = data->patch->patcher;
+    t_object* src_box = nullptr;
+    t_object* dst_box = nullptr;
+
+    for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
+        t_symbol* varname = object_attr_getsym(box, gensym("varname"));
+
+        if (varname && varname->s_name) {
+            if (data->src_varname == varname->s_name) {
+                src_box = box;
+            }
+            if (data->dst_varname == varname->s_name) {
+                dst_box = box;
+            }
+
+            if (src_box && dst_box) break;
+        }
+    }
+
+    if (!src_box || !dst_box) {
+        ConsoleLogger::log("Source or destination object not found for disconnect");
+        delete data;
+        return;
+    }
+
+    // Find and remove matching patchline
+    t_object* line = jpatcher_get_firstline(patcher);
+    bool found = false;
+
+    while (line) {
+        t_object* line_box1 = (t_object*)jpatchline_get_box1(line);
+        long line_outlet = jpatchline_get_outletnum(line);
+        t_object* line_box2 = (t_object*)jpatchline_get_box2(line);
+        long line_inlet = jpatchline_get_inletnum(line);
+
+        if (line_box1 == src_box && line_outlet == data->outlet &&
+            line_box2 == dst_box && line_inlet == data->inlet) {
+
+            object_free(line);
+            found = true;
+
+            std::string msg = "Disconnected: " + data->src_varname + "[" + std::to_string(data->outlet) + "] -> " +
+                              data->dst_varname + "[" + std::to_string(data->inlet) + "]";
+            ConsoleLogger::log(msg.c_str());
+            break;
+        }
+
+        line = jpatchline_get_nextline(line);
+    }
+
+    if (!found) {
+        ConsoleLogger::log("Connection not found for disconnect");
     }
 
     delete data;
@@ -387,6 +528,66 @@ json MCPServer::handle_request(const json& req) {
                             }},
                             {"required", json::array({"patch_id", "varname", "attribute", "value"})}
                         }}
+                    },
+                    {
+                        {"name", "connect_max_objects"},
+                        {"description", "Create a patchcord connection between two Max objects"},
+                        {"inputSchema", {
+                            {"type", "object"},
+                            {"properties", {
+                                {"patch_id", {
+                                    {"type", "string"},
+                                    {"description", "Patch ID containing the objects"}
+                                }},
+                                {"src_varname", {
+                                    {"type", "string"},
+                                    {"description", "Source object variable name"}
+                                }},
+                                {"outlet", {
+                                    {"type", "number"},
+                                    {"description", "Source outlet index (0-based)"}
+                                }},
+                                {"dst_varname", {
+                                    {"type", "string"},
+                                    {"description", "Destination object variable name"}
+                                }},
+                                {"inlet", {
+                                    {"type", "number"},
+                                    {"description", "Destination inlet index (0-based)"}
+                                }}
+                            }},
+                            {"required", json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}
+                        }}
+                    },
+                    {
+                        {"name", "disconnect_max_objects"},
+                        {"description", "Remove a patchcord connection between two Max objects"},
+                        {"inputSchema", {
+                            {"type", "object"},
+                            {"properties", {
+                                {"patch_id", {
+                                    {"type", "string"},
+                                    {"description", "Patch ID containing the objects"}
+                                }},
+                                {"src_varname", {
+                                    {"type", "string"},
+                                    {"description", "Source object variable name"}
+                                }},
+                                {"outlet", {
+                                    {"type", "number"},
+                                    {"description", "Source outlet index (0-based)"}
+                                }},
+                                {"dst_varname", {
+                                    {"type", "string"},
+                                    {"description", "Destination object variable name"}
+                                }},
+                                {"inlet", {
+                                    {"type", "number"},
+                                    {"description", "Destination inlet index (0-based)"}
+                                }}
+                            }},
+                            {"required", json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}
+                        }}
                     }
                 })}
             }}
@@ -600,6 +801,108 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
                 {"patch_id", patch_id},
                 {"varname", varname},
                 {"attribute", attribute}
+            }}
+        };
+
+    } else if (tool == "connect_max_objects") {
+        // Parse parameters
+        std::string patch_id = params.value("patch_id", "");
+        std::string src_varname = params.value("src_varname", "");
+        std::string dst_varname = params.value("dst_varname", "");
+        long outlet = params.value("outlet", -1);
+        long inlet = params.value("inlet", -1);
+
+        if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Missing or invalid required parameters"}
+                }}
+            };
+        }
+
+        // Find patch
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Patch not found: " + patch_id}
+                }}
+            };
+        }
+
+        // Create defer data
+        t_connect_objects_data* data = new t_connect_objects_data{
+            patch,
+            src_varname,
+            outlet,
+            dst_varname,
+            inlet
+        };
+
+        // Defer to main thread
+        defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, (t_atom*)data);
+
+        return {
+            {"result", {
+                {"status", "success"},
+                {"patch_id", patch_id},
+                {"src_varname", src_varname},
+                {"outlet", outlet},
+                {"dst_varname", dst_varname},
+                {"inlet", inlet}
+            }}
+        };
+
+    } else if (tool == "disconnect_max_objects") {
+        // Parse parameters
+        std::string patch_id = params.value("patch_id", "");
+        std::string src_varname = params.value("src_varname", "");
+        std::string dst_varname = params.value("dst_varname", "");
+        long outlet = params.value("outlet", -1);
+        long inlet = params.value("inlet", -1);
+
+        if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Missing or invalid required parameters"}
+                }}
+            };
+        }
+
+        // Find patch
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return {
+                {"error", {
+                    {"code", -32602},
+                    {"message", "Patch not found: " + patch_id}
+                }}
+            };
+        }
+
+        // Create defer data
+        t_disconnect_objects_data* data = new t_disconnect_objects_data{
+            patch,
+            src_varname,
+            outlet,
+            dst_varname,
+            inlet
+        };
+
+        // Defer to main thread
+        defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, (t_atom*)data);
+
+        return {
+            {"result", {
+                {"status", "success"},
+                {"patch_id", patch_id},
+                {"src_varname", src_varname},
+                {"outlet", outlet},
+                {"dst_varname", dst_varname},
+                {"inlet", inlet}
             }}
         };
 
