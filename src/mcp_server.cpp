@@ -468,7 +468,7 @@ json MCPServer::handle_request(const json& req) {
         // Handle MCP initialize handshake
         return {
             {"jsonrpc", "2.0"},
-            {"id", req.value("id", nullptr)},
+            {"id", req.contains("id") ? req["id"] : nullptr},
             {"result", {
                 {"protocolVersion", "2024-11-05"},
                 {"capabilities", {
@@ -485,7 +485,7 @@ json MCPServer::handle_request(const json& req) {
         // Return list of available tools
         return {
             {"jsonrpc", "2.0"},
-            {"id", req.value("id", nullptr)},
+            {"id", req.contains("id") ? req["id"] : nullptr},
             {"result", {
                 {"tools", json::array({
                     {
@@ -718,7 +718,7 @@ json MCPServer::handle_request(const json& req) {
 
         return {
             {"jsonrpc", "2.0"},
-            {"id", req.value("id", nullptr)},
+            {"id", req.contains("id") ? req["id"] : nullptr},
             {"result", result}
         };
 
@@ -726,7 +726,7 @@ json MCPServer::handle_request(const json& req) {
         // Unknown method
         return {
             {"jsonrpc", "2.0"},
-            {"id", req.value("id", nullptr)},
+            {"id", req.contains("id") ? req["id"] : nullptr},
             {"error", {
                 {"code", -32601},
                 {"message", "Method not found"}
@@ -1133,11 +1133,14 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
 std::string MCPServer::handle_request_string(const std::string& request_str) {
     try {
+        ConsoleLogger::log(("Received message (" + std::to_string(request_str.length()) + " bytes): " + request_str).c_str());
         json req = json::parse(request_str);
         json response = handle_request(req);
         return response.dump();
     } catch (const std::exception& e) {
         // Return JSON-RPC error
+        ConsoleLogger::log(("Parse error on message: " + request_str).c_str());
+        ConsoleLogger::log(("Exception: " + std::string(e.what())).c_str());
         json error_response = {
             {"jsonrpc", "2.0"},
             {"error", {
