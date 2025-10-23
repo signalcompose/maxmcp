@@ -6,7 +6,13 @@
 */
 
 #include "console_logger.h"
+
+// Only include Max API if not in test mode
+#ifndef MAXMCP_TEST_MODE
 #include "ext.h"  // For post()
+#else
+#include <iostream>  // For std::cerr in test mode
+#endif
 
 // Static member initialization
 std::deque<std::string> ConsoleLogger::log_buffer_;
@@ -24,8 +30,14 @@ void ConsoleLogger::log(const char* message) {
         log_buffer_.pop_front();
     }
 
-    // Also output to Max Console
+    // Output to console
+#ifndef MAXMCP_TEST_MODE
+    // Max Console in production
     post("%s", message);
+#else
+    // stderr in test mode
+    std::cerr << "[ConsoleLogger] " << message << std::endl;
+#endif
 }
 
 json ConsoleLogger::get_logs(size_t count, bool clear_after) {

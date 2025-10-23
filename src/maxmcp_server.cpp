@@ -7,7 +7,7 @@
 
 #include "maxmcp_server.h"
 #include "mcp_server.h"
-#include "udp_server.h"
+#include "websocket_server.h"
 #include "utils/console_logger.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -44,7 +44,7 @@ void ext_main(void* r) {
 
     // Register attributes
     CLASS_ATTR_LONG(c, "port", 0, t_maxmcp_server, port);
-    CLASS_ATTR_LABEL(c, "port", 0, "UDP Port");
+    CLASS_ATTR_LABEL(c, "port", 0, "WebSocket Port");
     CLASS_ATTR_DEFAULT(c, "port", 0, "7400");
     CLASS_ATTR_ACCESSORS(c, "port", nullptr, (method)maxmcp_server_port_set);
 
@@ -55,7 +55,7 @@ void ext_main(void* r) {
     class_register(CLASS_BOX, c);
     maxmcp_server_class = c;
 
-    post("MaxMCP Server external loaded (UDP mode)");
+    post("MaxMCP Server external loaded (WebSocket mode)");
 }
 
 void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
@@ -80,9 +80,6 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
         // Create outlet for JSON-RPC responses (optional, for debugging)
         x->outlet_log = outlet_new(x, nullptr);
 
-        // Create qelem for deferred message processing
-        x->qelem = qelem_new(x, (method)maxmcp_server_process_messages);
-
         // Process attributes
         attr_args_process(x, argc, argv);
 
@@ -91,21 +88,48 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
             x->port = std::atoi(env_port);
         }
 
-        // Create UDP server
-        x->udp_server = new UDPServer((int)x->port);
+        // Create WebSocket server
+        x->ws_server = new WebSocketServer((int)x->port);
 
-        // Set message callback - triggers qelem when message arrives
-        x->udp_server->set_message_callback([x](const std::string& message) {
-            // Message received callback (runs in UDP thread)
-            // Trigger qelem to process in Max main thread
-            qelem_set(x->qelem);
+        // Set message callback - called when message arrives from client
+        x->ws_server->set_message_callback([x](const std::string& client_id, const std::string& message) {
+            try {
+                if (x->debug) {
+                    ConsoleLogger::log(("Processing WebSocket message from " + client_id + " (" + std::to_string(message.length()) + " bytes)").c_str());
+                }
+
+                // Route to MCP server (runs in WebSocket thread, but MCPServer is thread-safe)
+                std::string response = MCPServer::get_instance()->handle_request_string(message);
+
+                // Send response back via WebSocket
+                x->ws_server->send_to_client(client_id, response);
+
+                if (x->debug) {
+                    ConsoleLogger::log(("Response sent to " + client_id + " (" + std::to_string(response.length()) + " bytes)").c_str());
+                }
+
+            } catch (const std::exception& e) {
+                object_error((t_object*)x, "Request processing error: %s", e.what());
+
+                // Send error response
+                json error_response = {
+                    {"jsonrpc", "2.0"},
+                    {"error", {
+                        {"code", -32603},
+                        {"message", std::string("Internal error: ") + e.what()}
+                    }},
+                    {"id", nullptr}
+                };
+
+                x->ws_server->send_to_client(client_id, error_response.dump());
+            }
         });
 
-        // Start UDP server
-        if (!x->udp_server->start()) {
-            object_error((t_object*)x, "Failed to start UDP server");
-            delete x->udp_server;
-            x->udp_server = nullptr;
+        // Start WebSocket server
+        if (!x->ws_server->start()) {
+            object_error((t_object*)x, "Failed to start WebSocket server");
+            delete x->ws_server;
+            x->ws_server = nullptr;
             return nullptr;
         }
 
@@ -116,7 +140,7 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
         g_server_instance = x;
 
         object_post((t_object*)x, "MaxMCP Server started on port %ld", x->port);
-        ConsoleLogger::log(("maxmcp.server: UDP server listening on port " + std::to_string(x->port)).c_str());
+        ConsoleLogger::log(("maxmcp.server: WebSocket server listening on port " + std::to_string(x->port)).c_str());
     }
 
     return x;
@@ -127,17 +151,11 @@ void maxmcp_server_free(t_maxmcp_server* x) {
         // Stop running
         x->running = false;
 
-        // Stop UDP server
-        if (x->udp_server) {
-            x->udp_server->stop();
-            delete x->udp_server;
-            x->udp_server = nullptr;
-        }
-
-        // Free qelem
-        if (x->qelem) {
-            qelem_free(x->qelem);
-            x->qelem = nullptr;
+        // Stop WebSocket server
+        if (x->ws_server) {
+            x->ws_server->stop();
+            delete x->ws_server;
+            x->ws_server = nullptr;
         }
 
         // Stop MCP server
@@ -171,71 +189,6 @@ t_maxmcp_server* maxmcp_server_get_instance() {
     return g_server_instance;
 }
 
-/**
- * @brief Handle incoming MCP request from UDP
- *
- * Receives JSON-RPC request as Max message, processes it, and outputs response to outlet.
- *
- * @param x Server instance
- * @param s Symbol (unused)
- * @param argc Number of atoms
- * @param argv Array of atoms containing JSON-RPC request string
- */
-void maxmcp_server_request(t_maxmcp_server* x, t_symbol* s, long argc, t_atom* argv) {
-    if (argc < 1) {
-        object_error((t_object*)x, "request: expected JSON-RPC string");
-        return;
-    }
-
-    // Build JSON string from atoms (could be single symbol or list of symbols)
-    std::string request;
-    if (atom_gettype(argv) == A_SYM) {
-        // Single symbol
-        request = atom_getsym(argv)->s_name;
-    } else {
-        // List of atoms - concatenate them
-        for (long i = 0; i < argc; i++) {
-            if (atom_gettype(&argv[i]) == A_SYM) {
-                request += atom_getsym(&argv[i])->s_name;
-            } else if (atom_gettype(&argv[i]) == A_LONG) {
-                request += std::to_string(atom_getlong(&argv[i]));
-            } else if (atom_gettype(&argv[i]) == A_FLOAT) {
-                request += std::to_string(atom_getfloat(&argv[i]));
-            }
-        }
-    }
-
-    try {
-        ConsoleLogger::log(("MCP Request received (" + std::to_string(request.length()) + " bytes)").c_str());
-
-        // Route to MCP server
-        std::string response = MCPServer::get_instance()->handle_request_string(request);
-
-        // Output response to outlet (will be sent via UDP)
-        t_atom response_atom;
-        atom_setsym(&response_atom, gensym(response.c_str()));
-        outlet_anything(x->outlet_log, gensym("response"), 1, &response_atom);
-
-        ConsoleLogger::log(("MCP Response sent (" + std::to_string(response.length()) + " bytes)").c_str());
-
-    } catch (const std::exception& e) {
-        object_error((t_object*)x, "request error: %s", e.what());
-
-        // Send error response
-        json error_response = {
-            {"jsonrpc", "2.0"},
-            {"error", {
-                {"code", -32603},
-                {"message", std::string("Internal error: ") + e.what()}
-            }},
-            {"id", nullptr}
-        };
-
-        t_atom error_atom;
-        atom_setsym(&error_atom, gensym(error_response.dump().c_str()));
-        outlet_anything(x->outlet_log, gensym("response"), 1, &error_atom);
-    }
-}
 
 /**
  * @brief Attribute setter for port
@@ -248,49 +201,3 @@ t_max_err maxmcp_server_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_
     return MAX_ERR_NONE;
 }
 
-/**
- * @brief Process UDP messages (called periodically or via idle)
- *
- * This should be called from Max's main thread to safely process
- * messages received from UDP clients.
- */
-void maxmcp_server_process_messages(t_maxmcp_server* x) {
-    if (!x || !x->udp_server) {
-        return;
-    }
-
-    // Process all pending messages
-    std::string message;
-    while (x->udp_server->get_received_message(message)) {
-        try {
-            if (x->debug) {
-                ConsoleLogger::log(("Processing UDP message (" + std::to_string(message.length()) + " bytes)").c_str());
-            }
-
-            // Route to MCP server
-            std::string response = MCPServer::get_instance()->handle_request_string(message);
-
-            // Send response back via UDP
-            x->udp_server->send_message(response);
-
-            if (x->debug) {
-                ConsoleLogger::log(("Response sent via UDP (" + std::to_string(response.length()) + " bytes)").c_str());
-            }
-
-        } catch (const std::exception& e) {
-            object_error((t_object*)x, "Request processing error: %s", e.what());
-
-            // Send error response
-            json error_response = {
-                {"jsonrpc", "2.0"},
-                {"error", {
-                    {"code", -32603},
-                    {"message", std::string("Internal error: ") + e.what()}
-                }},
-                {"id", nullptr}
-            };
-
-            x->udp_server->send_message(error_response.dump());
-        }
-    }
-}

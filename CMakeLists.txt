@@ -10,10 +10,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # macOS Universal Binary (Apple Silicon + Intel)
+# NOTE: Universal build disabled for maxmcp.server due to libwebsockets arm64-only dependency
+# Client builds can still use Universal Binary
 if(APPLE)
     if(NOT CMAKE_OSX_ARCHITECTURES)
-        set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures" FORCE)
-        message(STATUS "Building Universal Binary: arm64 and x86_64")
+        if(BUILD_MODE STREQUAL "server")
+            set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures" FORCE)
+            message(STATUS "Building for arm64 only (server mode requires native libwebsockets)")
+        else()
+            set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures" FORCE)
+            message(STATUS "Building Universal Binary: arm64 and x86_64")
+        endif()
     endif()
 endif()
 
@@ -46,6 +53,9 @@ include_directories(
 # Find nlohmann/json
 find_package(nlohmann_json 3.11.0 REQUIRED)
 
+# Find libwebsockets
+find_package(Libwebsockets REQUIRED)
+
 # Shared utility files
 set(UTILS_SRC
     src/utils/uuid_generator.cpp
@@ -62,8 +72,8 @@ set(SERVER_SRC
     src/maxmcp_server.h
     src/mcp_server.cpp
     src/mcp_server.h
-    src/udp_server.cpp
-    src/udp_server.h
+    src/websocket_server.cpp
+    src/websocket_server.h
     ${UTILS_SRC}
 )
 
@@ -102,6 +112,7 @@ target_link_libraries(
     ${PROJECT_NAME}
     PRIVATE
     nlohmann_json::nlohmann_json
+    websockets_shared
 )
 
 # Max SDK post-target configuration

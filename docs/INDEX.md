@@ -96,19 +96,21 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 MaxMCP development follows a structured 4-phase approach:
 
-1. **Phase 1: MVP** ✅ **COMPLETE** (2025-10-19)
+1. **Phase 1: MVP** ✅ **COMPLETE** (2025-10-23)
    - ✅ Max SDK setup
    - ✅ Basic external object (maxmcp client + maxmcp.server)
-   - ✅ stdio communication (JSON-RPC over stdin/stdout)
+   - ✅ WebSocket communication (JSON-RPC over WebSocket + stdio-to-WebSocket bridge)
+   - ✅ WebSocketServer implementation (libwebsockets 4.4.1)
    - ✅ 3 core tools: `get_console_log()`, `list_active_patches()`, `add_max_object()`
    - ✅ Unit testing framework (Google Test)
    - ✅ Build system (CMake with BUILD_MODE parameter)
+   - ✅ WebSocket tests (14 tests, 10 enabled passing)
 
    **Delivered**:
-   - maxmcp.server.mxo (MCP server singleton)
-   - maxmcp.mxo (Client object, multi-instance)
-   - Universal Binary support (arm64 + x86_64)
-   - 15/28 unit tests passing
+   - maxmcp.server.mxo (MCP WebSocket server singleton, arm64)
+   - WebSocketServer class (C++ / libwebsockets)
+   - WebSocket test suite (unit tests for connection, authentication, multi-client)
+   - websocket-mcp-bridge.js (planned for Phase 2)
 
 2. **Phase 2: Core** (Planned - Week 3-4)
    - All MCP tools

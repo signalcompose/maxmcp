@@ -17,7 +17,7 @@
 #include <atomic>
 
 // Forward declaration
-class UDPServer;
+class WebSocketServer;
 
 /**
  * @brief MaxMCP Server object structure
@@ -33,14 +33,11 @@ typedef struct _maxmcp_server {
     std::string protocol_version; ///< Negotiated protocol version
     std::atomic<bool> running; ///< Server running state
 
-    // UDP server
-    UDPServer* udp_server;    ///< UDP server instance
-
-    // Message processing
-    void* qelem;              ///< Queue element for deferred message processing
+    // WebSocket server
+    WebSocketServer* ws_server;    ///< WebSocket server instance
 
     // Attributes
-    t_atom_long port;         ///< UDP server port (@port attribute)
+    t_atom_long port;         ///< WebSocket server port (@port attribute)
     bool debug;               ///< Debug mode (@debug attribute)
 
 } t_maxmcp_server;
@@ -52,8 +49,5 @@ void maxmcp_server_assist(t_maxmcp_server* x, void* b, long m, long a, char* s);
 
 // Attribute accessors
 t_max_err maxmcp_server_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_atom* av);
-
-// Message processing
-void maxmcp_server_process_messages(t_maxmcp_server* x);
 
 #endif // MAXMCP_SERVER_H
