@@ -55,10 +55,12 @@ public:
      * @brief List all active patches
      *
      * Thread-safe. Returns JSON array of patch metadata.
+     * Optionally filter by group name.
      *
+     * @param group_filter Optional group name to filter by (empty = all patches)
      * @return JSON object with patches array and count
      */
-    static json list_patches();
+    static json list_patches(const std::string& group_filter = "");
 
     /**
      * @brief Find patch by ID
