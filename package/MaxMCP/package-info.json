@@ -21,6 +21,9 @@
       "maxmcp.mxo",
       "maxmcp.server.mxo"
     ],
+    "support": [
+      "maxmcp-bridge"
+    ],
     "help": [
       "maxmcp.maxhelp"
     ],

@@ -160,3 +160,7 @@ bridge/node_modules/
 bridge/dist/
 bridge/coverage/
 bridge/package-lock.json
+
+# Max Package build artifacts (installed by install-package.sh)
+package/MaxMCP/externals/*.mxo
+package/MaxMCP/support/maxmcp-bridge
