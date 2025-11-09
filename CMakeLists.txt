@@ -119,6 +119,82 @@ target_link_libraries(
 include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 
 #############################################################
+# BUNDLE DEPENDENCIES (macOS only)
+#############################################################
+if(APPLE AND BUILD_MODE STREQUAL "server")
+    # Create Frameworks directory in bundle
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks"
+        COMMENT "Creating Frameworks directory"
+    )
+
+    # Copy and fix dylib paths
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        COMMAND ${CMAKE_COMMAND} -E copy
+            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        COMMAND ${CMAKE_COMMAND} -E copy
+            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        # Fix install names in main executable
+        COMMAND install_name_tool -change
+            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
+            @loader_path/../Frameworks/libwebsockets.20.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+        COMMAND install_name_tool -change
+            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
+            @loader_path/../Frameworks/libssl.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+        COMMAND install_name_tool -change
+            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
+            @loader_path/../Frameworks/libcrypto.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+        # Fix install names in libwebsockets.20.dylib itself
+        COMMAND install_name_tool -id
+            @loader_path/../Frameworks/libwebsockets.20.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
+        COMMAND install_name_tool -change
+            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
+            @loader_path/libssl.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
+        COMMAND install_name_tool -change
+            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
+            @loader_path/libcrypto.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
+        # Fix install names in libssl.3.dylib itself
+        COMMAND install_name_tool -id
+            @loader_path/../Frameworks/libssl.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
+        COMMAND install_name_tool -change
+            /opt/homebrew/Cellar/openssl@3/3.6.0/lib/libcrypto.3.dylib
+            @loader_path/libcrypto.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
+        # Fix install name in libcrypto.3.dylib itself
+        COMMAND install_name_tool -id
+            @loader_path/../Frameworks/libcrypto.3.dylib
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libcrypto.3.dylib"
+        COMMENT "Bundling dependencies and fixing all install names"
+        VERBATIM
+    )
+endif()
+
+#############################################################
+# CODE SIGNING (macOS only)
+#############################################################
+if(APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND find "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>" -name "*.backup" -delete
+        COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
+        COMMENT "Code signing ${OUTPUT_NAME} with ad-hoc signature"
+        VERBATIM
+    )
+endif()
+
+#############################################################
 # INSTALLATION
 #############################################################
 
