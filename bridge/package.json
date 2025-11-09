@@ -1,0 +1,42 @@
+{
+  "name": "maxmcp-bridge",
+  "version": "1.0.0",
+  "description": "WebSocket bridge for MaxMCP - translates stdio MCP to WebSocket",
+  "main": "websocket-mcp-bridge.js",
+  "bin": "websocket-mcp-bridge.js",
+  "scripts": {
+    "build": "./build.sh",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"],
+    "collectCoverageFrom": ["websocket-mcp-bridge.js"],
+    "coverageDirectory": "coverage"
+  },
+  "pkg": {
+    "targets": [
+      "node18-macos-arm64"
+    ],
+    "outputPath": "dist",
+    "assets": []
+  },
+  "dependencies": {
+    "ws": "^8.14.0"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "pkg": "^5.8.1"
+  },
+  "keywords": [
+    "maxmsp",
+    "mcp",
+    "websocket",
+    "bridge",
+    "claude"
+  ],
+  "author": "SignalCompose",
+  "license": "MIT"
+}
