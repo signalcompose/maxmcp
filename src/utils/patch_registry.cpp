@@ -37,7 +37,7 @@ void PatchRegistry::unregister_patch(t_maxmcp* patch) {
     }
 }
 
-json PatchRegistry::list_patches() {
+json PatchRegistry::list_patches(const std::string& group_filter) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     json patches = json::array();
@@ -45,19 +45,48 @@ json PatchRegistry::list_patches() {
     for (auto* patch : patches_) {
         if (!patch) continue;
 
-        patches.push_back({
+        // Get group name (may be empty)
+        std::string group_name = "";
+        if (patch->group && patch->group->s_name) {
+            group_name = patch->group->s_name;
+        }
+
+        // Apply group filter if specified
+        if (!group_filter.empty() && group_name != group_filter) {
+            continue; // Skip patches that don't match the filter
+        }
+
+        // Build patch entry
+        json patch_entry = {
             {"patch_id", patch->patch_id},
             {"display_name", patch->display_name},
             {"patcher_name", patch->patcher_name}
-        });
+        };
+
+        // Add group field if set
+        if (!group_name.empty()) {
+            patch_entry["group"] = group_name;
+        }
+
+        patches.push_back(patch_entry);
     }
 
-    return {
+    // Build result
+    json result = {
         {"result", {
             {"patches", patches},
             {"count", patches.size()}
         }}
     };
+
+    // Add filter info if filter was applied
+    if (!group_filter.empty()) {
+        result["result"]["filter"] = {
+            {"group", group_filter}
+        };
+    }
+
+    return result;
 }
 
 t_maxmcp* PatchRegistry::find_patch(const std::string& patch_id) {
@@ -93,14 +122,27 @@ json PatchRegistry::get_patch_info(const std::string& patch_id) {
         };
     }
 
-    // Return detailed patch information
+    // Get group name (may be empty)
+    std::string group_name = "";
+    if (patch->group && patch->group->s_name) {
+        group_name = patch->group->s_name;
+    }
+
+    // Build patch information
+    json patch_info = {
+        {"patch_id", patch->patch_id},
+        {"display_name", patch->display_name},
+        {"patcher_name", patch->patcher_name},
+        {"has_patcher_ref", patch->patcher != nullptr}
+    };
+
+    // Add group field if set
+    if (!group_name.empty()) {
+        patch_info["group"] = group_name;
+    }
+
     return {
-        {"result", {
-            {"patch_id", patch->patch_id},
-            {"display_name", patch->display_name},
-            {"patcher_name", patch->patcher_name},
-            {"has_patcher_ref", patch->patcher != nullptr}
-        }}
+        {"result", patch_info}
     };
 }
 
@@ -131,11 +173,25 @@ json PatchRegistry::get_frontmost_patch() {
         };
     }
 
+    // Get group name (may be empty)
+    std::string group_name = "";
+    if (patch->group && patch->group->s_name) {
+        group_name = patch->group->s_name;
+    }
+
+    // Build patch information
+    json patch_info = {
+        {"patch_id", patch->patch_id},
+        {"display_name", patch->display_name},
+        {"patcher_name", patch->patcher_name}
+    };
+
+    // Add group field if set
+    if (!group_name.empty()) {
+        patch_info["group"] = group_name;
+    }
+
     return {
-        {"result", {
-            {"patch_id", patch->patch_id},
-            {"display_name", patch->display_name},
-            {"patcher_name", patch->patcher_name}
-        }}
+        {"result", patch_info}
     };
 }

@@ -507,10 +507,15 @@ json MCPServer::handle_request(const json& req) {
                     },
                     {
                         {"name", "list_active_patches"},
-                        {"description", "List all registered MaxMCP client patches"},
+                        {"description", "List all registered MaxMCP client patches. Optionally filter by group name."},
                         {"inputSchema", {
                             {"type", "object"},
-                            {"properties", {}}
+                            {"properties", {
+                                {"group", {
+                                    {"type", "string"},
+                                    {"description", "Optional group name to filter patches (e.g., 'synths', 'effects')"}
+                                }}
+                            }}
                         }}
                     },
                     {
@@ -744,7 +749,9 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
     } else if (tool == "list_active_patches") {
         // Get list of active patches from global registry
-        return PatchRegistry::list_patches();
+        // Optionally filter by group
+        std::string group_filter = params.value("group", "");
+        return PatchRegistry::list_patches(group_filter);
 
     } else if (tool == "get_patch_info") {
         // Get detailed information about a patch
