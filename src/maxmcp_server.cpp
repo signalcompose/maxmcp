@@ -32,7 +32,7 @@ static t_maxmcp_server* g_server_instance = nullptr;
  *
  * @param r Module reference (unused)
  */
-void ext_main(void* r) {
+void ext_main_agent(void* r) {
     t_class* c;
 
     c = class_new("maxmcp.agent",
