@@ -15,9 +15,35 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 
 // Static member initialization
 MCPServer* MCPServer::instance_ = nullptr;
+
+// Helper structure for synchronizing deferred results
+struct DeferredResult {
+    json result;
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool completed = false;
+
+    // Wait for completion with timeout
+    bool wait_for(std::chrono::milliseconds timeout) {
+        std::unique_lock<std::mutex> lock(mutex);
+        return cv.wait_for(lock, timeout, [this] { return completed; });
+    }
+
+    // Notify waiting thread of completion
+    void notify() {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            completed = true;
+        }
+        cv.notify_one();
+    }
+};
 
 // Structures for defer callback data
 struct t_add_object_data {
@@ -27,6 +53,7 @@ struct t_add_object_data {
     double y;
     std::string varname;
     json arguments;  // Object arguments (e.g., [440] for cycle~)
+    json attributes; // Object attributes (e.g., {"bgcolor": [1.0, 0.5, 0.0, 1.0]})
 };
 
 struct t_remove_object_data {
@@ -59,14 +86,14 @@ struct t_disconnect_objects_data {
 
 struct t_get_objects_data {
     t_maxmcp* patch;
-    json* result;  // Pointer to store result
+    DeferredResult* deferred_result;  // Pointer to DeferredResult for synchronization
 };
 
 struct t_get_position_data {
     t_maxmcp* patch;
     double width;
     double height;
-    json* result;  // Pointer to store result
+    DeferredResult* deferred_result;  // Pointer to DeferredResult for synchronization
 };
 
 // Defer callback for adding Max object
@@ -101,8 +128,8 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         }
     }
 
-    // Create object with newobject_sprintf
-    t_object* obj = (t_object*)newobject_sprintf(data->patch->patcher, "@maxclass %s @patching_rect %.2f %.2f 50.0 20.0",
+    // Create object with newobject_sprintf (without size - use Max default)
+    t_object* obj = (t_object*)newobject_sprintf(data->patch->patcher, "@maxclass %s @patching_position %.2f %.2f",
                                                    obj_string.c_str(), data->x, data->y);
 
     if (obj) {
@@ -110,6 +137,36 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         if (!data->varname.empty()) {
             object_attr_setsym(obj, gensym("varname"), gensym(data->varname.c_str()));
         }
+
+        // Set attributes if provided (BEFORE bringtofront to avoid z-order issues)
+        if (!data->attributes.is_null() && data->attributes.is_object()) {
+            for (auto& [attr_name, attr_value] : data->attributes.items()) {
+                if (attr_value.is_array() && attr_value.size() == 4) {
+                    // Color array [r, g, b, a]
+                    t_atom color_atoms[4];
+                    for (size_t i = 0; i < 4; i++) {
+                        atom_setfloat(&color_atoms[i], attr_value[i].get<double>());
+                    }
+                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 4, color_atoms);
+                } else if (attr_value.is_number()) {
+                    double val = attr_value.get<double>();
+                    t_atom a;
+                    atom_setfloat(&a, val);
+                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 1, &a);
+                } else if (attr_value.is_string()) {
+                    std::string val = attr_value.get<std::string>();
+                    t_atom a;
+                    atom_setsym(&a, gensym(val.c_str()));
+                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 1, &a);
+                }
+            }
+        }
+
+        // Bring object to front AFTER setting attributes (so it appears above panels/backgrounds)
+        object_method(obj, gensym("bringtofront"));
+
+        // Enable presentation mode visibility by default
+        object_attr_setlong(obj, gensym("presentation"), 1);
 
         ConsoleLogger::log(("Object created: " + obj_string).c_str());
     } else {
@@ -229,54 +286,54 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
         return;
     }
 
-    t_connect_objects_data* data = (t_connect_objects_data*)atom_getobj(argv);
+    // Retrieve data from argv
+    t_connect_objects_data* data = nullptr;
+    if (argv[0].a_type == A_LONG) {
+        data = reinterpret_cast<t_connect_objects_data*>(argv[0].a_w.w_long);
+    }
+    if (!data) {
+        ConsoleLogger::log("ERROR: Invalid connect data pointer");
+        return;
+    }
 
-    if (!data || !data->patch || !data->patch->patcher) {
+    // Get patcher from patch object
+    if (!data->patch || !data->patch->patcher) {
+        ConsoleLogger::log("ERROR: Invalid patch or patcher in connect data");
         delete data;
         return;
     }
 
-    // Find source and destination boxes
     t_object* patcher = data->patch->patcher;
+
+    // Find source and destination boxes by varname
     t_object* src_box = nullptr;
     t_object* dst_box = nullptr;
 
-    for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
-        t_symbol* varname = object_attr_getsym(box, gensym("varname"));
-
-        if (varname && varname->s_name) {
-            if (data->src_varname == varname->s_name) {
-                src_box = box;
-            }
-            if (data->dst_varname == varname->s_name) {
-                dst_box = box;
-            }
-
-            if (src_box && dst_box) break;
+    t_object* box = nullptr;
+    for (box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
+        t_symbol* varname = jbox_get_varname(box);
+        if (varname == gensym(data->src_varname.c_str())) {
+            src_box = box;
+        } else if (varname == gensym(data->dst_varname.c_str())) {
+            dst_box = box;
         }
     }
 
-    if (!src_box) {
-        ConsoleLogger::log(("Source object not found: " + data->src_varname).c_str());
+    if (!src_box || !dst_box) {
+        ConsoleLogger::log("ERROR: Cannot find source or destination box");
         delete data;
         return;
     }
 
-    if (!dst_box) {
-        ConsoleLogger::log(("Destination object not found: " + data->dst_varname).c_str());
-        delete data;
-        return;
-    }
-
-    // Create connection using object_method
-    // patcher connect src_box outlet dst_box inlet
     t_atom connect_args[4];
     atom_setobj(&connect_args[0], src_box);
     atom_setlong(&connect_args[1], data->outlet);
     atom_setobj(&connect_args[2], dst_box);
     atom_setlong(&connect_args[3], data->inlet);
 
-    object_method_typed(patcher, gensym("connect"), 4, connect_args, nullptr);
+    // Create connection
+    t_atom result;
+    object_method_typed(patcher, gensym("connect"), 4, connect_args, &result);
 
     std::string msg = "Connected: " + data->src_varname + "[" + std::to_string(data->outlet) + "] -> " +
                       data->dst_varname + "[" + std::to_string(data->inlet) + "]";
@@ -292,9 +349,17 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
         return;
     }
 
-    t_disconnect_objects_data* data = (t_disconnect_objects_data*)atom_getobj(argv);
+    t_disconnect_objects_data* data = nullptr;
+    if (argv[0].a_type == A_LONG) {
+        data = reinterpret_cast<t_disconnect_objects_data*>(argv[0].a_w.w_long);
+    }
+    if (!data) {
+        ConsoleLogger::log("ERROR: Invalid disconnect data pointer");
+        return;
+    }
 
-    if (!data || !data->patch || !data->patch->patcher) {
+    if (!data->patch || !data->patch->patcher) {
+        ConsoleLogger::log("ERROR: Invalid patch or patcher in disconnect data");
         delete data;
         return;
     }
@@ -366,7 +431,7 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
 
     t_get_objects_data* data = (t_get_objects_data*)atom_getobj(argv);
 
-    if (!data || !data->patch || !data->patch->patcher || !data->result) {
+    if (!data || !data->patch || !data->patch->patcher || !data->deferred_result) {
         if (data) delete data;
         return;
     }
@@ -402,13 +467,19 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         objects.push_back(obj_info);
     }
 
-    *(data->result) = {
-        {"result", {
-            {"patch_id", data->patch->patch_id},
-            {"objects", objects},
-            {"count", objects.size()}
-        }}
+    // Store result and notify waiting thread
+    data->deferred_result->result = {
+        {"patch_id", data->patch->patch_id},
+        {"objects", objects},
+        {"count", objects.size()}
     };
+
+    // Log the result to console for debugging
+    std::string log_msg = "Objects in patch " + std::string(data->patch->patch_id) + ": " + std::to_string(objects.size()) + " objects";
+    ConsoleLogger::log(log_msg.c_str());
+
+    // Notify waiting thread that result is ready
+    data->deferred_result->notify();
 
     delete data;
 }
@@ -422,7 +493,7 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
 
     t_get_position_data* data = (t_get_position_data*)atom_getobj(argv);
 
-    if (!data || !data->patch || !data->patch->patcher || !data->result) {
+    if (!data || !data->patch || !data->patch->patcher || !data->deferred_result) {
         if (data) delete data;
         return;
     }
@@ -448,12 +519,14 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
     double new_x = max_x + margin;
     double new_y = start_y;
 
-    *(data->result) = {
-        {"result", {
-            {"position", json::array({new_x, new_y})},
-            {"rationale", "Positioned to the right of existing objects with 50px margin"}
-        }}
+    // Store result and notify waiting thread
+    data->deferred_result->result = {
+        {"position", json::array({new_x, new_y})},
+        {"rationale", "Positioned to the right of existing objects with 50px margin"}
     };
+
+    // Notify waiting thread that result is ready
+    data->deferred_result->notify();
 
     delete data;
 }
@@ -590,6 +663,10 @@ json MCPServer::handle_request(const json& req) {
                                 {"arguments", {
                                     {"type", "array"},
                                     {"description", "Object arguments (e.g., [440] for 'cycle~ 440')"}
+                                }},
+                                {"attributes", {
+                                    {"type", "object"},
+                                    {"description", "Object attributes (e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]})"}
                                 }}
                             }},
                             {"required", json::array({"patch_id", "obj_type", "position"})}
@@ -888,6 +965,22 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
         json arguments = params.value("arguments", json::array());
 
+        // Parse attributes (handle both string and object)
+        json attributes = json::object();
+        if (params.contains("attributes")) {
+            if (params["attributes"].is_string()) {
+                // Parse JSON string
+                try {
+                    attributes = json::parse(params["attributes"].get<std::string>());
+                } catch (const json::exception& e) {
+                    ConsoleLogger::log(("Failed to parse attributes JSON: " + std::string(e.what())).c_str());
+                }
+            } else if (params["attributes"].is_object()) {
+                // Use object directly
+                attributes = params["attributes"];
+            }
+        }
+
         if (patch_id.empty() || obj_type.empty()) {
             return {
                 {"error", {
@@ -928,7 +1021,8 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             x,
             y,
             varname,
-            arguments
+            arguments,
+            attributes
         };
 
         // Create atom to hold pointer
@@ -1094,7 +1188,7 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
         // Create atom to hold pointer
         t_atom a;
-        atom_setobj(&a, data);
+        atom_setlong(&a, reinterpret_cast<t_atom_long>(data));
 
         // Defer to main thread
         defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
@@ -1149,7 +1243,7 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
         // Create atom to hold pointer
         t_atom a;
-        atom_setobj(&a, data);
+        atom_setlong(&a, reinterpret_cast<t_atom_long>(data));
 
         // Defer to main thread
         defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
@@ -1189,29 +1283,37 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             };
         }
 
-        // Create result holder
-        json result;
+        // Allocate DeferredResult on heap (lives until callback completes)
+        DeferredResult* deferred_result = new DeferredResult();
+
         t_get_objects_data* data = new t_get_objects_data{
             patch,
-            &result
+            deferred_result
         };
 
         // Create atom to hold pointer
         t_atom a;
         atom_setobj(&a, data);
 
-        // Defer to main thread and wait
+        // Defer to main thread
         defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, &a);
 
-        // Note: This is a simplified implementation that returns immediately
-        // In a real implementation, we would need to synchronize with the defer callback
-        // For now, return a success status
-        return {
-            {"result", {
-                {"status", "deferred"},
-                {"message", "Object list retrieval initiated"}
-            }}
-        };
+        // Wait for defer callback to complete (timeout: 5 seconds)
+        if (!deferred_result->wait_for(std::chrono::milliseconds(5000))) {
+            delete deferred_result;
+            return {
+                {"error", {
+                    {"code", -32603},
+                    {"message", "Timeout waiting for patch object list"}
+                }}
+            };
+        }
+
+        // Success - copy result before cleanup
+        json result = deferred_result->result;
+        delete deferred_result;
+
+        return {{"result", result}};
 
     } else if (tool == "get_avoid_rect_position") {
         // Parse parameters
@@ -1239,31 +1341,39 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             };
         }
 
-        // Create result holder
-        json result;
+        // Allocate DeferredResult on heap (lives until callback completes)
+        DeferredResult* deferred_result = new DeferredResult();
+
         t_get_position_data* data = new t_get_position_data{
             patch,
             width,
             height,
-            &result
+            deferred_result
         };
 
         // Create atom to hold pointer
         t_atom a;
         atom_setobj(&a, data);
 
-        // Defer to main thread and wait
+        // Defer to main thread
         defer(patch, (method)get_position_deferred, gensym("get_position"), 1, &a);
 
-        // Note: This is a simplified implementation
-        // For now, return calculated position directly (simplified, not thread-safe)
-        // In production, this would require proper synchronization
-        return {
-            {"result", {
-                {"status", "deferred"},
-                {"message", "Position calculation initiated"}
-            }}
-        };
+        // Wait for defer callback to complete (timeout: 5 seconds)
+        if (!deferred_result->wait_for(std::chrono::milliseconds(5000))) {
+            delete deferred_result;
+            return {
+                {"error", {
+                    {"code", -32603},
+                    {"message", "Timeout waiting for position calculation"}
+                }}
+            };
+        }
+
+        // Success - copy result before cleanup
+        json result = deferred_result->result;
+        delete deferred_result;
+
+        return {{"result", result}};
 
     } else {
         return {

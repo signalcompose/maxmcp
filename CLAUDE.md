@@ -398,6 +398,17 @@ cp -R package/MaxMCP/examples "$HOME/Documents/Max 9/Packages/MaxMCP/"
 cp -R package/MaxMCP/support "$HOME/Documents/Max 9/Packages/MaxMCP/"
 ```
 
+**🚨 CRITICAL: After building, you MUST copy to Max Packages AND restart Max**:
+1. **Build**: `cmake --build build` → outputs to `/Users/yamato/externals/maxmcp.mxo`
+2. **Deploy**: Remove old and copy new external to Max Packages (see commands above)
+3. **Restart Max**: Close and reopen Max application to load new binary
+
+**Why this matters**:
+- Max caches externals in memory
+- Simply building does NOT update running Max
+- Old external remains loaded until Max restarts
+- This is the most common source of "my changes don't work" issues
+
 **Usage**:
 ```
 [maxmcp @mode agent]                              ← MCP server

@@ -36,7 +36,7 @@
 			{
 				"box": {
 					"maxclass": "comment",
-					"text": "1. Patch auto-registers with ID \"synth1\"",
+					"text": "1. Patch auto-registers with ID \"group-test\"",
 					"patching_rect": [20, 110, 450, 20]
 				}
 			},
@@ -66,7 +66,7 @@
 			{
 				"box": {
 					"maxclass": "comment",
-					"text": "\"maxmcp client initialized (ID: synth1)\"",
+					"text": "\"maxmcp client initialized (ID: group-test)\"",
 					"textcolor": [0.0, 0.7, 0.0, 1.0],
 					"fontname": "Monaco",
 					"fontsize": 10,
@@ -95,7 +95,7 @@
 			{
 				"box": {
 					"maxclass": "comment",
-					"text": "\"List all active patches\" → Should show patch_id: \"synth1\", group: \"synths\"",
+					"text": "\"List all active patches\" → Should show patch_id: \"group-test\", group: \"synths\"",
 					"patching_rect": [20, 290, 650, 20]
 				}
 			},
@@ -109,7 +109,7 @@
 			{
 				"box": {
 					"maxclass": "newobj",
-					"text": "maxmcp @mode patch @alias synth1 @group synths",
+					"text": "maxmcp @mode patch @alias group-test @group synths",
 					"patching_rect": [20, 360, 340, 22],
 					"numinlets": 0,
 					"numoutlets": 0,

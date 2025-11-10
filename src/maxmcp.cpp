@@ -58,34 +58,63 @@ void ext_main(void* r) {
     class_addmethod(c, (method)maxmcp_start, "start", 0);
     class_addmethod(c, (method)maxmcp_stop, "stop", 0);
 
-    // Mode attribute
+    // ========================================
+    // Basic Configuration
+    // ========================================
+
+    // Mode attribute (required)
     CLASS_ATTR_SYM(c, "mode", 0, t_maxmcp, mode);
     CLASS_ATTR_LABEL(c, "mode", 0, "Operation Mode");
     CLASS_ATTR_ENUM(c, "mode", 0, "agent patch");
     CLASS_ATTR_DEFAULT(c, "mode", 0, "patch");
     CLASS_ATTR_BASIC(c, "mode", 0);
     CLASS_ATTR_SAVE(c, "mode", 0);
+    CLASS_ATTR_CATEGORY(c, "mode", 0, "Basic");
+    CLASS_ATTR_STYLE(c, "mode", 0, "enum");
+    CLASS_METHOD_ATTR_PARSE(c, "mode", "description", gensym("symbol"), 0,
+        "\"agent\" for MCP server mode, \"patch\" for client mode");
 
-    // Agent mode attributes
+    // ========================================
+    // Agent Mode Attributes
+    // ========================================
+
     CLASS_ATTR_LONG(c, "port", 0, t_maxmcp, port);
     CLASS_ATTR_LABEL(c, "port", 0, "WebSocket Port");
     CLASS_ATTR_DEFAULT(c, "port", 0, "7400");
     CLASS_ATTR_ACCESSORS(c, "port", nullptr, (method)maxmcp_port_set);
+    CLASS_ATTR_CATEGORY(c, "port", 0, "Agent Mode");
+    CLASS_ATTR_STYLE(c, "port", 0, "text");
+    CLASS_METHOD_ATTR_PARSE(c, "port", "description", gensym("symbol"), 0,
+        "WebSocket port for agent mode (default: 7400)");
 
     CLASS_ATTR_CHAR(c, "debug", 0, t_maxmcp, debug);
     CLASS_ATTR_STYLE_LABEL(c, "debug", 0, "onoff", "Debug Mode");
     CLASS_ATTR_DEFAULT(c, "debug", 0, "0");
+    CLASS_ATTR_CATEGORY(c, "debug", 0, "Agent Mode");
+    CLASS_METHOD_ATTR_PARSE(c, "debug", "description", gensym("symbol"), 0,
+        "Enable debug logging (0=off, 1=on)");
 
-    // Patch mode attributes
+    // ========================================
+    // Patch Mode Attributes
+    // ========================================
+
     CLASS_ATTR_SYM(c, "alias", 0, t_maxmcp, alias);
     CLASS_ATTR_LABEL(c, "alias", 0, "Custom Patch ID");
     CLASS_ATTR_BASIC(c, "alias", 0);
     CLASS_ATTR_SAVE(c, "alias", 0);
+    CLASS_ATTR_CATEGORY(c, "alias", 0, "Patch Mode");
+    CLASS_ATTR_STYLE(c, "alias", 0, "text");
+    CLASS_METHOD_ATTR_PARSE(c, "alias", "description", gensym("symbol"), 0,
+        "Custom patch ID (optional, defaults to auto-generated)");
 
     CLASS_ATTR_SYM(c, "group", 0, t_maxmcp, group);
     CLASS_ATTR_LABEL(c, "group", 0, "Patch Group");
     CLASS_ATTR_BASIC(c, "group", 0);
     CLASS_ATTR_SAVE(c, "group", 0);
+    CLASS_ATTR_CATEGORY(c, "group", 0, "Patch Mode");
+    CLASS_ATTR_STYLE(c, "group", 0, "text");
+    CLASS_METHOD_ATTR_PARSE(c, "group", "description", gensym("symbol"), 0,
+        "Patch group for organizing multiple patches");
 
     // Register the class
     class_register(CLASS_BOX, c);
@@ -387,7 +416,26 @@ void maxmcp_start(t_maxmcp* x) {
         return;
     }
 
-    object_post((t_object*)x, "Agent already running on port %ld", x->port);
+    // Check if WebSocket server exists
+    if (!x->ws_server) {
+        object_error((t_object*)x, "WebSocket server not initialized");
+        return;
+    }
+
+    // If already running, do nothing
+    if (x->ws_server->is_running()) {
+        object_post((t_object*)x, "Agent already running on port %ld", x->port);
+        return;
+    }
+
+    // Restart server
+    x->running = true;
+    if (x->ws_server->start()) {
+        object_post((t_object*)x, "Agent restarted on port %ld", x->port);
+    } else {
+        object_error((t_object*)x, "Failed to restart Agent on port %ld", x->port);
+        x->running = false;
+    }
 }
 
 /**
