@@ -66,36 +66,25 @@ set(UTILS_SRC
     src/utils/patch_registry.h
 )
 
-# Source files for maxmcp.agent external
-set(SERVER_SRC
-    src/maxmcp_server.cpp
-    src/maxmcp_server.h
+# Source files (unified object with @mode attribute)
+set(PROJECT_SRC
+    # Main implementation (supports both agent and patch modes)
+    src/maxmcp.cpp
+    src/maxmcp.h
+
+    # MCP server components (used in agent mode)
     src/mcp_server.cpp
     src/mcp_server.h
     src/websocket_server.cpp
     src/websocket_server.h
+
+    # Shared utilities
     ${UTILS_SRC}
 )
 
-# Source files for maxmcp client external
-set(CLIENT_SRC
-    src/maxmcp.cpp
-    src/maxmcp.h
-    ${UTILS_SRC}
-)
-
-# Select source files based on build mode
-if(BUILD_MODE STREQUAL "agent")
-    set(PROJECT_SRC ${SERVER_SRC})
-    set(OUTPUT_NAME "maxmcp.agent")
-    message(STATUS "Building maxmcp.agent external")
-elseif(BUILD_MODE STREQUAL "client")
-    set(PROJECT_SRC ${CLIENT_SRC})
-    set(OUTPUT_NAME "maxmcp")
-    message(STATUS "Building maxmcp client external")
-else()
-    message(FATAL_ERROR "Invalid BUILD_MODE: ${BUILD_MODE}. Must be 'agent' or 'client'")
-endif()
+# Single output name
+set(OUTPUT_NAME "maxmcp")
+message(STATUS "Building unified maxmcp external (@mode attribute selects agent/patch)")
 
 # Override output name
 set(${PROJECT_NAME}_EXTERN_OUTPUT_NAME "${OUTPUT_NAME}" CACHE STRING "External output name" FORCE)
@@ -107,12 +96,17 @@ add_library(
     ${PROJECT_SRC}
 )
 
-# Link libraries
+# Link libraries (always include all dependencies for unified binary)
 target_link_libraries(
     ${PROJECT_NAME}
     PRIVATE
     nlohmann_json::nlohmann_json
     websockets_shared
+)
+
+# Set architecture to arm64 only (libwebsockets native dependency)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OSX_ARCHITECTURES "arm64"
 )
 
 # Max SDK post-target configuration
@@ -121,7 +115,7 @@ include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 #############################################################
 # BUNDLE DEPENDENCIES (macOS only)
 #############################################################
-if(APPLE AND BUILD_MODE STREQUAL "agent")
+if(APPLE)
     # Create Frameworks directory in bundle
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -144,15 +138,15 @@ if(APPLE AND BUILD_MODE STREQUAL "agent")
         COMMAND install_name_tool -change
             /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
             @loader_path/../Frameworks/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
         COMMAND install_name_tool -change
             /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
             @loader_path/../Frameworks/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
         COMMAND install_name_tool -change
             /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
             @loader_path/../Frameworks/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
         # Fix install names in libwebsockets.20.dylib itself
         COMMAND install_name_tool -id
             @loader_path/../Frameworks/libwebsockets.20.dylib
@@ -200,6 +194,12 @@ endif()
 
 # Install externals to package directory
 # Usage: cmake --install build --prefix package/MaxMCP
+#
+# NOTE: This only installs the compiled .mxo binary.
+# To install the complete package (examples, support files) to Max:
+#   cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/
+#
+# For development workflow, see CLAUDE.md "Installing Package Files to Max"
 install(
     TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION externals
