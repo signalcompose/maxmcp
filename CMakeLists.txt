@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.19)
 project(MaxMCP)
 
-# Build mode: "server" or "client"
+# Build mode: "agent" or "client"
 # Set via: cmake -B build -S . -DBUILD_MODE=client
-set(BUILD_MODE "client" CACHE STRING "Build mode: server or client")
+set(BUILD_MODE "client" CACHE STRING "Build mode: agent or client")
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # macOS Universal Binary (Apple Silicon + Intel)
-# NOTE: Universal build disabled for maxmcp.server due to libwebsockets arm64-only dependency
+# NOTE: Universal build disabled for maxmcp.agent due to libwebsockets arm64-only dependency
 # Client builds can still use Universal Binary
 if(APPLE)
     if(NOT CMAKE_OSX_ARCHITECTURES)
-        if(BUILD_MODE STREQUAL "server")
+        if(BUILD_MODE STREQUAL "agent")
             set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures" FORCE)
-            message(STATUS "Building for arm64 only (server mode requires native libwebsockets)")
+            message(STATUS "Building for arm64 only (agent mode requires native libwebsockets)")
         else()
             set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures" FORCE)
             message(STATUS "Building Universal Binary: arm64 and x86_64")
@@ -35,8 +35,8 @@ endif()
 # Include Max SDK base scripts
 include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-pretarget.cmake)
 
-# Override output name to maxmcp.server
-set(${PROJECT_NAME}_EXTERN_OUTPUT_NAME "maxmcp.server" CACHE STRING "External output name" FORCE)
+# Override output name to maxmcp.agent
+set(${PROJECT_NAME}_EXTERN_OUTPUT_NAME "maxmcp.agent" CACHE STRING "External output name" FORCE)
 
 #############################################################
 # MAX EXTERNAL
@@ -66,7 +66,7 @@ set(UTILS_SRC
     src/utils/patch_registry.h
 )
 
-# Source files for maxmcp.server external
+# Source files for maxmcp.agent external
 set(SERVER_SRC
     src/maxmcp_server.cpp
     src/maxmcp_server.h
@@ -85,16 +85,16 @@ set(CLIENT_SRC
 )
 
 # Select source files based on build mode
-if(BUILD_MODE STREQUAL "server")
+if(BUILD_MODE STREQUAL "agent")
     set(PROJECT_SRC ${SERVER_SRC})
-    set(OUTPUT_NAME "maxmcp.server")
-    message(STATUS "Building maxmcp.server external")
+    set(OUTPUT_NAME "maxmcp.agent")
+    message(STATUS "Building maxmcp.agent external")
 elseif(BUILD_MODE STREQUAL "client")
     set(PROJECT_SRC ${CLIENT_SRC})
     set(OUTPUT_NAME "maxmcp")
     message(STATUS "Building maxmcp client external")
 else()
-    message(FATAL_ERROR "Invalid BUILD_MODE: ${BUILD_MODE}. Must be 'server' or 'client'")
+    message(FATAL_ERROR "Invalid BUILD_MODE: ${BUILD_MODE}. Must be 'agent' or 'client'")
 endif()
 
 # Override output name
@@ -121,7 +121,7 @@ include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 #############################################################
 # BUNDLE DEPENDENCIES (macOS only)
 #############################################################
-if(APPLE AND BUILD_MODE STREQUAL "server")
+if(APPLE AND BUILD_MODE STREQUAL "agent")
     # Create Frameworks directory in bundle
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -144,15 +144,15 @@ if(APPLE AND BUILD_MODE STREQUAL "server")
         COMMAND install_name_tool -change
             /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
             @loader_path/../Frameworks/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
         COMMAND install_name_tool -change
             /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
             @loader_path/../Frameworks/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
         COMMAND install_name_tool -change
             /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
             @loader_path/../Frameworks/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.server"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/maxmcp.agent"
         # Fix install names in libwebsockets.20.dylib itself
         COMMAND install_name_tool -id
             @loader_path/../Frameworks/libwebsockets.20.dylib

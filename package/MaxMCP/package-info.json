@@ -6,6 +6,7 @@
   "homepage": "https://github.com/signalcompose/MaxMCP",
   "repository": "https://github.com/signalcompose/MaxMCP.git",
   "license": "MIT",
+  "homepatcher": "00-index.maxpat",
   "externals": {
     "maxmcp": {
       "description": "MaxMCP client object - registers patch with MCP server for Claude Code control",
@@ -28,10 +29,16 @@
       "maxmcp.maxhelp"
     ],
     "examples": [
-      "01-getting-started.maxpat",
-      "02-synth-creation.maxpat",
-      "03-multi-patch.maxpat",
-      "04-effect-chain.maxpat"
+      "00-index.maxpat",
+      "01-claude-code-connection.maxpat",
+      "02-basic-client.maxpat",
+      "03-custom-alias.maxpat",
+      "04-group-assignment.maxpat",
+      "05-multi-patch-synth1.maxpat",
+      "06-multi-patch-synth2.maxpat",
+      "07-multi-patch-fx1.maxpat",
+      "08-server-groupfilter.maxpat",
+      "09-bridge-launch.maxpat"
     ]
   }
 }

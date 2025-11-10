@@ -14,6 +14,7 @@
 #include "jpatcher_api.h"
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 // Static member initialization
 MCPServer* MCPServer::instance_ = nullptr;
@@ -466,29 +467,34 @@ json MCPServer::handle_request(const json& req) {
 
     if (method == "initialize") {
         // Handle MCP initialize handshake
+        // Echo back the client's protocol version (MCP spec requirement)
+        std::string client_protocol_version = req["params"].value("protocolVersion", "2024-11-05");
+
+        ConsoleLogger::log(("MCP: Client protocol version: " + client_protocol_version).c_str());
+
         return {
             {"jsonrpc", "2.0"},
             {"id", req.contains("id") ? req["id"] : nullptr},
             {"result", {
-                {"protocolVersion", "2024-11-05"},
+                {"protocolVersion", client_protocol_version},  // Echo client's version
                 {"capabilities", {
-                    {"tools", json::object()}
+                    {"tools", {
+                        {"listChanged", true}
+                    }}
                 }},
                 {"serverInfo", {
                     {"name", "maxmcp"},
-                    {"version", "1.0.0"}
+                    {"version", "0.2.0"}
                 }}
             }}
         };
 
     } else if (method == "tools/list") {
         // Return list of available tools
-        return {
-            {"jsonrpc", "2.0"},
-            {"id", req.contains("id") ? req["id"] : nullptr},
-            {"result", {
-                {"tools", json::array({
-                    {
+        ConsoleLogger::log("MCP: Handling tools/list request");
+
+        auto tools = json::array({
+                {
                         {"name", "get_console_log"},
                         {"description", "Retrieve recent Max Console messages"},
                         {"inputSchema", {
@@ -534,7 +540,9 @@ json MCPServer::handle_request(const json& req) {
                                 }},
                                 {"position", {
                                     {"type", "array"},
-                                    {"items", {"type", "number"}},
+                                    {"items", {
+                                        {"type", "number"}
+                                    }},
                                     {"description", "Position [x, y] in patch"}
                                 }},
                                 {"varname", {
@@ -568,7 +576,7 @@ json MCPServer::handle_request(const json& req) {
                         {"description", "Get the currently focused/frontmost patch"},
                         {"inputSchema", {
                             {"type", "object"},
-                            {"properties", {}}
+                            {"properties", json::object()}
                         }}
                     },
                     {
@@ -709,10 +717,32 @@ json MCPServer::handle_request(const json& req) {
                             }},
                             {"required", json::array({"patch_id"})}
                         }}
-                    }
-                })}
+                }
+        });
+
+        ConsoleLogger::log(("MCP: Returning " + std::to_string(tools.size()) + " tools").c_str());
+
+        auto response = json{
+            {"jsonrpc", "2.0"},
+            {"id", req.contains("id") ? req["id"] : nullptr},
+            {"result", {
+                {"tools", tools}
             }}
         };
+
+        std::string response_str = response.dump();
+        ConsoleLogger::log(("MCP: Response length: " + std::to_string(response_str.length()) + " bytes").c_str());
+        ConsoleLogger::log(("MCP: Response preview: " + response_str.substr(0, 200)).c_str());
+
+        // Write full JSON to file for debugging
+        std::ofstream debug_file("/tmp/maxmcp_tools_list.json");
+        if (debug_file.is_open()) {
+            debug_file << response.dump(2);  // Pretty print with 2-space indent
+            debug_file.close();
+            ConsoleLogger::log("MCP: Full tools/list JSON written to /tmp/maxmcp_tools_list.json");
+        }
+
+        return response;
 
     } else if (method == "tools/call") {
         // Execute tool
@@ -727,6 +757,12 @@ json MCPServer::handle_request(const json& req) {
             {"result", result}
         };
 
+    } else if (method.find("notifications/") == 0) {
+        // Notification messages (no response required)
+        // According to JSON-RPC 2.0, notifications MUST NOT receive a response
+        // Return null JSON to signal that no response should be sent
+        ConsoleLogger::log(("MCP: Received notification: " + method).c_str());
+        return nullptr;
     } else {
         // Unknown method
         return {
@@ -1143,6 +1179,13 @@ std::string MCPServer::handle_request_string(const std::string& request_str) {
         ConsoleLogger::log(("Received message (" + std::to_string(request_str.length()) + " bytes): " + request_str).c_str());
         json req = json::parse(request_str);
         json response = handle_request(req);
+
+        // Check if response is null (for notifications that should not receive a response)
+        if (response.is_null()) {
+            ConsoleLogger::log("MCP: No response required (notification)");
+            return std::string();  // Return truly empty string (0 bytes)
+        }
+
         return response.dump();
     } catch (const std::exception& e) {
         // Return JSON-RPC error

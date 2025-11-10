@@ -1,0 +1,6 @@
+
+# Bridge
+bridge/node_modules/
+bridge/dist/
+bridge/coverage/
+bridge/package-lock.json

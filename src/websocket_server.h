@@ -27,6 +27,8 @@ struct ClientInfo {
     struct lws* wsi;
     std::string ip_address;
     bool authenticated;
+    std::queue<std::string> send_queue;  // Queue for outgoing messages
+    std::mutex send_mutex;               // Mutex for send_queue
 };
 
 /**
@@ -117,6 +119,14 @@ public:
     }
 
     /**
+     * Set synchronous message callback
+     * Called from LWS_CALLBACK_RECEIVE, should return response immediately
+     */
+    void set_sync_message_callback(std::function<std::string(const std::string&, const std::string&)> callback) {
+        sync_message_callback_ = callback;
+    }
+
+    /**
      * libwebsockets callback (public for protocol registration)
      */
     static int lws_callback(struct lws* wsi, enum lws_callback_reasons reason,
@@ -134,7 +144,7 @@ private:
     std::thread service_thread_;
 
     // Client management
-    std::map<std::string, ClientInfo> clients_;
+    std::map<std::string, std::shared_ptr<ClientInfo>> clients_;
     mutable std::mutex clients_mutex_;
 
     // Request queue
@@ -146,6 +156,7 @@ private:
     // Callbacks
     std::function<void(const std::string&, const std::string&)> message_callback_;
     std::function<void(const std::string&, const std::string&)> error_callback_;
+    std::function<std::string(const std::string&, const std::string&)> sync_message_callback_;
 
     // Internal methods
     void service_loop();
@@ -153,7 +164,7 @@ private:
     std::string generate_client_id();
     void add_client(struct lws* wsi, const std::string& ip);
     void remove_client(struct lws* wsi);
-    ClientInfo* find_client_by_wsi(struct lws* wsi);
+    std::shared_ptr<ClientInfo> find_client_by_wsi(struct lws* wsi);
     void enqueue_request(const std::string& client_id, const std::string& message);
     void process_request(const QueuedRequest& request);
     bool check_authentication(const std::string& auth_header);

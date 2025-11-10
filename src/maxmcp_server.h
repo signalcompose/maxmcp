@@ -36,10 +36,6 @@ typedef struct _maxmcp_server {
     // WebSocket server
     WebSocketServer* ws_server;    ///< WebSocket server instance
 
-    // Bridge management
-    pid_t bridge_pid;         ///< Bridge process ID (0 if not running)
-    t_atom_long bridge_port;  ///< Bridge WebSocket port (@bridge_port attribute)
-
     // Attributes
     t_atom_long port;         ///< WebSocket server port (@port attribute)
     bool debug;               ///< Debug mode (@debug attribute)
@@ -51,12 +47,10 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv);
 void maxmcp_server_free(t_maxmcp_server* x);
 void maxmcp_server_assist(t_maxmcp_server* x, void* b, long m, long a, char* s);
 
-// Bridge management methods
-void maxmcp_server_start_bridge(t_maxmcp_server* x, t_symbol* s, long argc, t_atom* argv);
-void maxmcp_server_stop_bridge(t_maxmcp_server* x);
+// Defer callback for ready bang
+void maxmcp_server_send_ready_bang(t_maxmcp_server* x, t_symbol* s, long argc, t_atom* argv);
 
 // Attribute accessors
 t_max_err maxmcp_server_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_atom* av);
-t_max_err maxmcp_server_bridge_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_atom* av);
 
 #endif // MAXMCP_SERVER_H
