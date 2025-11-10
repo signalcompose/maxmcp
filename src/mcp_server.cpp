@@ -70,11 +70,19 @@ struct t_get_position_data {
 };
 
 // Defer callback for adding Max object
+// Defer callback for adding Max object
 static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_add_object_data* data = (t_add_object_data*)argv;
+    // Extract data pointer from atom
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: add_object_deferred called with no data");
+        return;
+    }
 
+    t_add_object_data* data = (t_add_object_data*)atom_getobj(argv);
+    
     if (!data || !data->patch || !data->patch->patcher) {
-        delete data;
+        ConsoleLogger::log("ERROR: Invalid data in add_object_deferred");
+        if (data) delete data;
         return;
     }
 
@@ -113,7 +121,12 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
 // Defer callback for removing Max object
 static void remove_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_remove_object_data* data = (t_remove_object_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: remove_object_deferred called with no data");
+        return;
+    }
+
+    t_remove_object_data* data = (t_remove_object_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher) {
         delete data;
@@ -148,7 +161,12 @@ static void remove_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
 
 // Defer callback for setting object attribute
 static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_set_attribute_data* data = (t_set_attribute_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: set_attribute_deferred called with no data");
+        return;
+    }
+
+    t_set_attribute_data* data = (t_set_attribute_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher) {
         delete data;
@@ -206,7 +224,12 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
 
 // Defer callback for connecting Max objects
 static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_connect_objects_data* data = (t_connect_objects_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: connect_objects_deferred called with no data");
+        return;
+    }
+
+    t_connect_objects_data* data = (t_connect_objects_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher) {
         delete data;
@@ -264,7 +287,12 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
 // Defer callback for disconnecting Max objects
 static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_disconnect_objects_data* data = (t_disconnect_objects_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: disconnect_objects_deferred called with no data");
+        return;
+    }
+
+    t_disconnect_objects_data* data = (t_disconnect_objects_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher) {
         delete data;
@@ -331,7 +359,12 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
 
 // Defer callback for getting objects in patch
 static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_get_objects_data* data = (t_get_objects_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: get_objects_deferred called with no data");
+        return;
+    }
+
+    t_get_objects_data* data = (t_get_objects_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher || !data->result) {
         if (data) delete data;
@@ -382,7 +415,12 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
 
 // Defer callback for getting empty position
 static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
-    t_get_position_data* data = (t_get_position_data*)argv;
+    if (argc < 1 || !argv) {
+        ConsoleLogger::log("ERROR: get_position_deferred called with no data");
+        return;
+    }
+
+    t_get_position_data* data = (t_get_position_data*)atom_getobj(argv);
 
     if (!data || !data->patch || !data->patch->patcher || !data->result) {
         if (data) delete data;
@@ -749,13 +787,44 @@ json MCPServer::handle_request(const json& req) {
         std::string tool_name = req["params"]["name"];
         json arguments = req.value("params", json::object()).value("arguments", json::object());
 
+        ConsoleLogger::log(("MCP: tools/call - tool: " + tool_name).c_str());
+        ConsoleLogger::log(("MCP: tools/call - arguments: " + arguments.dump()).c_str());
+
         json result = execute_tool(tool_name, arguments);
 
-        return {
+        ConsoleLogger::log(("MCP: tools/call - raw result: " + result.dump()).c_str());
+
+        // Check if tool returned an error
+        bool is_error = result.contains("error");
+
+        // Wrap result in MCP-compliant content format
+        // According to MCP spec, tools/call response MUST have:
+        // - "content" array with type/text fields
+        // - "isError" boolean flag
+        json mcp_result = {
+            {"content", json::array({
+                {
+                    {"type", "text"},
+                    {"text", result.dump()}  // Serialize JSON result as text
+                }
+            })},
+            {"isError", is_error}
+        };
+
+        json response = {
             {"jsonrpc", "2.0"},
             {"id", req.contains("id") ? req["id"] : nullptr},
-            {"result", result}
+            {"result", mcp_result}  // MCP-compliant format
         };
+
+        ConsoleLogger::log(("MCP: tools/call - MCP response: " + response.dump()).c_str());
+
+        // Write response to file for debugging
+        std::ofstream out("/tmp/maxmcp_tools_call_response.json");
+        out << response.dump(2);
+        out.close();
+
+        return response;
 
     } else if (method.find("notifications/") == 0) {
         // Notification messages (no response required)
@@ -777,6 +846,8 @@ json MCPServer::handle_request(const json& req) {
 }
 
 json MCPServer::execute_tool(const std::string& tool, const json& params) {
+    ConsoleLogger::log(("MCP: execute_tool called: " + tool).c_str());
+
     if (tool == "get_console_log") {
         size_t lines = params.value("lines", 50);
         bool clear = params.value("clear", false);
@@ -787,7 +858,9 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
         // Get list of active patches from global registry
         // Optionally filter by group
         std::string group_filter = params.value("group", "");
-        return PatchRegistry::list_patches(group_filter);
+        json result = PatchRegistry::list_patches(group_filter);
+        ConsoleLogger::log(("MCP: list_active_patches result: " + result.dump()).c_str());
+        return result;
 
     } else if (tool == "get_patch_info") {
         // Get detailed information about a patch
@@ -858,8 +931,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             arguments
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread (CRITICAL for thread safety)
-        defer(patch, (method)add_object_deferred, gensym("add_object"), 1, (t_atom*)data);
+        defer(patch, (method)add_object_deferred, gensym("add_object"), 1, &a);
 
         return {
             {"result", {
@@ -902,8 +979,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             varname
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread
-        defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, (t_atom*)data);
+        defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, &a);
 
         return {
             {"result", {
@@ -958,8 +1039,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             value
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread
-        defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, (t_atom*)data);
+        defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, &a);
 
         return {
             {"result", {
@@ -1007,8 +1092,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             inlet
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread
-        defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, (t_atom*)data);
+        defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
 
         return {
             {"result", {
@@ -1058,8 +1147,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             inlet
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread
-        defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, (t_atom*)data);
+        defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
 
         return {
             {"result", {
@@ -1103,8 +1196,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             &result
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread and wait
-        defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, (t_atom*)data);
+        defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, &a);
 
         // Note: This is a simplified implementation that returns immediately
         // In a real implementation, we would need to synchronize with the defer callback
@@ -1151,8 +1248,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
             &result
         };
 
+        // Create atom to hold pointer
+        t_atom a;
+        atom_setobj(&a, data);
+
         // Defer to main thread and wait
-        defer(patch, (method)get_position_deferred, gensym("get_position"), 1, (t_atom*)data);
+        defer(patch, (method)get_position_deferred, gensym("get_position"), 1, &a);
 
         // Note: This is a simplified implementation
         // For now, return calculated position directly (simplified, not thread-safe)
