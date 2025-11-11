@@ -1,0 +1,17 @@
+{
+  "release-type": "simple",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance Improvements" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "refactor", "section": "Code Refactoring" },
+    { "type": "test", "section": "Tests" },
+    { "type": "chore", "section": "Miscellaneous" }
+  ],
+  "packages": {
+    ".": {}
+  }
+}
