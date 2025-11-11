@@ -1,0 +1,66 @@
+---
+# MaxMCP C++ Code Style Configuration
+# Based on LLVM style with project-specific adjustments
+
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++17
+
+# Indentation
+IndentWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+IndentCaseLabels: false
+IndentPPDirectives: None
+
+# Line Length
+ColumnLimit: 100
+
+# Braces
+BreakBeforeBraces: Attach
+
+# Pointers and References
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Functions
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+
+# Comments
+ReflowComments: true
+SpacesBeforeTrailingComments: 2
+
+# Includes
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Max SDK headers
+  - Regex:           '^"ext.*\.h"'
+    Priority:        1
+  # Project headers
+  - Regex:           '^".*\.h"'
+    Priority:        2
+  # C++ standard library
+  - Regex:           '^<[^/]*>'
+    Priority:        3
+  # Other libraries
+  - Regex:           '.*'
+    Priority:        4
+
+# Other
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: true
+BinPackParameters: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+BreakConstructorInitializers: BeforeColon

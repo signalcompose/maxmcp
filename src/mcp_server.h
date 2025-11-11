@@ -11,6 +11,7 @@
 #define MCP_SERVER_H
 
 #include <atomic>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -24,7 +25,7 @@ using json = nlohmann::json;
  * Note: stdio I/O is managed by maxmcp.server.mxo external object.
  */
 class MCPServer {
-private:
+  private:
     static MCPServer* instance_;
 
     std::atomic<bool> running_{false};
@@ -53,7 +54,7 @@ private:
     // Private constructor for singleton
     MCPServer() = default;
 
-public:
+  public:
     // Delete copy/move constructors
     MCPServer(const MCPServer&) = delete;
     MCPServer& operator=(const MCPServer&) = delete;
@@ -93,7 +94,9 @@ public:
      *
      * @return true if IO thread is active
      */
-    bool is_running() const { return running_.load(); }
+    bool is_running() const {
+        return running_.load();
+    }
 
     /**
      * @brief Handle MCP request from string
@@ -107,4 +110,4 @@ public:
     std::string handle_request_string(const std::string& request_str);
 };
 
-#endif // MCP_SERVER_H
+#endif  // MCP_SERVER_H

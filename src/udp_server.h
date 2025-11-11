@@ -11,15 +11,16 @@
 #ifndef UDP_SERVER_H
 #define UDP_SERVER_H
 
-#include <string>
-#include <thread>
 #include <atomic>
-#include <mutex>
-#include <queue>
 #include <functional>
 #include <map>
-#include <sys/socket.h>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
+
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 /**
  * @brief UDP Server for MCP communication
@@ -28,7 +29,7 @@
  * Thread-safe implementation with message queues.
  */
 class UDPServer {
-public:
+  public:
     using MessageCallback = std::function<void(const std::string&)>;
 
     /**
@@ -57,7 +58,9 @@ public:
      * @brief Check if server is running
      * @return true if running
      */
-    bool is_running() const { return running_; }
+    bool is_running() const {
+        return running_;
+    }
 
     /**
      * @brief Send message to client
@@ -81,7 +84,7 @@ public:
      */
     bool get_received_message(std::string& message);
 
-private:
+  private:
     int port_;
     int socket_fd_;
     std::atomic<bool> running_;
@@ -120,4 +123,4 @@ private:
     void send_fragmented(const std::string& message, const struct sockaddr_in& to_addr);
 };
 
-#endif // UDP_SERVER_H
+#endif  // UDP_SERVER_H

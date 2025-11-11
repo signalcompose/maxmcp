@@ -11,15 +11,18 @@
 */
 
 #include "maxmcp.h"
+
 #include "mcp_server.h"
-#include "websocket_server.h"
-#include "utils/uuid_generator.h"
-#include "utils/patch_registry.h"
 #include "utils/console_logger.h"
-#include <nlohmann/json.hpp>
+#include "utils/patch_registry.h"
+#include "utils/uuid_generator.h"
+#include "websocket_server.h"
+
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
-#include <cstdlib>
+
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -40,10 +43,7 @@ static t_maxmcp* g_agent_instance = nullptr;
 void ext_main(void* r) {
     t_class* c;
 
-    c = class_new("maxmcp",
-                  (method)maxmcp_new,
-                  (method)maxmcp_free,
-                  (long)sizeof(t_maxmcp),
+    c = class_new("maxmcp", (method)maxmcp_new, (method)maxmcp_free, (long)sizeof(t_maxmcp),
                   nullptr,  // No class flags
                   A_GIMME,  // Accept variable arguments
                   0);
@@ -72,7 +72,7 @@ void ext_main(void* r) {
     CLASS_ATTR_CATEGORY(c, "mode", 0, "Basic");
     CLASS_ATTR_STYLE(c, "mode", 0, "enum");
     CLASS_METHOD_ATTR_PARSE(c, "mode", "description", gensym("symbol"), 0,
-        "\"agent\" for MCP server mode, \"patch\" for client mode");
+                            "\"agent\" for MCP server mode, \"patch\" for client mode");
 
     // ========================================
     // Agent Mode Attributes
@@ -85,14 +85,14 @@ void ext_main(void* r) {
     CLASS_ATTR_CATEGORY(c, "port", 0, "Agent Mode");
     CLASS_ATTR_STYLE(c, "port", 0, "text");
     CLASS_METHOD_ATTR_PARSE(c, "port", "description", gensym("symbol"), 0,
-        "WebSocket port for agent mode (default: 7400)");
+                            "WebSocket port for agent mode (default: 7400)");
 
     CLASS_ATTR_CHAR(c, "debug", 0, t_maxmcp, debug);
     CLASS_ATTR_STYLE_LABEL(c, "debug", 0, "onoff", "Debug Mode");
     CLASS_ATTR_DEFAULT(c, "debug", 0, "0");
     CLASS_ATTR_CATEGORY(c, "debug", 0, "Agent Mode");
     CLASS_METHOD_ATTR_PARSE(c, "debug", "description", gensym("symbol"), 0,
-        "Enable debug logging (0=off, 1=on)");
+                            "Enable debug logging (0=off, 1=on)");
 
     // ========================================
     // Patch Mode Attributes
@@ -105,7 +105,7 @@ void ext_main(void* r) {
     CLASS_ATTR_CATEGORY(c, "alias", 0, "Patch Mode");
     CLASS_ATTR_STYLE(c, "alias", 0, "text");
     CLASS_METHOD_ATTR_PARSE(c, "alias", "description", gensym("symbol"), 0,
-        "Custom patch ID (optional, defaults to auto-generated)");
+                            "Custom patch ID (optional, defaults to auto-generated)");
 
     CLASS_ATTR_SYM(c, "group", 0, t_maxmcp, group);
     CLASS_ATTR_LABEL(c, "group", 0, "Patch Group");
@@ -114,7 +114,7 @@ void ext_main(void* r) {
     CLASS_ATTR_CATEGORY(c, "group", 0, "Patch Mode");
     CLASS_ATTR_STYLE(c, "group", 0, "text");
     CLASS_METHOD_ATTR_PARSE(c, "group", "description", gensym("symbol"), 0,
-        "Patch group for organizing multiple patches");
+                            "Patch group for organizing multiple patches");
 
     // Register the class
     class_register(CLASS_BOX, c);
@@ -169,7 +169,8 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
 
             // Singleton check
             if (g_agent_instance != nullptr) {
-                object_error(nullptr, "maxmcp (agent mode) already exists! Only one agent instance allowed");
+                object_error(nullptr,
+                             "maxmcp (agent mode) already exists! Only one agent instance allowed");
                 // Clean up and return nullptr
                 x->patch_id.~basic_string();
                 x->display_name.~basic_string();
@@ -192,33 +193,37 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
             x->ws_server = new WebSocketServer((int)x->port);
 
             // Set synchronous message callback - called from LWS_CALLBACK_RECEIVE
-            x->ws_server->set_sync_message_callback([x](const std::string& client_id, const std::string& message) -> std::string {
-                try {
-                    ConsoleLogger::log(("Sync callback: Processing message (" + std::to_string(message.length()) + " bytes)").c_str());
+            x->ws_server->set_sync_message_callback(
+                [x](const std::string& client_id, const std::string& message) -> std::string {
+                    try {
+                        ConsoleLogger::log(("Sync callback: Processing message (" +
+                                            std::to_string(message.length()) + " bytes)")
+                                               .c_str());
 
-                    // Route to MCP server (thread-safe)
-                    std::string response = MCPServer::get_instance()->handle_request_string(message);
+                        // Route to MCP server (thread-safe)
+                        std::string response =
+                            MCPServer::get_instance()->handle_request_string(message);
 
-                    ConsoleLogger::log(("Sync callback: Generated response (" + std::to_string(response.length()) + " bytes)").c_str());
+                        ConsoleLogger::log(("Sync callback: Generated response (" +
+                                            std::to_string(response.length()) + " bytes)")
+                                               .c_str());
 
-                    return response;
+                        return response;
 
-                } catch (const std::exception& e) {
-                    object_error((t_object*)x, "Request processing error: %s", e.what());
+                    } catch (const std::exception& e) {
+                        object_error((t_object*)x, "Request processing error: %s", e.what());
 
-                    // Return error response
-                    json error_response = {
-                        {"jsonrpc", "2.0"},
-                        {"error", {
-                            {"code", -32603},
-                            {"message", std::string("Internal error: ") + e.what()}
-                        }},
-                        {"id", nullptr}
-                    };
+                        // Return error response
+                        json error_response = {
+                            {"jsonrpc", "2.0"},
+                            {"error",
+                             {{"code", -32603},
+                              {"message", std::string("Internal error: ") + e.what()}}},
+                            {"id", nullptr}};
 
-                    return error_response.dump();
-                }
-            });
+                        return error_response.dump();
+                    }
+                });
 
             // Start WebSocket server
             if (!x->ws_server->start()) {
@@ -239,7 +244,8 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
             g_agent_instance = x;
 
             object_post((t_object*)x, "maxmcp (agent mode) started on port %ld", x->port);
-            ConsoleLogger::log(("maxmcp: WebSocket server listening on port " + std::to_string(x->port)).c_str());
+            ConsoleLogger::log(
+                ("maxmcp: WebSocket server listening on port " + std::to_string(x->port)).c_str());
 
             // Defer bang output to main thread (outlets must be called from main thread)
             defer_low((t_object*)x, (method)maxmcp_send_ready_bang, NULL, 0, NULL);
@@ -279,7 +285,8 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
             }
 
             // Post initialization message
-            object_post((t_object*)x, "maxmcp (patch mode) initialized (ID: %s)", x->patch_id.c_str());
+            object_post((t_object*)x, "maxmcp (patch mode) initialized (ID: %s)",
+                        x->patch_id.c_str());
             if (x->group && x->group->s_name && strlen(x->group->s_name) > 0) {
                 object_post((t_object*)x, "Group: %s", x->group->s_name);
             }
@@ -333,7 +340,8 @@ void maxmcp_free(t_maxmcp* x) {
             // Unregister from global patch registry
             PatchRegistry::unregister_patch(x);
 
-            object_post((t_object*)x, "maxmcp (patch mode) destroyed (ID: %s)", x->patch_id.c_str());
+            object_post((t_object*)x, "maxmcp (patch mode) destroyed (ID: %s)",
+                        x->patch_id.c_str());
         }
 
         // Explicitly destroy std::string members (placement delete)
@@ -395,7 +403,8 @@ void maxmcp_notify(t_maxmcp* x, t_symbol* s, t_symbol* msg, void* sender, void* 
             // Unregister from global patch registry
             PatchRegistry::unregister_patch(x);
 
-            object_post((t_object*)x, "maxmcp: patcher closing, unregistered (ID: %s)", x->patch_id.c_str());
+            object_post((t_object*)x, "maxmcp: patcher closing, unregistered (ID: %s)",
+                        x->patch_id.c_str());
         }
     }
 }

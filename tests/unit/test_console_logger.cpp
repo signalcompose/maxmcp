@@ -34,10 +34,10 @@ TEST_F(ConsoleLoggerTest, LogSingleMessage) {
     ConsoleLogger::log("Test message");
 
     auto result = ConsoleLogger::get_logs(10, false);
-    EXPECT_TRUE(result.contains("result"));
-    EXPECT_TRUE(result["result"].contains("logs"));
+    EXPECT_TRUE(result.contains("logs"));
+    EXPECT_TRUE(result.contains("count"));
 
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
     EXPECT_EQ(logs.size(), 1);
     EXPECT_EQ(logs[0], "Test message");
 }
@@ -51,7 +51,7 @@ TEST_F(ConsoleLoggerTest, LogMultipleMessages) {
     ConsoleLogger::log("Message 3");
 
     auto result = ConsoleLogger::get_logs(10, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 3);
     EXPECT_EQ(logs[0], "Message 1");
@@ -69,7 +69,7 @@ TEST_F(ConsoleLoggerTest, RingBuffer) {
     }
 
     auto result = ConsoleLogger::get_logs(2000, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     // Should have only last 1000 messages
     EXPECT_EQ(logs.size(), 1000);
@@ -91,7 +91,7 @@ TEST_F(ConsoleLoggerTest, GetLogsWithLimit) {
 
     // Get only last 10 messages
     auto result = ConsoleLogger::get_logs(10, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 10);
     EXPECT_EQ(logs[0], "Message 90");
@@ -109,7 +109,7 @@ TEST_F(ConsoleLoggerTest, ClearLogs) {
     ConsoleLogger::clear();
 
     auto result = ConsoleLogger::get_logs(10, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 0);
 }
@@ -123,13 +123,13 @@ TEST_F(ConsoleLoggerTest, GetLogsWithClear) {
 
     // Get logs and clear
     auto result = ConsoleLogger::get_logs(10, true);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 2);
 
     // Verify logs are cleared
     result = ConsoleLogger::get_logs(10, false);
-    logs = result["result"]["logs"];
+    logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 0);
 }
@@ -139,7 +139,7 @@ TEST_F(ConsoleLoggerTest, GetLogsWithClear) {
  */
 TEST_F(ConsoleLoggerTest, EmptyLogRetrieval) {
     auto result = ConsoleLogger::get_logs(10, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 0);
 }
@@ -166,7 +166,7 @@ TEST_F(ConsoleLoggerTest, ThreadSafety) {
 
     // Should have 1000 messages (10 threads * 100 messages)
     auto result = ConsoleLogger::get_logs(2000, false);
-    auto logs = result["result"]["logs"];
+    auto logs = result["logs"];
 
     EXPECT_EQ(logs.size(), 1000);
 }

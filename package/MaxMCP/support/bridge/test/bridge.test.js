@@ -34,10 +34,7 @@ describe('maxmcp-bridge', () => {
       });
 
       // Spawn bridge process
-      const bridge = spawn('node', [
-        path.join(__dirname, '../websocket-mcp-bridge.js'),
-        TEST_URL
-      ]);
+      const bridge = spawn('node', [path.join(__dirname, '../websocket-mcp-bridge.js'), TEST_URL]);
 
       // Cleanup
       setTimeout(() => {
@@ -58,7 +55,7 @@ describe('maxmcp-bridge', () => {
       const bridge = spawn('node', [
         path.join(__dirname, '../websocket-mcp-bridge.js'),
         TEST_URL,
-        testToken
+        testToken,
       ]);
 
       setTimeout(() => {
@@ -79,10 +76,7 @@ describe('maxmcp-bridge', () => {
         });
       });
 
-      const bridge = spawn('node', [
-        path.join(__dirname, '../websocket-mcp-bridge.js'),
-        TEST_URL
-      ]);
+      const bridge = spawn('node', [path.join(__dirname, '../websocket-mcp-bridge.js'), TEST_URL]);
 
       // Wait for connection, then send message
       setTimeout(() => {
@@ -98,10 +92,7 @@ describe('maxmcp-bridge', () => {
       const testResponse = '{"jsonrpc":"2.0","result":"ok","id":1}';
       let output = '';
 
-      const bridge = spawn('node', [
-        path.join(__dirname, '../websocket-mcp-bridge.js'),
-        TEST_URL
-      ]);
+      const bridge = spawn('node', [path.join(__dirname, '../websocket-mcp-bridge.js'), TEST_URL]);
 
       bridge.stdout.on('data', (data) => {
         output += data.toString();
@@ -133,7 +124,7 @@ describe('maxmcp-bridge', () => {
 
       const bridge = spawn('node', [
         path.join(__dirname, '../websocket-mcp-bridge.js'),
-        invalidUrl
+        invalidUrl,
       ]);
 
       bridge.on('exit', (code) => {
@@ -148,10 +139,7 @@ describe('maxmcp-bridge', () => {
     });
 
     test('should exit gracefully on SIGINT', (done) => {
-      const bridge = spawn('node', [
-        path.join(__dirname, '../websocket-mcp-bridge.js'),
-        TEST_URL
-      ]);
+      const bridge = spawn('node', [path.join(__dirname, '../websocket-mcp-bridge.js'), TEST_URL]);
 
       setTimeout(() => {
         bridge.kill('SIGINT');

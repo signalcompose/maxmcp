@@ -51,6 +51,17 @@ protected:
                 }}
             };
         } else if (method == "tools/call") {
+            // Safely check for required parameter
+            if (!req.contains("params") || !req["params"].contains("name")) {
+                return {
+                    {"jsonrpc", "2.0"},
+                    {"error", {
+                        {"code", -32602},
+                        {"message", "Invalid params: missing 'name' field"}
+                    }}
+                };
+            }
+
             std::string tool_name = req["params"]["name"];
 
             if (tool_name == "get_console_log") {

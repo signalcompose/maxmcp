@@ -10,9 +10,10 @@
 #ifndef PATCH_REGISTRY_H
 #define PATCH_REGISTRY_H
 
-#include <vector>
-#include <string>
 #include <mutex>
+#include <string>
+#include <vector>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -28,11 +29,11 @@ typedef struct _maxmcp t_maxmcp;
  * Enables list_active_patches MCP tool.
  */
 class PatchRegistry {
-private:
+  private:
     static std::vector<t_maxmcp*> patches_;
     static std::mutex mutex_;
 
-public:
+  public:
     /**
      * @brief Register a patch in the global registry
      *
@@ -93,4 +94,4 @@ public:
     static json get_frontmost_patch();
 };
 
-#endif // PATCH_REGISTRY_H
+#endif  // PATCH_REGISTRY_H

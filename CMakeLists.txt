@@ -9,6 +9,9 @@ set(BUILD_MODE "client" CACHE STRING "Build mode: agent or client")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Export compile commands for clang-tidy and other tools
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # macOS Universal Binary (Apple Silicon + Intel)
 # NOTE: Universal build disabled for maxmcp.agent due to libwebsockets arm64-only dependency
 # Client builds can still use Universal Binary

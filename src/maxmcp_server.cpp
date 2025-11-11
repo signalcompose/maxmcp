@@ -6,15 +6,18 @@
 */
 
 #include "maxmcp_server.h"
+
 #include "mcp_server.h"
-#include "websocket_server.h"
 #include "utils/console_logger.h"
-#include <nlohmann/json.hpp>
-#include <iostream>
-#include <sstream>
+#include "websocket_server.h"
+
 #include <cstdlib>
+#include <iostream>
 #include <signal.h>
+#include <sstream>
 #include <unistd.h>
+
+#include <nlohmann/json.hpp>
 #include <sys/wait.h>
 
 using json = nlohmann::json;
@@ -35,13 +38,8 @@ static t_maxmcp_server* g_server_instance = nullptr;
 void ext_main_agent(void* r) {
     t_class* c;
 
-    c = class_new("maxmcp.agent",
-                  (method)maxmcp_server_new,
-                  (method)maxmcp_server_free,
-                  (long)sizeof(t_maxmcp_server),
-                  nullptr,
-                  A_GIMME,
-                  0);
+    c = class_new("maxmcp.agent", (method)maxmcp_server_new, (method)maxmcp_server_free,
+                  (long)sizeof(t_maxmcp_server), nullptr, A_GIMME, 0);
 
     class_addmethod(c, (method)maxmcp_server_assist, "assist", A_CANT, 0);
 
@@ -95,14 +93,19 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
         x->ws_server = new WebSocketServer((int)x->port);
 
         // Set synchronous message callback - called from LWS_CALLBACK_RECEIVE
-        x->ws_server->set_sync_message_callback([x](const std::string& client_id, const std::string& message) -> std::string {
+        x->ws_server->set_sync_message_callback([x](const std::string& client_id,
+                                                    const std::string& message) -> std::string {
             try {
-                ConsoleLogger::log(("Sync callback: Processing message (" + std::to_string(message.length()) + " bytes)").c_str());
+                ConsoleLogger::log(("Sync callback: Processing message (" +
+                                    std::to_string(message.length()) + " bytes)")
+                                       .c_str());
 
                 // Route to MCP server (thread-safe)
                 std::string response = MCPServer::get_instance()->handle_request_string(message);
 
-                ConsoleLogger::log(("Sync callback: Generated response (" + std::to_string(response.length()) + " bytes)").c_str());
+                ConsoleLogger::log(("Sync callback: Generated response (" +
+                                    std::to_string(response.length()) + " bytes)")
+                                       .c_str());
 
                 return response;
 
@@ -112,12 +115,9 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
                 // Return error response
                 json error_response = {
                     {"jsonrpc", "2.0"},
-                    {"error", {
-                        {"code", -32603},
-                        {"message", std::string("Internal error: ") + e.what()}
-                    }},
-                    {"id", nullptr}
-                };
+                    {"error",
+                     {{"code", -32603}, {"message", std::string("Internal error: ") + e.what()}}},
+                    {"id", nullptr}};
 
                 return error_response.dump();
             }
@@ -138,7 +138,9 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
         g_server_instance = x;
 
         object_post((t_object*)x, "MaxMCP Agent started on port %ld", x->port);
-        ConsoleLogger::log(("maxmcp.agent: WebSocket server listening on port " + std::to_string(x->port)).c_str());
+        ConsoleLogger::log(
+            ("maxmcp.agent: WebSocket server listening on port " + std::to_string(x->port))
+                .c_str());
 
         // Defer bang output to main thread (outlets must be called from main thread)
         defer_low((t_object*)x, (method)maxmcp_server_send_ready_bang, NULL, 0, NULL);
@@ -208,7 +210,6 @@ t_maxmcp_server* maxmcp_server_get_instance() {
     return g_server_instance;
 }
 
-
 /**
  * @brief Attribute setter for port
  */
@@ -219,4 +220,3 @@ t_max_err maxmcp_server_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_
     }
     return MAX_ERR_NONE;
 }
-

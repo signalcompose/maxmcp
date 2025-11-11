@@ -3,6 +3,7 @@
 WebSocket bridge that translates stdio MCP (Claude Code) to WebSocket (maxmcp.server).
 
 This bridge is packaged as a single executable binary using [pkg](https://github.com/vercel/pkg), containing:
+
 - Node.js v18 runtime
 - websocket-mcp-bridge.js
 - node_modules/ws
@@ -52,6 +53,7 @@ Add to `~/.claude.json`:
 ```
 
 **With Authentication**:
+
 ```json
 {
   "mcpServers": {
@@ -65,6 +67,7 @@ Add to `~/.claude.json`:
 ```
 
 **Remote Connection**:
+
 ```json
 {
   "mcpServers": {
@@ -88,6 +91,7 @@ DEBUG=1 ./dist/maxmcp-bridge ws://localhost:7400
 ```
 
 This will output debug messages to stderr, including:
+
 - Connection status
 - Message send/receive events
 - Error details

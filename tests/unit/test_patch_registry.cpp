@@ -43,16 +43,16 @@ TEST_F(PatchRegistryTest, RegisterUnregister) {
 
     // Verify registration
     auto result = PatchRegistry::list_patches();
-    EXPECT_TRUE(result.contains("result"));
-    EXPECT_TRUE(result["result"].contains("patches"));
-    EXPECT_EQ(result["result"]["count"], 1);
+    EXPECT_TRUE(result.contains("patches"));
+    EXPECT_TRUE(result.contains("count"));
+    EXPECT_EQ(result["count"], 1);
 
     // Unregister
     PatchRegistry::unregister_patch(&mock_patch);
 
     // Verify unregistration
     result = PatchRegistry::list_patches();
-    EXPECT_EQ(result["result"]["count"], 0);
+    EXPECT_EQ(result["count"], 0);
 
     // Cleanup
     mock_patch.patch_id.~basic_string();
@@ -112,10 +112,10 @@ TEST_F(PatchRegistryTest, MultiplePatches) {
 
     // Verify count
     auto result = PatchRegistry::list_patches();
-    EXPECT_EQ(result["result"]["count"], 3);
+    EXPECT_EQ(result["count"], 3);
 
     // Verify all patches are listed
-    auto patches = result["result"]["patches"];
+    auto patches = result["patches"];
     EXPECT_EQ(patches.size(), 3);
 
     // Cleanup

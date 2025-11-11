@@ -9,15 +9,15 @@
 #ifndef WEBSOCKET_SERVER_H
 #define WEBSOCKET_SERVER_H
 
-#include <string>
-#include <vector>
-#include <queue>
+#include <atomic>
+#include <functional>
+#include <libwebsockets.h>
 #include <map>
 #include <mutex>
+#include <queue>
+#include <string>
 #include <thread>
-#include <functional>
-#include <atomic>
-#include <libwebsockets.h>
+#include <vector>
 
 /**
  * Client connection information
@@ -44,7 +44,7 @@ struct QueuedRequest {
  * WebSocket server class
  */
 class WebSocketServer {
-public:
+  public:
     /**
      * Constructor
      * @param port Port to listen on
@@ -71,12 +71,16 @@ public:
     /**
      * Check if server is running
      */
-    bool is_running() const { return running_; }
+    bool is_running() const {
+        return running_;
+    }
 
     /**
      * Get listening port
      */
-    int get_port() const { return port_; }
+    int get_port() const {
+        return port_;
+    }
 
     /**
      * Get number of connected clients
@@ -106,7 +110,8 @@ public:
      * Set message callback
      * Called when message is received from client
      */
-    void set_message_callback(std::function<void(const std::string&, const std::string&)> callback) {
+    void
+    set_message_callback(std::function<void(const std::string&, const std::string&)> callback) {
         message_callback_ = callback;
     }
 
@@ -122,17 +127,18 @@ public:
      * Set synchronous message callback
      * Called from LWS_CALLBACK_RECEIVE, should return response immediately
      */
-    void set_sync_message_callback(std::function<std::string(const std::string&, const std::string&)> callback) {
+    void set_sync_message_callback(
+        std::function<std::string(const std::string&, const std::string&)> callback) {
         sync_message_callback_ = callback;
     }
 
     /**
      * libwebsockets callback (public for protocol registration)
      */
-    static int lws_callback(struct lws* wsi, enum lws_callback_reasons reason,
-                           void* user, void* in, size_t len);
+    static int lws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in,
+                            size_t len);
 
-private:
+  private:
     // Configuration
     int port_;
     std::string auth_token_;
@@ -170,4 +176,4 @@ private:
     bool check_authentication(const std::string& auth_header);
 };
 
-#endif // WEBSOCKET_SERVER_H
+#endif  // WEBSOCKET_SERVER_H

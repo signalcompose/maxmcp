@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  cpp-lint:
+    name: C++ Linting (clang-format)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: brew install clang-format
+
+      - name: Check C++ formatting
+        run: |
+          find src -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+
+  cpp-build-test:
+    name: C++ Build & Test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone Max SDK
+        run: |
+          git clone --depth 1 https://github.com/Cycling74/max-sdk.git max-sdk
+          cd max-sdk
+          git submodule update --init --recursive --depth 1
+
+      - name: Install dependencies
+        run: |
+          brew install cmake nlohmann-json libwebsockets googletest
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure
+
+  nodejs-lint:
+    name: Node.js Linting (ESLint + Prettier)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: package/MaxMCP/support/bridge
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package/MaxMCP/support/bridge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+      - name: Run tests
+        run: npm test

@@ -46,4 +46,4 @@ std::string generate_patch_id(const std::string& patcher_name, size_t uuid_lengt
  */
 std::string remove_extension(const std::string& filename);
 
-#endif // UUID_GENERATOR_H
+#endif  // UUID_GENERATOR_H

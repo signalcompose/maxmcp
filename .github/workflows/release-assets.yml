@@ -1,0 +1,60 @@
+name: Release Assets
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-macos:
+    name: Build macOS Binary (arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          brew install cmake nlohmann-json libwebsockets
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Install to package structure
+        run: |
+          cmake --install build --prefix package/MaxMCP
+
+      - name: Create distribution archive
+        run: |
+          cd package
+          zip -r MaxMCP-${{ github.event.release.tag_name }}-macos-arm64.zip MaxMCP/
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: package/MaxMCP-${{ github.event.release.tag_name }}-macos-arm64.zip
+          asset_name: MaxMCP-${{ github.event.release.tag_name }}-macos-arm64.zip
+          asset_content_type: application/zip
+
+      - name: Generate checksum
+        run: |
+          cd package
+          shasum -a 256 MaxMCP-${{ github.event.release.tag_name }}-macos-arm64.zip > checksums.txt
+
+      - name: Upload Checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: package/checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain

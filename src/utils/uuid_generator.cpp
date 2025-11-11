@@ -6,14 +6,14 @@
 */
 
 #include "uuid_generator.h"
+
 #include <random>
 #include <sstream>
 
 std::string generate_uuid(size_t length) {
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
+    static const char alphanum[] = "0123456789"
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                   "abcdefghijklmnopqrstuvwxyz";
 
     static std::random_device rd;
     static std::mt19937 gen(rd());

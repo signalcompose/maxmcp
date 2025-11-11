@@ -12,8 +12,9 @@
 #define CONSOLE_LOGGER_H
 
 #include <deque>
-#include <string>
 #include <mutex>
+#include <string>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -25,12 +26,12 @@ using json = nlohmann::json;
  * Thread-safe access via mutex. Available to Claude Code via get_console_log tool.
  */
 class ConsoleLogger {
-private:
+  private:
     static std::deque<std::string> log_buffer_;
     static const size_t MAX_BUFFER_SIZE = 1000;
     static std::mutex mutex_;
 
-public:
+  public:
     /**
      * @brief Log a message to buffer and Max Console
      *
@@ -60,4 +61,4 @@ public:
     static void clear();
 };
 
-#endif // CONSOLE_LOGGER_H
+#endif  // CONSOLE_LOGGER_H

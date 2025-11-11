@@ -7,7 +7,11 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "jest": {
     "testEnvironment": "node",
@@ -23,7 +27,11 @@
     "ws": "^8.14.0"
   },
   "devDependencies": {
-    "jest": "^30.2.0"
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "jest": "^30.2.0",
+    "prettier": "^3.4.1"
   },
   "keywords": [
     "maxmsp",

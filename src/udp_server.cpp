@@ -6,25 +6,24 @@
 */
 
 #include "udp_server.h"
+
 #include "utils/console_logger.h"
+
 #include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+#include <unistd.h>
+
+#include <arpa/inet.h>
 
 // Fragment protocol constants
-const size_t MAX_UDP_PAYLOAD = 60000;  // Leave room for headers
+const size_t MAX_UDP_PAYLOAD = 60000;    // Leave room for headers
 const char FRAGMENT_HEADER[] = "MCPF:";  // MCP Fragment header
 const size_t FRAGMENT_HEADER_LEN = 5;
 
 UDPServer::UDPServer(int port)
-    : port_(port)
-    , socket_fd_(-1)
-    , running_(false)
-    , server_thread_(nullptr)
-    , client_addr_set_(false)
-{
+    : port_(port), socket_fd_(-1), running_(false), server_thread_(nullptr),
+      client_addr_set_(false) {
     memset(&client_addr_, 0, sizeof(client_addr_));
 }
 
@@ -59,7 +58,8 @@ bool UDPServer::start() {
     server_addr.sin_port = htons(port_);
 
     if (bind(socket_fd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        ConsoleLogger::log(("ERROR: Failed to bind UDP socket to port " + std::to_string(port_)).c_str());
+        ConsoleLogger::log(
+            ("ERROR: Failed to bind UDP socket to port " + std::to_string(port_)).c_str());
         close(socket_fd_);
         socket_fd_ = -1;
         return false;
@@ -108,7 +108,7 @@ bool UDPServer::send_message(const std::string& message) {
     if (message.length() <= MAX_UDP_PAYLOAD) {
         // Send as single packet
         ssize_t sent = sendto(socket_fd_, message.c_str(), message.length(), 0,
-                             (struct sockaddr*)&client_addr_, sizeof(client_addr_));
+                              (struct sockaddr*)&client_addr_, sizeof(client_addr_));
 
         if (sent < 0) {
             ConsoleLogger::log("ERROR: Failed to send UDP message");
@@ -144,7 +144,7 @@ void UDPServer::server_loop() {
 
     while (running_) {
         ssize_t received = recvfrom(socket_fd_, buffer, sizeof(buffer) - 1, 0,
-                                   (struct sockaddr*)&from_addr, &from_len);
+                                    (struct sockaddr*)&from_addr, &from_len);
 
         if (received < 0) {
             if (running_) {
@@ -213,8 +213,9 @@ bool UDPServer::handle_fragment(const char* data, size_t len, const struct socka
     int total_frags = std::stoi(fragment.substr(pos2 + 1, pos3 - pos2 - 1));
     std::string frag_data = fragment.substr(pos3 + 1);
 
-    ConsoleLogger::log(("UDP fragment received: " + msg_id + " (" +
-                       std::to_string(frag_index) + "/" + std::to_string(total_frags) + ")").c_str());
+    ConsoleLogger::log(("UDP fragment received: " + msg_id + " (" + std::to_string(frag_index) +
+                        "/" + std::to_string(total_frags) + ")")
+                           .c_str());
 
     // Store fragment
     std::lock_guard<std::mutex> lock(fragment_mutex_);
@@ -240,7 +241,8 @@ bool UDPServer::handle_fragment(const char* data, size_t len, const struct socka
         std::string complete_message = info.data.substr(0, frag_data.length() + offset);
 
         ConsoleLogger::log(("UDP complete message reassembled: " +
-                           std::to_string(complete_message.length()) + " bytes").c_str());
+                            std::to_string(complete_message.length()) + " bytes")
+                               .c_str());
 
         // Add to receive queue
         {
@@ -271,19 +273,20 @@ void UDPServer::send_fragmented(const std::string& message, const struct sockadd
     std::string msg_id = ss.str();
 
     ConsoleLogger::log(("UDP sending fragmented message: " + std::to_string(total_len) +
-                       " bytes in " + std::to_string(total_frags) + " fragments").c_str());
+                        " bytes in " + std::to_string(total_frags) + " fragments")
+                           .c_str());
 
     for (int i = 0; i < total_frags; i++) {
         size_t offset = i * MAX_UDP_PAYLOAD;
         size_t frag_len = std::min(MAX_UDP_PAYLOAD, total_len - offset);
 
         // Build fragment: "MCPF:msg_id:frag_index:total_frags:data"
-        std::string fragment = std::string(FRAGMENT_HEADER) + msg_id + ":" +
-                              std::to_string(i) + ":" + std::to_string(total_frags) + ":" +
-                              message.substr(offset, frag_len);
+        std::string fragment = std::string(FRAGMENT_HEADER) + msg_id + ":" + std::to_string(i) +
+                               ":" + std::to_string(total_frags) + ":" +
+                               message.substr(offset, frag_len);
 
         ssize_t sent = sendto(socket_fd_, fragment.c_str(), fragment.length(), 0,
-                             (struct sockaddr*)&to_addr, sizeof(to_addr));
+                              (struct sockaddr*)&to_addr, sizeof(to_addr));
 
         if (sent < 0) {
             ConsoleLogger::log(("ERROR: Failed to send fragment " + std::to_string(i)).c_str());

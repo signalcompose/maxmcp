@@ -22,7 +22,7 @@ const readline = require('readline');
 // Parse command line arguments
 let wsUrl = null;
 let authToken = null;
-let wsPort = 18081;  // Default port
+let wsPort = 18081; // Default port
 let wsHost = 'localhost';
 
 // Process arguments
@@ -67,7 +67,7 @@ debug('Auth Token:', authToken ? '***' : 'none');
 const wsOptions = {};
 if (authToken) {
   wsOptions.headers = {
-    'Authorization': `Bearer ${authToken}`
+    Authorization: `Bearer ${authToken}`,
   };
 }
 
@@ -77,11 +77,11 @@ const ws = new WebSocket(wsUrl, 'mcp', wsOptions);
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  terminal: false
+  terminal: false,
 });
 
 // Buffer for messages received before WebSocket is connected
-let messageBuffer = [];
+const messageBuffer = [];
 let isConnected = false;
 
 // Connection established

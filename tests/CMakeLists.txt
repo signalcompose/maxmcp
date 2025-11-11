@@ -4,9 +4,9 @@ cmake_minimum_required(VERSION 3.19)
 # Disable Universal Binary for tests (use native arch only)
 set(CMAKE_OSX_ARCHITECTURES "${CMAKE_HOST_SYSTEM_PROCESSOR}" CACHE STRING "Test architecture" FORCE)
 
-# Find Google Test
+# Find Google Test (system-installed or via package manager)
 find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+include(GoogleTest)
 
 # Find libwebsockets
 find_package(PkgConfig REQUIRED)

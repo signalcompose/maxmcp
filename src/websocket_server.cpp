@@ -4,12 +4,15 @@
  */
 
 #include "websocket_server.h"
+
 #include "utils/console_logger.h"
-#include <nlohmann/json.hpp>
-#include <sstream>
-#include <iomanip>
+
 #include <cstring>
+#include <iomanip>
 #include <random>
+#include <sstream>
+
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -18,10 +21,10 @@ static const struct lws_protocols protocols[] = {
     {
         "mcp",  // Protocol name
         WebSocketServer::lws_callback,
-        0,      // per_session_data_size
-        4096,   // rx_buffer_size
+        0,     // per_session_data_size
+        4096,  // rx_buffer_size
     },
-    { nullptr, nullptr, 0, 0 } // Terminator
+    {nullptr, nullptr, 0, 0}  // Terminator
 };
 
 // ============================================================================
@@ -29,12 +32,8 @@ static const struct lws_protocols protocols[] = {
 // ============================================================================
 
 WebSocketServer::WebSocketServer(int port, const std::string& auth_token)
-    : port_(port)
-    , auth_token_(auth_token)
-    , require_auth_(!auth_token.empty())
-    , running_(false)
-    , context_(nullptr)
-{
+    : port_(port), auth_token_(auth_token), require_auth_(!auth_token.empty()), running_(false),
+      context_(nullptr) {
     ConsoleLogger::log("WebSocketServer created");
 }
 
@@ -178,7 +177,8 @@ void WebSocketServer::add_client(struct lws* wsi, const std::string& ip) {
     clients_[client_id] = info;
 
     ConsoleLogger::log(("Client connected: " + client_id + " from " + ip +
-                       " (total: " + std::to_string(clients_.size()) + ")").c_str());
+                        " (total: " + std::to_string(clients_.size()) + ")")
+                           .c_str());
 }
 
 void WebSocketServer::remove_client(struct lws* wsi) {
@@ -187,7 +187,8 @@ void WebSocketServer::remove_client(struct lws* wsi) {
     for (auto it = clients_.begin(); it != clients_.end(); ++it) {
         if (it->second->wsi == wsi) {
             ConsoleLogger::log(("Client disconnected: " + it->first +
-                               " (remaining: " + std::to_string(clients_.size() - 1) + ")").c_str());
+                                " (remaining: " + std::to_string(clients_.size() - 1) + ")")
+                                   .c_str());
             clients_.erase(it);
             return;
         }
@@ -274,9 +275,7 @@ void WebSocketServer::process_queue_loop() {
             std::unique_lock<std::mutex> lock(queue_mutex_);
 
             // Wait for request to be available or stop signal
-            queue_cv_.wait(lock, [this] {
-                return !request_queue_.empty() || !running_;
-            });
+            queue_cv_.wait(lock, [this] { return !request_queue_.empty() || !running_; });
 
             // Check if we're stopping
             if (!running_) {
@@ -339,174 +338,185 @@ bool WebSocketServer::check_authentication(const std::string& auth_header) {
 // libwebsockets Callback
 // ============================================================================
 
-int WebSocketServer::lws_callback(struct lws* wsi, enum lws_callback_reasons reason,
-                                  void* user, void* in, size_t len) {
-    WebSocketServer* server = static_cast<WebSocketServer*>(
-        lws_context_user(lws_get_context(wsi))
-    );
+int WebSocketServer::lws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
+                                  void* in, size_t len) {
+    WebSocketServer* server = static_cast<WebSocketServer*>(lws_context_user(lws_get_context(wsi)));
 
     if (!server) {
         return 0;
     }
 
     switch (reason) {
-        case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
-            // Called before WebSocket upgrade - check authentication here
-            if (server->require_auth_) {
-                char ip[128];
-                lws_get_peer_simple(wsi, ip, sizeof(ip));
-
-                // Get Authorization header during HTTP upgrade
-                char auth_buf[256];
-                int hdr_len = lws_hdr_copy(wsi, auth_buf, sizeof(auth_buf),
-                                          WSI_TOKEN_HTTP_AUTHORIZATION);
-
-                if (hdr_len <= 0 || !server->check_authentication(std::string(auth_buf, hdr_len))) {
-                    ConsoleLogger::log(("Authentication failed for " + std::string(ip)).c_str());
-                    return -1;  // Reject connection (< 0 = reject)
-                }
-            }
-            break;
-        }
-
-        case LWS_CALLBACK_ESTABLISHED: {
-            // Client connected (authentication already passed)
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
+        // Called before WebSocket upgrade - check authentication here
+        if (server->require_auth_) {
             char ip[128];
             lws_get_peer_simple(wsi, ip, sizeof(ip));
-            server->add_client(wsi, ip);
-            break;
+
+            // Get Authorization header during HTTP upgrade
+            char auth_buf[256];
+            int hdr_len =
+                lws_hdr_copy(wsi, auth_buf, sizeof(auth_buf), WSI_TOKEN_HTTP_AUTHORIZATION);
+
+            if (hdr_len <= 0 || !server->check_authentication(std::string(auth_buf, hdr_len))) {
+                ConsoleLogger::log(("Authentication failed for " + std::string(ip)).c_str());
+                return -1;  // Reject connection (< 0 = reject)
+            }
+        }
+        break;
+    }
+
+    case LWS_CALLBACK_ESTABLISHED: {
+        // Client connected (authentication already passed)
+        char ip[128];
+        lws_get_peer_simple(wsi, ip, sizeof(ip));
+        server->add_client(wsi, ip);
+        break;
+    }
+
+    case LWS_CALLBACK_RECEIVE: {
+        // Message received
+        auto client = server->find_client_by_wsi(wsi);
+        if (!client) {
+            return 0;
         }
 
-        case LWS_CALLBACK_RECEIVE: {
-            // Message received
-            auto client = server->find_client_by_wsi(wsi);
-            if (!client) {
-                return 0;
-            }
+        if (!client->authenticated && server->require_auth_) {
+            ConsoleLogger::log("Unauthenticated client attempted to send message");
+            return -1;
+        }
 
-            if (!client->authenticated && server->require_auth_) {
-                ConsoleLogger::log("Unauthenticated client attempted to send message");
-                return -1;
-            }
+        std::string message(static_cast<const char*>(in), len);
 
-            std::string message(static_cast<const char*>(in), len);
+        // If sync callback is set, use synchronous response
+        if (server->sync_message_callback_) {
+            ConsoleLogger::log(("RECEIVE: Processing message from " + client->client_id + " (" +
+                                std::to_string(message.length()) + " bytes)")
+                                   .c_str());
+            ConsoleLogger::log(("REQUEST: " + message.substr(0, 200)).c_str());
 
-            // If sync callback is set, use synchronous response
-            if (server->sync_message_callback_) {
-                ConsoleLogger::log(("RECEIVE: Processing message from " + client->client_id + " (" + std::to_string(message.length()) + " bytes)").c_str());
-                ConsoleLogger::log(("REQUEST: " + message.substr(0, 200)).c_str());
+            std::string response = server->sync_message_callback_(client->client_id, message);
 
-                std::string response = server->sync_message_callback_(client->client_id, message);
-
-                // Check if response is empty (for notifications, which should not receive a response)
-                if (response.empty()) {
-                    ConsoleLogger::log("RECEIVE: Empty response (notification), no response sent");
-                } else {
-                    ConsoleLogger::log(("RECEIVE: Got response (" + std::to_string(response.length()) + " bytes), adding to send queue").c_str());
-                    ConsoleLogger::log(("RESPONSE PREVIEW: " + response.substr(0, 300)).c_str());
-
-                    // Add response to client's send queue (direct access to avoid mutex nesting)
-                    {
-                        std::lock_guard<std::mutex> send_lock(client->send_mutex);
-                        client->send_queue.push(response);
-                        ConsoleLogger::log(("RECEIVE: Queue size now: " + std::to_string(client->send_queue.size())).c_str());
-                    }
-
-                    // Request writable callback to trigger send
-                    lws_callback_on_writable(wsi);
-                    ConsoleLogger::log("RECEIVE: Requested WRITEABLE callback");
-
-                    // Wake up service thread
-                    lws_cancel_service(server->context_);
-                    ConsoleLogger::log("RECEIVE: Woke service thread");
-                }
-
+            // Check if response is empty (for notifications, which should not receive a response)
+            if (response.empty()) {
+                ConsoleLogger::log("RECEIVE: Empty response (notification), no response sent");
             } else {
-                // Fallback to async queue
-                server->enqueue_request(client->client_id, message);
-            }
-            break;
-        }
+                ConsoleLogger::log(("RECEIVE: Got response (" + std::to_string(response.length()) +
+                                    " bytes), adding to send queue")
+                                       .c_str());
+                ConsoleLogger::log(("RESPONSE PREVIEW: " + response.substr(0, 300)).c_str());
 
-        case LWS_CALLBACK_CLOSED: {
-            // Client disconnected
-            server->remove_client(wsi);
-            break;
-        }
-
-        case LWS_CALLBACK_SERVER_WRITEABLE: {
-            ConsoleLogger::log("WRITEABLE: Callback triggered");
-
-            // Find client WITHOUT locking clients_mutex_ (to avoid deadlock)
-            std::shared_ptr<ClientInfo> client;
-            {
-                std::lock_guard<std::mutex> lock(server->clients_mutex_);
-                for (auto& pair : server->clients_) {
-                    if (pair.second->wsi == wsi) {
-                        client = pair.second;
-                        break;
-                    }
+                // Add response to client's send queue (direct access to avoid mutex nesting)
+                {
+                    std::lock_guard<std::mutex> send_lock(client->send_mutex);
+                    client->send_queue.push(response);
+                    ConsoleLogger::log(
+                        ("RECEIVE: Queue size now: " + std::to_string(client->send_queue.size()))
+                            .c_str());
                 }
-            }
 
-            if (!client) {
-                ConsoleLogger::log("WRITEABLE: client not found");
-                break;
-            }
-
-            // Check if there are messages to send
-            std::string message;
-            bool has_message = false;
-            {
-                std::lock_guard<std::mutex> send_lock(client->send_mutex);
-                if (!client->send_queue.empty()) {
-                    message = client->send_queue.front();
-                    client->send_queue.pop();
-                    has_message = true;
-                    ConsoleLogger::log(("WRITEABLE: Dequeued message for " + client->client_id + " (" + std::to_string(message.length()) + " bytes)").c_str());
-                }
-            }
-
-            if (!has_message) {
-                ConsoleLogger::log(("WRITEABLE: No messages for " + client->client_id).c_str());
-                break;
-            }
-
-            // Allocate buffer with LWS_PRE padding
-            size_t msg_len = message.length();
-            unsigned char* buf = new unsigned char[LWS_PRE + msg_len];
-            memcpy(buf + LWS_PRE, message.c_str(), msg_len);
-
-            // Write message
-            ConsoleLogger::log(("WRITEABLE: Calling lws_write for " + client->client_id).c_str());
-            int written = lws_write(wsi, buf + LWS_PRE, msg_len, LWS_WRITE_TEXT);
-            delete[] buf;
-
-            if (written < 0) {
-                ConsoleLogger::log(("WRITEABLE: lws_write FAILED for " + client->client_id).c_str());
-            } else {
-                ConsoleLogger::log(("WRITEABLE: Successfully sent " + std::to_string(written) + " bytes to " + client->client_id).c_str());
-            }
-
-            // If more messages in queue, request another callback
-            bool has_more = false;
-            {
-                std::lock_guard<std::mutex> send_lock(client->send_mutex);
-                has_more = !client->send_queue.empty();
-                if (has_more) {
-                    ConsoleLogger::log(("WRITEABLE: Queue has " + std::to_string(client->send_queue.size()) + " more messages, requesting callback").c_str());
-                }
-            }
-
-            if (has_more) {
+                // Request writable callback to trigger send
                 lws_callback_on_writable(wsi);
+                ConsoleLogger::log("RECEIVE: Requested WRITEABLE callback");
+
+                // Wake up service thread
+                lws_cancel_service(server->context_);
+                ConsoleLogger::log("RECEIVE: Woke service thread");
             }
 
+        } else {
+            // Fallback to async queue
+            server->enqueue_request(client->client_id, message);
+        }
+        break;
+    }
+
+    case LWS_CALLBACK_CLOSED: {
+        // Client disconnected
+        server->remove_client(wsi);
+        break;
+    }
+
+    case LWS_CALLBACK_SERVER_WRITEABLE: {
+        ConsoleLogger::log("WRITEABLE: Callback triggered");
+
+        // Find client WITHOUT locking clients_mutex_ (to avoid deadlock)
+        std::shared_ptr<ClientInfo> client;
+        {
+            std::lock_guard<std::mutex> lock(server->clients_mutex_);
+            for (auto& pair : server->clients_) {
+                if (pair.second->wsi == wsi) {
+                    client = pair.second;
+                    break;
+                }
+            }
+        }
+
+        if (!client) {
+            ConsoleLogger::log("WRITEABLE: client not found");
             break;
         }
 
-        default:
+        // Check if there are messages to send
+        std::string message;
+        bool has_message = false;
+        {
+            std::lock_guard<std::mutex> send_lock(client->send_mutex);
+            if (!client->send_queue.empty()) {
+                message = client->send_queue.front();
+                client->send_queue.pop();
+                has_message = true;
+                ConsoleLogger::log(("WRITEABLE: Dequeued message for " + client->client_id + " (" +
+                                    std::to_string(message.length()) + " bytes)")
+                                       .c_str());
+            }
+        }
+
+        if (!has_message) {
+            ConsoleLogger::log(("WRITEABLE: No messages for " + client->client_id).c_str());
             break;
+        }
+
+        // Allocate buffer with LWS_PRE padding
+        size_t msg_len = message.length();
+        unsigned char* buf = new unsigned char[LWS_PRE + msg_len];
+        memcpy(buf + LWS_PRE, message.c_str(), msg_len);
+
+        // Write message
+        ConsoleLogger::log(("WRITEABLE: Calling lws_write for " + client->client_id).c_str());
+        int written = lws_write(wsi, buf + LWS_PRE, msg_len, LWS_WRITE_TEXT);
+        delete[] buf;
+
+        if (written < 0) {
+            ConsoleLogger::log(("WRITEABLE: lws_write FAILED for " + client->client_id).c_str());
+        } else {
+            ConsoleLogger::log(("WRITEABLE: Successfully sent " + std::to_string(written) +
+                                " bytes to " + client->client_id)
+                                   .c_str());
+        }
+
+        // If more messages in queue, request another callback
+        bool has_more = false;
+        {
+            std::lock_guard<std::mutex> send_lock(client->send_mutex);
+            has_more = !client->send_queue.empty();
+            if (has_more) {
+                ConsoleLogger::log(("WRITEABLE: Queue has " +
+                                    std::to_string(client->send_queue.size()) +
+                                    " more messages, requesting callback")
+                                       .c_str());
+            }
+        }
+
+        if (has_more) {
+            lws_callback_on_writable(wsi);
+        }
+
+        break;
+    }
+
+    default:
+        break;
     }
 
     return 0;

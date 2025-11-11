@@ -13,8 +13,9 @@
 
 #include "ext.h"
 #include "ext_obex.h"
-#include <string>
+
 #include <atomic>
+#include <string>
 
 // Forward declaration
 class WebSocketServer;
@@ -25,20 +26,20 @@ class WebSocketServer;
  * Singleton Max external that manages MCP server lifecycle and UDP communication.
  */
 typedef struct _maxmcp_server {
-    t_object ob;              ///< Max object header (must be first)
-    void* outlet_log;         ///< Outlet for log messages (optional)
+    t_object ob;       ///< Max object header (must be first)
+    void* outlet_log;  ///< Outlet for log messages (optional)
 
     // MCP Protocol state
-    bool initialized;         ///< MCP initialize handshake completed
-    std::string protocol_version; ///< Negotiated protocol version
-    std::atomic<bool> running; ///< Server running state
+    bool initialized;              ///< MCP initialize handshake completed
+    std::string protocol_version;  ///< Negotiated protocol version
+    std::atomic<bool> running;     ///< Server running state
 
     // WebSocket server
-    WebSocketServer* ws_server;    ///< WebSocket server instance
+    WebSocketServer* ws_server;  ///< WebSocket server instance
 
     // Attributes
-    t_atom_long port;         ///< WebSocket server port (@port attribute)
-    bool debug;               ///< Debug mode (@debug attribute)
+    t_atom_long port;  ///< WebSocket server port (@port attribute)
+    bool debug;        ///< Debug mode (@debug attribute)
 
 } t_maxmcp_server;
 
@@ -53,4 +54,4 @@ void maxmcp_server_send_ready_bang(t_maxmcp_server* x, t_symbol* s, long argc, t
 // Attribute accessors
 t_max_err maxmcp_server_port_set(t_maxmcp_server* x, t_object* attr, long ac, t_atom* av);
 
-#endif // MAXMCP_SERVER_H
+#endif  // MAXMCP_SERVER_H
