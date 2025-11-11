@@ -29,6 +29,8 @@ jobs:
       - name: Clone Max SDK
         run: |
           git clone --depth 1 https://github.com/Cycling74/max-sdk.git max-sdk
+          cd max-sdk
+          git submodule update --init --recursive --depth 1
 
       - name: Install dependencies
         run: |
