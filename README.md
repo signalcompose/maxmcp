@@ -206,8 +206,4 @@ Hiroshi Yamato
 
 ## Inspiration
 
-This project was inspired by [MaxMSP-MCP-Server-multipatch](https://github.com/dropcontrol/MaxMSP-MCP-Server-multipatch). We reimagined the architecture with a native C++ approach for improved performance and simplified deployment.
-
-**Architecture Evolution**:
-- ❌ Python MCP Server + Node.js Socket.IO Server + 6 JavaScript files
-- ✅ **1 C++ external object** (99% reduction in complexity)
+This project was inspired by [MaxMSP-MCP-Server-multipatch](https://github.com/dropcontrol/MaxMSP-MCP-Server-multipatch), reimagined with a native C++ architecture for improved performance and Max integration.
