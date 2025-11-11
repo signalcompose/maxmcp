@@ -26,9 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Max SDK
+      - name: Clone Max SDK
         run: |
-          git clone --depth 1 https://github.com/Cycling74/max-sdk.git
+          git clone --depth 1 https://github.com/Cycling74/max-sdk.git max-sdk
 
       - name: Install dependencies
         run: |
