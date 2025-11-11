@@ -115,20 +115,22 @@ MaxMCP provides 10 tools for comprehensive patch control:
 
 ## Development Status
 
-**Current Phase**: Phase 2 Complete ✅
+**Current Version**: v1.1.0 ✅
 
 ✅ **Completed**:
 - Phase 1: Core external objects, WebSocket server
 - Phase 2: Complete MCP toolset, E2E testing, Max Package integration
+- Phase 1 Infrastructure: CI/CD pipeline, comprehensive testing (57 tests), code quality automation
 
 🔄 **Next**:
 - Phase 3: Max Package Manager submission
 - Phase 4: Cross-platform builds (Windows/Intel support)
 
-See `docs/` for detailed specifications and development roadmap.
+See [CHANGELOG.md](CHANGELOG.md) for version history and `docs/` for detailed specifications and development roadmap.
 
 ## Documentation
 
+- [CHANGELOG](CHANGELOG.md) - Version history and release notes
 - [Documentation Index](docs/INDEX.md) - Complete documentation overview
 - [Quick Start Guide](docs/quick-start.md) - Detailed getting started
 - [Development Guide](docs/development-guide.md) - Contributing guide
@@ -171,6 +173,17 @@ MaxMCP is licensed under the **MIT License**. See [LICENSE](LICENSE) for the ful
 
 MaxMCP uses open-source libraries. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for full attribution and license details.
 
+## Development & Testing
+
+MaxMCP uses a comprehensive CI/CD pipeline with automated testing and code quality checks:
+
+- **Testing**: 57 unit tests (Google Test 1.17.0) with 100% pass rate
+- **CI/CD**: GitHub Actions workflows for automated testing and linting
+- **Code Quality**: Pre-commit hooks with clang-format, ESLint, and automated tests
+- **Local Setup**: `pre-commit install` to enable local quality checks
+
+See [docs/PHASE1_INFRASTRUCTURE.md](docs/PHASE1_INFRASTRUCTURE.md) for details on the testing infrastructure.
+
 ## Contributing
 
 We welcome contributions from the community! Please see:
@@ -178,6 +191,8 @@ We welcome contributions from the community! Please see:
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community guidelines
 - [SECURITY.md](SECURITY.md) - Security policy
+
+All contributions are automatically validated by CI to ensure code quality and test coverage.
 
 ## Author
 
