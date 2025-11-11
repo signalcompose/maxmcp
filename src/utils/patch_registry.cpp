@@ -23,8 +23,10 @@ void PatchRegistry::register_patch(t_maxmcp* patch) {
     std::lock_guard<std::mutex> lock(mutex_);
     patches_.push_back(patch);
 
+#ifndef MAXMCP_TEST_MODE
     std::string msg = "Patch registered: " + patch->patch_id;
     ConsoleLogger::log(msg.c_str());
+#endif
 }
 
 void PatchRegistry::unregister_patch(t_maxmcp* patch) {
@@ -35,8 +37,10 @@ void PatchRegistry::unregister_patch(t_maxmcp* patch) {
 
     auto it = std::find(patches_.begin(), patches_.end(), patch);
     if (it != patches_.end()) {
+#ifndef MAXMCP_TEST_MODE
         std::string msg = "Patch unregistered: " + patch->patch_id;
         ConsoleLogger::log(msg.c_str());
+#endif
         patches_.erase(it);
     }
 }
@@ -44,10 +48,12 @@ void PatchRegistry::unregister_patch(t_maxmcp* patch) {
 json PatchRegistry::list_patches(const std::string& group_filter) {
     std::lock_guard<std::mutex> lock(mutex_);
 
+#ifndef MAXMCP_TEST_MODE
     // Debug: Log registry size
     std::string debug_msg =
         "PatchRegistry::list_patches() - Registry size: " + std::to_string(patches_.size());
     ConsoleLogger::log(debug_msg.c_str());
+#endif
 
     json patches = json::array();
 
@@ -57,9 +63,11 @@ json PatchRegistry::list_patches(const std::string& group_filter) {
 
         // Get group name (may be empty)
         std::string group_name = "";
+#ifndef MAXMCP_TEST_MODE
         if (patch->group && patch->group->s_name) {
             group_name = patch->group->s_name;
         }
+#endif
 
         // Apply group filter if specified
         if (!group_filter.empty() && group_name != group_filter) {
@@ -120,9 +128,11 @@ json PatchRegistry::get_patch_info(const std::string& patch_id) {
 
     // Get group name (may be empty)
     std::string group_name = "";
+#ifndef MAXMCP_TEST_MODE
     if (patch->group && patch->group->s_name) {
         group_name = patch->group->s_name;
     }
+#endif
 
     // Build patch information
     json patch_info = {{"patch_id", patch->patch_id},
@@ -157,9 +167,11 @@ json PatchRegistry::get_frontmost_patch() {
 
     // Get group name (may be empty)
     std::string group_name = "";
+#ifndef MAXMCP_TEST_MODE
     if (patch->group && patch->group->s_name) {
         group_name = patch->group->s_name;
     }
+#endif
 
     // Build patch information
     json patch_info = {{"patch_id", patch->patch_id},
