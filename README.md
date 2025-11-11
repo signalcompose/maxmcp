@@ -165,7 +165,19 @@ The package includes comprehensive example patches in `examples/`:
 
 ## License
 
-MIT License
+MaxMCP is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full license text.
+
+### Third-Party Licenses
+
+MaxMCP uses open-source libraries. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for full attribution and license details.
+
+## Contributing
+
+We welcome contributions from the community! Please see:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community guidelines
+- [SECURITY.md](SECURITY.md) - Security policy
 
 ## Author
 
@@ -175,6 +187,7 @@ Hiroshi Yamato
 
 - GitHub Issues: https://github.com/signalcompose/MaxMCP/issues
 - Documentation: See `docs/` directory
+- Security: See [SECURITY.md](SECURITY.md) for vulnerability reporting
 
 ## Inspiration
 
