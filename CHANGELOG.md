@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-11-11
+
+### Documentation
+- Added CHANGELOG.md for version history tracking
+- Added docs/PHASE1_INFRASTRUCTURE.md completion report
+- Updated README.md with v1.1.0 status and development/testing section
+- Updated docs/INDEX.md with new documentation references
+
 ## [1.1.0] - 2025-11-11
 
 ### Added
@@ -40,11 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Advanced Security workflows (TruffleHog, Dependency Review)
   - Moved security scanning to local pre-commit hooks only
 
-### Documentation
-- Added this CHANGELOG.md for version tracking
-- Updated development workflow documentation
-- Added Phase 1 Infrastructure completion report
-
 ## [1.0.0] - 2025-11-11
 
 ### Added
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive example patches and documentation
 - Max Package structure for distribution
 
-[Unreleased]: https://github.com/signalcompose/MaxMCP/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/signalcompose/MaxMCP/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/signalcompose/MaxMCP/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/signalcompose/MaxMCP/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/signalcompose/MaxMCP/releases/tag/v1.0.0
