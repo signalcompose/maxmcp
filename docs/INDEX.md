@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2025-11-10
-**Project Status**: Phase 2 Complete ✅
+**Last Updated**: 2025-11-11
+**Project Status**: v1.1.0 Released ✅ (Phase 2 Complete + Infrastructure)
 
 ---
 
@@ -97,11 +97,22 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Inspector attribute descriptions
 - Help patch system integration
 
+### 9. [Phase 1 Infrastructure Completion](PHASE1_INFRASTRUCTURE.md)
+**Date**: 2025-11-11
+**Version**: v1.1.0
+**Status**: Complete ✅
+**Achievements**:
+- GitHub Actions CI/CD pipeline (C++ and Node.js workflows)
+- Comprehensive unit test suite (57 tests, 100% passing)
+- Pre-commit hooks (clang-format, ESLint, test validation)
+- Code quality automation
+- MAXMCP_TEST_MODE for CI compatibility
+
 ---
 
 ## 📖 Testing Documentation
 
-### 9. [E2E Test Results - Phase 2](e2e-test-results-phase2.md)
+### 10. [E2E Test Results - Phase 2](e2e-test-results-phase2.md)
 **Purpose**: Comprehensive E2E test results
 **Date**: 2025-11-09
 **Contents**:
@@ -110,7 +121,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Bridge communication verification
 - Known issues and resolutions
 
-### 10. [Manual Test Guide - Phase 2](manual-test-phase2.md)
+### 11. [Manual Test Guide - Phase 2](manual-test-phase2.md)
 **Purpose**: Manual testing procedures
 **Date**: 2025-11-09
 **Contents**:
@@ -216,6 +227,8 @@ Documentation should be updated when:
 | See implementation roadmap | [Implementation Plan](implementation-plan.md) |
 | Check Phase 1 results | [Phase 1 Completion](PHASE1_COMPLETION.md) |
 | Check Phase 2 results | [Phase 2 Completion](PHASE2_COMPLETION.md) |
+| Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |
+| See version history | [CHANGELOG](../CHANGELOG.md) |
 | Find E2E test results | [E2E Test Results](e2e-test-results-phase2.md) |
 | Find research notes | [Research Directory](research/) |
 
