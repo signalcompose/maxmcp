@@ -34,7 +34,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install cmake nlohmann-json libwebsockets
+          brew install cmake nlohmann-json libwebsockets googletest
 
       - name: Configure CMake
         run: |
