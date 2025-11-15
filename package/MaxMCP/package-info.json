@@ -1,11 +1,21 @@
 {
   "name": "MaxMCP",
   "version": "1.0.0",
+  "displayname": "MaxMCP",
   "author": "signalcompose",
   "description": "MCP Server for Max/MSP - Control Max patches with Claude Code using natural language",
   "homepage": "https://github.com/signalcompose/MaxMCP",
   "repository": "https://github.com/signalcompose/MaxMCP.git",
   "license": "MIT",
+  "tags": ["MCP", "AI", "automation", "Claude", "code-generation", "protocol"],
+  "max_version_min": "9.0.0",
+  "max_version_max": "none",
+  "os": {
+    "mac": {
+      "min_version": "10.15"
+    }
+  },
+  "toolbar_icon": "misc/MaxMCP_toolbar.svg",
   "homepatcher": "00-index.maxpat",
   "externals": {
     "maxmcp": {
