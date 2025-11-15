@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- MaxMCP Toolbar Icon -->
+  <!-- Design: Max object box with MCP connection symbol -->
+
+  <!-- Max-style object box -->
+  <rect x="4" y="10" width="24" height="12"
+        fill="none" stroke="#404040" stroke-width="1.5" rx="1"/>
+
+  <!-- MCP text inside box -->
+  <text x="16" y="18"
+        font-family="Arial, sans-serif"
+        font-size="8"
+        font-weight="bold"
+        fill="#404040"
+        text-anchor="middle"
+        dominant-baseline="middle">MCP</text>
+
+  <!-- Connection points (protocol symbols) -->
+  <!-- Top inlet -->
+  <circle cx="16" cy="10" r="2" fill="#5B9BD5"/>
+
+  <!-- Bottom outlets (3 outlets like Max objects) -->
+  <circle cx="10" cy="22" r="1.5" fill="#5B9BD5"/>
+  <circle cx="16" cy="22" r="1.5" fill="#5B9BD5"/>
+  <circle cx="22" cy="22" r="1.5" fill="#5B9BD5"/>
+
+  <!-- Signal flow lines -->
+  <line x1="16" y1="6" x2="16" y2="8"
+        stroke="#5B9BD5" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="10" y1="24" x2="10" y2="26"
+        stroke="#5B9BD5" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="24" x2="16" y2="26"
+        stroke="#5B9BD5" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="24" x2="22" y2="26"
+        stroke="#5B9BD5" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
