@@ -162,6 +162,9 @@ yarn.lock
 .env.local
 .env.*.local
 
+# Development tools (MaxMCP-Dev only)
+.export-config.yml
+
 # Max SDK (downloaded, not committed)
 max-sdk/
 
