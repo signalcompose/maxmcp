@@ -149,7 +149,97 @@ brew install nlohmann-json
 # https://github.com/Cycling74/max-sdk
 ```
 
-### 2. Create Minimal External
+### 2. Complete Local Setup Checklist
+
+Follow this exact order to reproduce the working installation from our latest debugging session:
+
+1. **Clone repos**
+   ```bash
+   git clone https://github.com/signalcompose/MaxMCP.git
+   cd MaxMCP
+   git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+   ```
+   > The `--recursive` flag is mandatory; without it the `max-pretarget.cmake` script is missing.
+
+2. **Install system dependencies**
+   ```bash
+   brew install cmake libwebsockets openssl
+   ```
+   - Requires macOS 13+, Xcode CLT, Max 9.1+, Node 18+, npm 9+.
+
+3. **Install bridge dependencies**
+   ```bash
+   cd bridge
+   npm install
+   cd ..
+   ```
+   Missing this step is what triggered the original `WebSocket error` (the `ws` module was absent).
+
+4. **Build the external**
+   ```bash
+   ./build.sh Release clean   # optional but recommended for first build
+   ./build.sh Release
+   ```
+   - Copies `maxmcp.mxo` to `~/Documents/Max 9/Library/`.
+   - Confirm with `ls ~/Documents/Max\ 9/Library/maxmcp.mxo/Contents/MacOS/maxmcp`.
+
+5. **(Optional) Manual CMake flags**
+   ```bash
+   cmake -B build -S . -DCMAKE_BUILD_TYPE=Release \
+         -DC74_LIBRARY_OUTPUT_DIRECTORY="$HOME/Documents/Max 9/Library"
+   cmake --build build --config Release
+   ```
+   Use this variant if you prefer running `cmake` directly or need a custom Max Library path.
+
+6. **Launch the agent in Max**
+   - Unlock a patcher (Cmd+E) and create:
+     ```
+     [maxmcp @mode agent @port 7400]
+     ```
+   - Add a `START` message box, connect it to the agent inlet, then click it.
+   - Console output should include:
+     ```
+     WebSocket server started on port 7400
+     maxmcp: maxmcp (agent mode) started on port 7400
+     ```
+
+7. **Launch a controllable patch**
+   - In any patch you want Claude to control, add:
+     ```
+     [maxmcp @mode patch]
+     ```
+   - Optional attributes: `@alias my-synth`, `@group synth`.
+   - Console will show `Patch registered: <ID>`.
+
+8. **Run the bridge**
+   ```bash
+   node ~/Documents/MaxMCP/bridge/websocket-mcp-bridge.js ws://localhost:7400
+   ```
+   - Use `DEBUG=1` for verbose logs.
+   - `ECONNREFUSED` means the agent is not running or the port is blocked (`lsof -i :7400` to verify).
+
+9. **Configure Claude Code**
+   ```bash
+   claude mcp add maxmcp node \
+     ~/Documents/MaxMCP/bridge/websocket-mcp-bridge.js \
+     ws://localhost:7400
+   ```
+   Restart Claude Code afterwards.
+
+10. **Smoke test**
+    ```bash
+    echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | \
+      node bridge/websocket-mcp-bridge.js ws://localhost:7400
+    ```
+    - Expect a JSON response listing `list_active_patches`, `get_console_log`, etc.
+    - For scripted testing without Max, use `node test-mcp-server.js 7400` to spin up the mock server first.
+
+11. **Troubleshooting commands**
+    - Port status: `lsof -i :7400`
+    - Kill stray bridge: `pkill -f websocket-mcp-bridge.js`
+    - Clear stuck agent thread: re-open the patcher and click `START` again.
+
+### 3. Create Minimal External
 ```cpp
 // src/maxmcp.cpp
 #include "ext.h"

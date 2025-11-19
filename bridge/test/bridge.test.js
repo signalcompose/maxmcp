@@ -18,10 +18,12 @@ describe('maxmcp-bridge', () => {
     wss = new WebSocket.Server({ port: TEST_PORT });
   });
 
-  afterAll(() => {
-    // Cleanup
+  afterAll((done) => {
+    // Cleanup server and wait for close to finish so Jest can exit cleanly
     if (wss) {
-      wss.close();
+      wss.close(() => done());
+    } else {
+      done();
     }
   });
 
@@ -89,9 +91,13 @@ describe('maxmcp-bridge', () => {
         bridge.stdin.write(testMessage + '\n');
       }, 500);
 
-      setTimeout(() => {
+      const killTimer = setTimeout(() => {
         bridge.kill();
       }, 2000);
+
+      bridge.on('exit', () => {
+        clearTimeout(killTimer);
+      });
     });
 
     test('should forward WebSocket to stdout', (done) => {
@@ -119,16 +125,22 @@ describe('maxmcp-bridge', () => {
         }, 100);
       });
 
-      setTimeout(() => {
-        if (!done.mock) {
+      let finished = false;
+      const killTimer = setTimeout(() => {
+        if (!finished) {
           bridge.kill();
         }
       }, 2000);
+
+      bridge.on('exit', () => {
+        finished = true;
+        clearTimeout(killTimer);
+      });
     });
   });
 
   describe('Error handling', () => {
-    test('should exit on connection error', (done) => {
+    test('should exit on connection error and surface message', (done) => {
       const invalidUrl = 'ws://localhost:9999'; // No server
 
       const bridge = spawn('node', [
@@ -136,15 +148,16 @@ describe('maxmcp-bridge', () => {
         invalidUrl
       ]);
 
-      bridge.on('exit', (code) => {
-        expect(code).toBe(1); // Error exit code
-        done();
+      let errorOutput = '';
+      bridge.stderr.on('data', (data) => {
+        errorOutput += data.toString();
       });
 
-      setTimeout(() => {
-        bridge.kill();
+      bridge.on('exit', (code) => {
+        expect(code).toBe(1); // Error exit code
+        expect(errorOutput).toMatch(/ECONNREFUSED/);
         done();
-      }, 2000);
+      });
     });
 
     test('should exit gracefully on SIGINT', (done) => {
