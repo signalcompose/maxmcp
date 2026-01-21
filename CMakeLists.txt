@@ -119,6 +119,37 @@ include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 # BUNDLE DEPENDENCIES (macOS only)
 #############################################################
 if(APPLE)
+    # Get library paths from CMake targets
+    get_target_property(LWS_LIBRARY websockets_shared LOCATION)
+    get_filename_component(LWS_DIR "${LWS_LIBRARY}" DIRECTORY)
+
+    # Find OpenSSL (required by libwebsockets)
+    find_package(OpenSSL REQUIRED)
+    get_filename_component(OPENSSL_LIB_DIR "${OPENSSL_SSL_LIBRARY}" DIRECTORY)
+
+    # Get actual dylib filenames using otool
+    execute_process(
+        COMMAND otool -L "${LWS_LIBRARY}"
+        OUTPUT_VARIABLE LWS_DEPS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Extract libwebsockets dylib name
+    string(REGEX MATCH "libwebsockets\\.[0-9]+\\.dylib" LWS_DYLIB_NAME "${LWS_DEPS}")
+    if(NOT LWS_DYLIB_NAME)
+        set(LWS_DYLIB_NAME "libwebsockets.dylib")
+    endif()
+
+    # Extract OpenSSL dylib names
+    string(REGEX MATCH "libssl\\.[0-9]+\\.dylib" SSL_DYLIB_NAME "${LWS_DEPS}")
+    string(REGEX MATCH "libcrypto\\.[0-9]+\\.dylib" CRYPTO_DYLIB_NAME "${LWS_DEPS}")
+    if(NOT SSL_DYLIB_NAME)
+        set(SSL_DYLIB_NAME "libssl.dylib")
+    endif()
+    if(NOT CRYPTO_DYLIB_NAME)
+        set(CRYPTO_DYLIB_NAME "libcrypto.dylib")
+    endif()
+
     # Create Frameworks directory in bundle
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -128,52 +159,52 @@ if(APPLE)
 
     # Copy and fix dylib paths
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${LWS_DIR}/${LWS_DYLIB_NAME}"
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${OPENSSL_LIB_DIR}/${SSL_DYLIB_NAME}"
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${OPENSSL_LIB_DIR}/${CRYPTO_DYLIB_NAME}"
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
         # Fix install names in main executable
         COMMAND install_name_tool -change
-            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
-            @loader_path/../Frameworks/libwebsockets.20.dylib
+            "${LWS_DIR}/${LWS_DYLIB_NAME}"
+            @loader_path/../Frameworks/${LWS_DYLIB_NAME}
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
         COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
-            @loader_path/../Frameworks/libssl.3.dylib
+            "${OPENSSL_LIB_DIR}/${SSL_DYLIB_NAME}"
+            @loader_path/../Frameworks/${SSL_DYLIB_NAME}
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
         COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
-            @loader_path/../Frameworks/libcrypto.3.dylib
+            "${OPENSSL_LIB_DIR}/${CRYPTO_DYLIB_NAME}"
+            @loader_path/../Frameworks/${CRYPTO_DYLIB_NAME}
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
-        # Fix install names in libwebsockets.20.dylib itself
+        # Fix install names in libwebsockets dylib itself
         COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
+            @loader_path/../Frameworks/${LWS_DYLIB_NAME}
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${LWS_DYLIB_NAME}"
         COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
-            @loader_path/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
+            "${OPENSSL_LIB_DIR}/${SSL_DYLIB_NAME}"
+            @loader_path/${SSL_DYLIB_NAME}
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${LWS_DYLIB_NAME}"
         COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
-            @loader_path/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
-        # Fix install names in libssl.3.dylib itself
+            "${OPENSSL_LIB_DIR}/${CRYPTO_DYLIB_NAME}"
+            @loader_path/${CRYPTO_DYLIB_NAME}
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${LWS_DYLIB_NAME}"
+        # Fix install names in libssl dylib itself
         COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
-        COMMAND install_name_tool -change
-            /opt/homebrew/Cellar/openssl@3/3.6.0/lib/libcrypto.3.dylib
-            @loader_path/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
-        # Fix install name in libcrypto.3.dylib itself
+            @loader_path/../Frameworks/${SSL_DYLIB_NAME}
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${SSL_DYLIB_NAME}"
+        COMMAND bash -c "install_name_tool -change \
+            $(otool -L \"$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${SSL_DYLIB_NAME}\" | grep libcrypto | awk '{print $1}') \
+            @loader_path/${CRYPTO_DYLIB_NAME} \
+            \"$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${SSL_DYLIB_NAME}\" || true"
+        # Fix install name in libcrypto dylib itself
         COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libcrypto.3.dylib"
+            @loader_path/../Frameworks/${CRYPTO_DYLIB_NAME}
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${CRYPTO_DYLIB_NAME}"
         COMMENT "Bundling dependencies and fixing all install names"
         VERBATIM
     )
