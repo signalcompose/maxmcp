@@ -134,8 +134,7 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
     // Create object with newobject_sprintf (without size - use Max default)
     t_object* obj = (t_object*)newobject_sprintf(
-        data->patch->patcher,
-        "@maxclass newobj @text \"%s\" @patching_position %.2f %.2f",
+        data->patch->patcher, "@maxclass newobj @text \"%s\" @patching_position %.2f %.2f",
         obj_string.c_str(), data->x, data->y);
 
     if (obj) {
