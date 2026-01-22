@@ -180,3 +180,8 @@ bridge/package-lock.json
 # Max Package build artifacts (installed by install-package.sh)
 package/MaxMCP/externals/*.mxo
 package/MaxMCP/support/maxmcp-bridge
+
+# Claude Code / AI assistant configs (not tracked)
+CLAUDE.md
+.claude/
+*.local.md
