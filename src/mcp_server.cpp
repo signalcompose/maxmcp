@@ -157,6 +157,17 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         pos += 2;
     }
 
+    // 4. Replace newline characters with space (prevents @text attribute issues)
+    pos = 0;
+    while ((pos = escaped.find('\n', pos)) != std::string::npos) {
+        escaped.replace(pos, 1, " ");
+        pos += 1;
+    }
+    pos = 0;
+    while ((pos = escaped.find('\r', pos)) != std::string::npos) {
+        escaped.erase(pos, 1);
+    }
+
     // Create object with newobject_sprintf (without size - use Max default)
     t_object* obj = (t_object*)newobject_sprintf(
         data->patch->patcher, "@maxclass newobj @text \"%s\" @patching_position %.2f %.2f",
