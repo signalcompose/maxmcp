@@ -5,6 +5,13 @@ All notable changes to MaxMCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/signalcompose/maxmcp/compare/v1.0.0...v1.0.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* **ci:** trigger release-assets workflow via workflow_dispatch ([#23](https://github.com/signalcompose/maxmcp/issues/23)) ([1c8da3d](https://github.com/signalcompose/maxmcp/commit/1c8da3d69670267e60dd54caac80a291df8abc69))
+
 ## 1.0.0 (2026-01-22)
 
 
