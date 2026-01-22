@@ -51,19 +51,47 @@ jobs:
           INPUT_TAG_NAME: ${{ inputs.tag_name }}
         with:
           script: |
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: process.env.INPUT_TAG_NAME
-            });
-            core.setOutput('upload_url', release.data.upload_url);
+            const tagName = process.env.INPUT_TAG_NAME;
+
+            if (!tagName) {
+              core.setFailed('INPUT_TAG_NAME is not set');
+              return;
+            }
+
+            try {
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tagName
+              });
+              core.setOutput('upload_url', release.data.upload_url);
+              console.log(`Found release for tag ${tagName}`);
+            } catch (error) {
+              if (error.status === 404) {
+                core.setFailed(`Release not found for tag '${tagName}'`);
+              } else {
+                core.setFailed(`Failed to get release: ${error.message}`);
+              }
+              return;
+            }
+
+      - name: Validate upload URL
+        if: ${{ inputs.tag_name && success() }}
+        env:
+          UPLOAD_URL: ${{ steps.get_release.outputs.upload_url }}
+        run: |
+          if [ -z "$UPLOAD_URL" ]; then
+            echo "::error::Upload URL is empty. The get_release step may have failed."
+            exit 1
+          fi
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.get_release.outputs.upload_url || github.event.release.upload_url }}
         with:
-          upload_url: ${{ steps.get_release.outputs.upload_url || github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: package/MaxMCP-${{ env.TAG_NAME }}-macos-arm64.zip
           asset_name: MaxMCP-${{ env.TAG_NAME }}-macos-arm64.zip
           asset_content_type: application/zip
@@ -77,8 +105,9 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.get_release.outputs.upload_url || github.event.release.upload_url }}
         with:
-          upload_url: ${{ steps.get_release.outputs.upload_url || github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: package/checksums.txt
           asset_name: checksums.txt
           asset_content_type: text/plain

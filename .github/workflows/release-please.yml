@@ -33,13 +33,30 @@ jobs:
           TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
         with:
           script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'release-assets.yml',
-              ref: 'main',
-              inputs: {
-                tag_name: process.env.TAG_NAME
+            const tagName = process.env.TAG_NAME;
+
+            if (!tagName || tagName.trim() === '') {
+              core.setFailed('TAG_NAME is empty. Release Please may not have created a release.');
+              return;
+            }
+
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'release-assets.yml',
+                ref: 'main',
+                inputs: {
+                  tag_name: tagName
+                }
+              });
+              console.log(`Triggered release-assets workflow for tag: ${tagName}`);
+              console.log(`Check: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/release-assets.yml`);
+            } catch (error) {
+              if (error.status === 404) {
+                core.setFailed(`Workflow 'release-assets.yml' not found`);
+              } else {
+                core.setFailed(`Failed to trigger workflow: ${error.message}`);
               }
-            });
-            console.log(`Triggered release-assets workflow for tag: ${process.env.TAG_NAME}`);
+              return;
+            }
