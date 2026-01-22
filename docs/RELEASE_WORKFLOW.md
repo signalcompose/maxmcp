@@ -129,6 +129,71 @@ Runs when a GitHub Release is published:
 
 ---
 
+## ⚠️ Critical Rules
+
+### DO NOT
+
+| Action | Why |
+|--------|-----|
+| Create tags manually (`git tag`) | Breaks Release Please's version tracking |
+| Edit CHANGELOG.md manually | Release Please manages this automatically |
+| Manually bump version numbers | Conventional Commits control versioning |
+| Ignore Release Please PRs | They must be merged to sync state |
+
+### ALWAYS
+
+| Action | Why |
+|--------|-----|
+| Merge Release Please PRs promptly | Keeps version state synchronized |
+| Use Conventional Commits | Determines version bumps automatically |
+| Let Release Please create tags | Ensures proper release tracking |
+
+---
+
+## Troubleshooting
+
+### Stale Release PR (version mismatch)
+
+**Symptom**: Release Please PR shows old version (e.g., `release 1.0.0`) but tags already exist (e.g., `v1.1.1`).
+
+**Cause**: Tags were created manually without merging Release Please PRs. Release Please tracks state via merged Release PRs, not git tags.
+
+**Fix**:
+
+1. Get the commit SHA of the latest tag:
+   ```bash
+   git rev-parse v1.1.1
+   ```
+
+2. Add `last-release-sha` to `release-please-config.json`:
+   ```json
+   {
+     "last-release-sha": "<full-sha-from-step-1>",
+     ...
+   }
+   ```
+
+3. Update `.release-please-manifest.json` to match the tag version:
+   ```json
+   {
+     ".": "1.1.1"
+   }
+   ```
+
+4. Close the stale Release PR.
+
+5. Merge the fix to main. Release Please will now create new PRs based on the correct version.
+
+6. **Important**: Remove `last-release-sha` after a successful Release PR is merged.
+
+### Release Please not creating PRs
+
+**Cause**: No releasable commits since last release. Only `feat:`, `fix:`, `perf:`, and breaking changes trigger releases.
+
+**Fix**: Ensure commits use Conventional Commits format with releasable types.
+
+---
+
 ## Manual Release (Emergency Only)
 
 In rare cases where automation fails:
