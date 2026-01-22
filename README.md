@@ -1,5 +1,7 @@
 # MaxMCP - Native MCP Server for Max/MSP
 
+[![Developed with Claude Code](https://img.shields.io/badge/Developed%20with-Claude%20Code-blueviolet)](https://claude.ai/code)
+
 Control your Max/MSP patches with Claude Code using natural language.
 
 ## Overview
@@ -259,6 +261,8 @@ We welcome contributions from the community! Please see:
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community guidelines
 - [SECURITY.md](SECURITY.md) - Security policy
+
+This project uses [Claude Code](https://claude.ai/code) for development. See [CLAUDE.md](CLAUDE.md) for AI assistant guidelines and project conventions.
 
 All contributions are automatically validated by CI to ensure code quality and test coverage.
 

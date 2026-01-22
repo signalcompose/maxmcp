@@ -1,0 +1,162 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model Context Protocol) server. It enables Claude Code to control Max/MSP patches through natural language commands via a unified external with two modes: `@mode agent` (WebSocket server, MCP handler) and `@mode patch` (client registration).
+
+**Architecture**: Claude Code ↔ stdio ↔ Node.js Bridge ↔ WebSocket ↔ maxmcp.mxo ↔ Max/MSP Patches
+
+## Build Commands
+
+```bash
+# Configure (Debug)
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+
+# Configure with tests
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+
+# Build
+cmake --build build
+
+# Install to package directory
+cmake --install build --prefix package/MaxMCP
+```
+
+## Testing
+
+```bash
+# Run all tests
+cd build && ctest --output-on-failure
+
+# Run specific test suite
+ctest -R UUIDGenerator --verbose
+
+# Run with verbose output
+ctest -V
+```
+
+**Test framework**: Google Test 1.17.0
+**Test files**: `tests/unit/test_*.cpp`
+**Test mode macro**: `MAXMCP_TEST_MODE` (enables compilation without Max SDK)
+
+## Installing Package Files to Max
+
+```bash
+# Install complete package (externals, examples, support files)
+cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/
+
+# Or install only the built external
+cp -R build/maxmcp.mxo ~/Documents/Max\ 9/Packages/MaxMCP/externals/
+```
+
+## Code Quality
+
+**C++ formatting**: clang-format (run before commit)
+```bash
+find src -name "*.cpp" -o -name "*.h" | xargs clang-format -i
+```
+
+**Node.js (bridge)**: ESLint + Prettier
+```bash
+cd package/MaxMCP/support/bridge
+npm run lint
+npm run format:check
+```
+
+## Architecture Overview
+
+### Key Components
+
+- **`src/maxmcp.cpp`**: Unified external object supporting both agent and patch modes via `@mode` attribute
+- **`src/mcp_server.cpp`**: MCP protocol handler (JSON-RPC), implements all 10 MCP tools
+- **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
+- **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry)
+
+### MCP Tools (11 total)
+
+1. `list_active_patches` - List registered patches
+2. `get_console_log` - Retrieve Max Console messages
+3. `add_max_object` - Create Max objects
+4. `get_objects_in_patch` - List objects in patch
+5. `set_object_attribute` - Modify object attributes
+6. `connect_max_objects` - Create patchcords
+7. `disconnect_max_objects` - Remove patchcords
+8. `remove_max_object` - Delete objects
+9. `get_patch_info` - Get patch metadata
+10. `get_frontmost_patch` - Get currently focused patch
+11. `get_avoid_rect_position` - Find safe placement positions
+
+### Threading Model
+
+All Max API calls must run on the main thread. Use `defer()` for operations triggered from WebSocket callbacks:
+
+```
+WebSocket Thread → defer() → Max Main Thread → Execute Max API
+```
+
+## Dependencies
+
+- **C++17** (required)
+- **Max SDK 8.6+** (clone to `max-sdk/` directory)
+- **nlohmann/json 3.11.0+** (`brew install nlohmann-json`)
+- **libwebsockets** (`brew install libwebsockets`)
+- **Google Test** (for tests only, `brew install googletest`)
+
+## Git Workflow
+
+**Branch strategy**: GitHub Flow
+
+- `main` - Production (default branch, protected)
+- `feature/XX-description` - Feature branches (XX = issue number)
+- `docs/description` - Documentation updates
+- `bugfix/description` - Bug fixes
+
+All changes merged to `main` via Pull Request with required CI checks.
+
+**Commit format**: Conventional Commits with English titles
+
+```
+feat(tools): add disconnect_max_objects MCP tool
+
+Implement MCP tool for disconnecting patchcords.
+- Parse source and destination object varnames
+- Defer to main thread for safety
+
+Closes #99
+```
+
+## Release Management
+
+**Tool**: [Release Please](https://github.com/googleapis/release-please) (automated)
+
+Conventional Commits automatically determine semantic versioning:
+- `feat:` → MINOR (new feature: 1.0.0 → 1.1.0)
+- `fix:` → PATCH (bug fix: 1.0.0 → 1.0.1)
+- `feat!:` or `BREAKING CHANGE:` → MAJOR (breaking: 1.0.0 → 2.0.0)
+
+When PRs are merged to `main`, Release Please automatically:
+1. Updates the release PR with CHANGELOG entries
+2. On release PR merge: creates Git tag and GitHub Release
+
+## Coding Conventions
+
+- **Classes**: PascalCase (`MCPServer`)
+- **Functions**: snake_case (`generate_patch_id`)
+- **Variables**: snake_case (`patch_id`)
+- **Constants**: UPPER_SNAKE_CASE (`MAX_BUFFER_SIZE`)
+- **Private members**: trailing underscore (`name_`)
+- **Indentation**: 4 spaces
+- **Max line length**: 100 characters
+
+## Documentation
+
+Documentation is the single source of truth (DDD - Documentation Driven Development):
+
+- `docs/INDEX.md` - Documentation index
+- `docs/specifications.md` - Technical specifications
+- `docs/architecture.md` - System design
+- `docs/development-guide.md` - Development practices
+
+Always read and update documentation before/after code changes.
