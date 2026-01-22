@@ -12,6 +12,14 @@
     { "type": "chore", "section": "Miscellaneous" }
   ],
   "packages": {
-    ".": {}
+    ".": {
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "package/MaxMCP/package-info.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
   }
 }

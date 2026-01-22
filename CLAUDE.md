@@ -136,9 +136,25 @@ Conventional Commits automatically determine semantic versioning:
 - `fix:` → PATCH (bug fix: 1.0.0 → 1.0.1)
 - `feat!:` or `BREAKING CHANGE:` → MAJOR (breaking: 1.0.0 → 2.0.0)
 
+### Release Workflow
+
 When PRs are merged to `main`, Release Please automatically:
-1. Updates the release PR with CHANGELOG entries
+1. Creates/updates a release PR with CHANGELOG entries
 2. On release PR merge: creates Git tag and GitHub Release
+
+### Release Rules (MUST follow)
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Merge Release Please PR to create releases | Create tags manually (`git tag`) |
+| Let Release Please manage CHANGELOG | Edit CHANGELOG.md manually |
+| Use Conventional Commits for versioning | Manually bump version numbers |
+
+**Release Process**:
+1. Merge feature/fix PRs to `main` with Conventional Commits
+2. Release Please automatically creates/updates release PR
+3. Review the release PR (check CHANGELOG, version bump)
+4. Merge the release PR → Tag and GitHub Release created automatically
 
 ## Coding Conventions
 
