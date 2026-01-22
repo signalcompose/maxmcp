@@ -121,62 +121,90 @@ include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 option(SKIP_BUNDLE_DEPS "Skip bundling dylib dependencies (for CI/testing)" OFF)
 
 if(APPLE AND NOT SKIP_BUNDLE_DEPS)
-    # Create Frameworks directory in bundle
+    # Helper: Get Homebrew prefix for a package
+    function(get_homebrew_prefix PACKAGE RESULT_VAR)
+        execute_process(
+            COMMAND brew --prefix ${PACKAGE}
+            OUTPUT_VARIABLE BREW_PREFIX
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE BREW_RESULT
+            ERROR_VARIABLE BREW_ERROR
+        )
+        if(NOT BREW_RESULT EQUAL 0)
+            message(FATAL_ERROR "Homebrew package not found: ${PACKAGE}\nError: ${BREW_ERROR}")
+        endif()
+        set(${RESULT_VAR} "${BREW_PREFIX}" PARENT_SCOPE)
+    endfunction()
+
+    # Helper: Find versioned dylib (e.g., libwebsockets.20.dylib, not symlinks)
+    # Symlinks are avoided because they may point to different versions across systems
+    function(find_versioned_dylib PREFIX LIBNAME RESULT_VAR)
+        file(GLOB DYLIB_CANDIDATES "${PREFIX}/lib/${LIBNAME}.*.dylib")
+        # Sort descending to prefer higher versions when multiple exist
+        list(SORT DYLIB_CANDIDATES COMPARE NATURAL ORDER DESCENDING)
+        foreach(CANDIDATE ${DYLIB_CANDIDATES})
+            if(NOT IS_SYMLINK "${CANDIDATE}")
+                get_filename_component(FILENAME "${CANDIDATE}" NAME)
+                # Match pattern: libname.VERSION.dylib (e.g., libwebsockets.20.dylib, libfoo.1.2.dylib)
+                string(REGEX MATCH "^${LIBNAME}\\.[0-9]+(\\.[0-9]+)*\\.dylib$" MATCH "${FILENAME}")
+                if(MATCH)
+                    set(${RESULT_VAR} "${CANDIDATE}" PARENT_SCOPE)
+                    return()
+                endif()
+            endif()
+        endforeach()
+        message(FATAL_ERROR "Could not find versioned ${LIBNAME} dylib in ${PREFIX}/lib/")
+    endfunction()
+
+    # Detect Homebrew package paths
+    get_homebrew_prefix("libwebsockets" LWS_PREFIX)
+    get_homebrew_prefix("openssl@3" OPENSSL_PREFIX)
+
+    # Find versioned dylibs
+    find_versioned_dylib("${LWS_PREFIX}" "libwebsockets" LWS_DYLIB)
+    find_versioned_dylib("${OPENSSL_PREFIX}" "libssl" SSL_DYLIB)
+    find_versioned_dylib("${OPENSSL_PREFIX}" "libcrypto" CRYPTO_DYLIB)
+
+    # Extract filenames
+    get_filename_component(LWS_DYLIB_NAME "${LWS_DYLIB}" NAME)
+    get_filename_component(SSL_DYLIB_NAME "${SSL_DYLIB}" NAME)
+    get_filename_component(CRYPTO_DYLIB_NAME "${CRYPTO_DYLIB}" NAME)
+
+    message(STATUS "Detected dylibs to bundle:")
+    message(STATUS "  ${LWS_DYLIB_NAME} <- ${LWS_DYLIB}")
+    message(STATUS "  ${SSL_DYLIB_NAME} <- ${SSL_DYLIB}")
+    message(STATUS "  ${CRYPTO_DYLIB_NAME} <- ${CRYPTO_DYLIB}")
+
+    # Create Frameworks directory and copy dylibs
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks"
-        COMMENT "Creating Frameworks directory"
+        COMMAND ${CMAKE_COMMAND} -E copy "${LWS_DYLIB}"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        COMMAND ${CMAKE_COMMAND} -E copy "${SSL_DYLIB}"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CRYPTO_DYLIB}"
+            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
+        COMMENT "Bundling dylibs: ${LWS_DYLIB_NAME}, ${SSL_DYLIB_NAME}, ${CRYPTO_DYLIB_NAME}"
+        VERBATIM
     )
 
-    # Copy and fix dylib paths
+    # Fix install names using external CMake script
+    # This script uses otool to detect actual dependency paths dynamically.
+    # Homebrew libraries often have install names referencing /opt/homebrew/Cellar/...
+    # (versioned installation paths) rather than the symlinked /opt/homebrew/opt/... paths.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
-        COMMAND ${CMAKE_COMMAND} -E copy
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
-        # Fix install names in main executable
-        COMMAND install_name_tool -change
-            /opt/homebrew/opt/libwebsockets/lib/libwebsockets.20.dylib
-            @loader_path/../Frameworks/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
-        COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
-            @loader_path/../Frameworks/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
-        COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
-            @loader_path/../Frameworks/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/MacOS/${OUTPUT_NAME}"
-        # Fix install names in libwebsockets.20.dylib itself
-        COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libwebsockets.20.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
-        COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib
-            @loader_path/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
-        COMMAND install_name_tool -change
-            /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib
-            @loader_path/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libwebsockets.20.dylib"
-        # Fix install names in libssl.3.dylib itself
-        COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libssl.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
-        COMMAND install_name_tool -change
-            /opt/homebrew/Cellar/openssl@3/3.6.0/lib/libcrypto.3.dylib
-            @loader_path/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libssl.3.dylib"
-        # Fix install name in libcrypto.3.dylib itself
-        COMMAND install_name_tool -id
-            @loader_path/../Frameworks/libcrypto.3.dylib
-            "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libcrypto.3.dylib"
-        COMMENT "Bundling dependencies and fixing all install names"
+        COMMAND ${CMAKE_COMMAND}
+            -DBUNDLE_DIR=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>
+            -DOUTPUT_NAME=${OUTPUT_NAME}
+            -DLWS_DYLIB_NAME=${LWS_DYLIB_NAME}
+            -DSSL_DYLIB_NAME=${SSL_DYLIB_NAME}
+            -DCRYPTO_DYLIB_NAME=${CRYPTO_DYLIB_NAME}
+            -DLWS_DYLIB=${LWS_DYLIB}
+            -DSSL_DYLIB=${SSL_DYLIB}
+            -DCRYPTO_DYLIB=${CRYPTO_DYLIB}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fix_install_names.cmake
+        COMMENT "Fixing install names (dynamic detection)"
         VERBATIM
     )
 endif()
