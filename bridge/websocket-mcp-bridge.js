@@ -57,6 +57,49 @@ function debug(...args) {
   }
 }
 
+function formatError(err) {
+  if (!err) {
+    return 'Unknown error';
+  }
+
+  const parts = [];
+
+  if (err.message) {
+    parts.push(err.message.trim());
+  }
+  if (err.code) {
+    parts.push(`code=${err.code}`);
+  }
+  if (typeof err.errno !== 'undefined') {
+    parts.push(`errno=${err.errno}`);
+  }
+  if (err.address) {
+    parts.push(`address=${err.address}`);
+  }
+  if (typeof err.port !== 'undefined') {
+    parts.push(`port=${err.port}`);
+  }
+
+  if (err instanceof AggregateError && Array.isArray(err.errors) && err.errors.length > 0) {
+    const innerMessages = err.errors.map((inner) => formatError(inner));
+    parts.push(`inner=[${innerMessages.join('; ')}]`);
+  }
+
+  if (parts.length === 0 && err.stack) {
+    return err.stack;
+  }
+
+  return parts.join(' ');
+}
+
+function logWebSocketError(err) {
+  const formatted = formatError(err);
+  console.error('WebSocket error:', formatted);
+  if (DEBUG && err && err.stack) {
+    console.error(err.stack);
+  }
+}
+
 debug('Starting MaxMCP WebSocket Bridge');
 debug('WebSocket URL:', wsUrl);
 debug('Auth Token:', authToken ? '***' : 'none');
@@ -117,13 +160,18 @@ ws.on('message', (data) => {
 
 // Error handling
 ws.on('error', (err) => {
-  console.error('WebSocket error:', err.message);
+  logWebSocketError(err);
   process.exit(1);
 });
 
 ws.on('close', (code, reason) => {
-  debug('WebSocket connection closed:', code, reason.toString());
-  console.error('WebSocket connection closed');
+  const reasonText = reason ? reason.toString() : '';
+  debug('WebSocket connection closed:', code, reasonText);
+  if (code !== 1000) {
+    console.error('WebSocket connection closed unexpectedly:', code, reasonText);
+  } else {
+    console.error('WebSocket connection closed');
+  }
   process.exit(0);
 });
 

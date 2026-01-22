@@ -58,6 +58,54 @@ Max/MSP Patches
 2. Extract to `~/Documents/Max 9/Packages/`
 3. Restart Max
 
+### Option 3: Build from Source (Development Setup)
+Use this path if you're cloning the repository and want to build the external yourself.
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/signalcompose/MaxMCP.git
+   cd MaxMCP
+   ```
+2. **Install prerequisites**
+   ```bash
+   brew install cmake libwebsockets openssl
+   ```
+   - Requires macOS 13+, Xcode Command Line Tools, Max 9.1+, Node.js 18+ with npm.
+3. **Fetch the Max SDK with submodules**
+   ```bash
+   git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+   ```
+   The `--recursive` flag is critical; without it `max-pretarget.cmake` is missing.
+4. **Install bridge dependencies**
+   ```bash
+   cd bridge
+   npm install
+   cd ..
+   ```
+   This installs the `ws` dependency used by `websocket-mcp-bridge.js`.
+5. **Build the external**
+   ```bash
+   ./build.sh Release clean   # optional but recommended for first build
+   ./build.sh Release
+   ```
+   The script configures CMake, builds the external, and copies `maxmcp.mxo`
+   into `~/Documents/Max 9/Library/`. Confirm the bundle exists:
+   ```bash
+   ls ~/Documents/Max\ 9/Library/maxmcp.mxo/Contents/MacOS/maxmcp
+   ```
+6. **(Optional) Manual CMake invocation**
+   If you prefer direct CMake commands or need a custom install location:
+   ```bash
+   cmake -B build -S . -DCMAKE_BUILD_TYPE=Release \
+         -DC74_LIBRARY_OUTPUT_DIRECTORY="$HOME/Documents/Max 9/Library"
+   cmake --build build --config Release
+   ```
+7. **Verify bridge tooling**
+   ```bash
+   cd bridge
+   npm test   # runs Jest suite against websocket-mcp-bridge.js
+   ```
+
 ## Quick Start
 
 ### 1. Open Help Patch
@@ -70,7 +118,24 @@ open ~/Documents/Max\ 9/Packages/MaxMCP/examples/00-index.maxpat
 ```
 
 ### 2. Start MCP Agent & Bridge
-In `00-index.maxpat`, click the "START" message to launch the agent and bridge.
+**Option A (recommended):** In `00-index.maxpat`, click the "START" message to launch the agent and bridge automatically.
+
+**Option B (manual patch):**
+1. Unlock a new patcher (Cmd+E) and add:
+   ```
+   [maxmcp @mode agent @port 7400]
+   ```
+2. Add a message box with `START` and connect it to the agent inlet.
+3. Click the `START` message. The Max Console should log:
+   ```
+   WebSocket server started on port 7400
+   maxmcp: maxmcp (agent mode) started on port 7400
+   ```
+4. Start the Node bridge in a terminal:
+   ```bash
+   node ~/Documents/MaxMCP/bridge/websocket-mcp-bridge.js ws://localhost:7400
+   ```
+   Run `npm install` inside `bridge/` first if you have not already.
 
 ### 3. Configure Claude Code
 Run this command in your terminal:
@@ -153,12 +218,15 @@ The package includes comprehensive example patches in `examples/`:
 
 ### Agent won't start
 - Check that port 7400 is available: `lsof -i :7400`
+- If the bridge logs `ECONNREFUSED`, start `[maxmcp @mode agent @port 7400]` and click `START`
 - Check Max Console for error messages
 
 ### Claude Code can't connect
 - Verify bridge is running: Check Max Console for "Bridge launched" message
 - Restart Claude Code after `claude mcp add` command
 - Verify MCP config: `cat ~/.config/claude-code/mcp.json`
+- Run the bridge with debugging to capture WebSocket errors:  
+  `DEBUG=1 node bridge/websocket-mcp-bridge.js ws://localhost:7400`
 
 ### Objects not appearing
 - Ensure patch is unlocked (Cmd+E)
