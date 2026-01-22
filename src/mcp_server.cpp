@@ -132,10 +132,35 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         }
     }
 
+    // Escape special characters in obj_string
+    // Note: Order matters! Escape backslash first to avoid double-escaping
+    std::string escaped = obj_string;
+    size_t pos = 0;
+
+    // 1. Escape \ to prevent escape sequence issues
+    while ((pos = escaped.find('\\', pos)) != std::string::npos) {
+        escaped.replace(pos, 1, "\\\\");
+        pos += 2;
+    }
+
+    // 2. Escape " to prevent syntax errors
+    pos = 0;
+    while ((pos = escaped.find('"', pos)) != std::string::npos) {
+        escaped.replace(pos, 1, "\\\"");
+        pos += 2;
+    }
+
+    // 3. Escape % to prevent format string injection
+    pos = 0;
+    while ((pos = escaped.find('%', pos)) != std::string::npos) {
+        escaped.replace(pos, 1, "%%");
+        pos += 2;
+    }
+
     // Create object with newobject_sprintf (without size - use Max default)
     t_object* obj = (t_object*)newobject_sprintf(
         data->patch->patcher, "@maxclass newobj @text \"%s\" @patching_position %.2f %.2f",
-        obj_string.c_str(), data->x, data->y);
+        escaped.c_str(), data->x, data->y);
 
     if (obj) {
         // Set varname if provided
