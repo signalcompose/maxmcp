@@ -207,17 +207,38 @@ endif()
 execute_process(
     COMMAND otool -L "${BUNDLED_LWS}"
     OUTPUT_VARIABLE LWS_DEPS
+    RESULT_VARIABLE OTOOL_RESULT
 )
+if(NOT OTOOL_RESULT EQUAL 0)
+    message(FATAL_ERROR "Verification failed: otool -L could not read ${BUNDLED_LWS}")
+endif()
 message(STATUS "${LWS_DYLIB_NAME} dependencies:\n${LWS_DEPS}")
+if(LWS_DEPS MATCHES "/opt/homebrew|/usr/local/Cellar|/usr/local/opt")
+    message(FATAL_ERROR "Verification FAILED: Homebrew paths still present in ${LWS_DYLIB_NAME}")
+endif()
 
 execute_process(
     COMMAND otool -L "${BUNDLED_SSL}"
     OUTPUT_VARIABLE SSL_DEPS
+    RESULT_VARIABLE OTOOL_RESULT
 )
+if(NOT OTOOL_RESULT EQUAL 0)
+    message(FATAL_ERROR "Verification failed: otool -L could not read ${BUNDLED_SSL}")
+endif()
 message(STATUS "${SSL_DYLIB_NAME} dependencies:\n${SSL_DEPS}")
+if(SSL_DEPS MATCHES "/opt/homebrew|/usr/local/Cellar|/usr/local/opt")
+    message(FATAL_ERROR "Verification FAILED: Homebrew paths still present in ${SSL_DYLIB_NAME}")
+endif()
 
 execute_process(
     COMMAND otool -L "${BUNDLED_CRYPTO}"
     OUTPUT_VARIABLE CRYPTO_DEPS
+    RESULT_VARIABLE OTOOL_RESULT
 )
+if(NOT OTOOL_RESULT EQUAL 0)
+    message(FATAL_ERROR "Verification failed: otool -L could not read ${BUNDLED_CRYPTO}")
+endif()
 message(STATUS "${CRYPTO_DYLIB_NAME} dependencies:\n${CRYPTO_DEPS}")
+if(CRYPTO_DEPS MATCHES "/opt/homebrew|/usr/local/Cellar|/usr/local/opt")
+    message(FATAL_ERROR "Verification FAILED: Homebrew paths still present in ${CRYPTO_DYLIB_NAME}")
+endif()
