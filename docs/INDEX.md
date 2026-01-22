@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2025-11-11
-**Project Status**: v1.1.0 Released ✅ (Phase 2 Complete + Infrastructure)
+**Last Updated**: 2026-01-22
+**Project Status**: v1.1.1 Released ✅ (Phase 2 Complete + Infrastructure)
 
 ---
 
