@@ -1,6 +1,13 @@
 # fix_install_names.cmake
 # Dynamically detects and fixes dylib install names for macOS bundles
 #
+# Purpose:
+#   macOS dylibs have embedded "install names" that specify where the loader
+#   should find dependencies at runtime. When bundling Homebrew libraries,
+#   these paths reference system locations (/opt/homebrew/...) that won't
+#   exist on other machines. This script rewrites them to use @loader_path
+#   for portable, self-contained bundles.
+#
 # Required variables (passed via -D):
 #   BUNDLE_DIR       - Path to the .mxo bundle
 #   OUTPUT_NAME      - Name of the executable (e.g., "maxmcp")
@@ -13,6 +20,13 @@
 
 cmake_minimum_required(VERSION 3.19)
 
+# Validate required variables
+foreach(REQUIRED_VAR BUNDLE_DIR OUTPUT_NAME LWS_DYLIB_NAME SSL_DYLIB_NAME CRYPTO_DYLIB_NAME LWS_DYLIB SSL_DYLIB CRYPTO_DYLIB)
+    if(NOT DEFINED ${REQUIRED_VAR} OR "${${REQUIRED_VAR}}" STREQUAL "")
+        message(FATAL_ERROR "Required variable ${REQUIRED_VAR} is not set or empty")
+    endif()
+endforeach()
+
 # Helper: Get install name (ID) of a dylib using otool -D
 function(get_dylib_id DYLIB_PATH RESULT_VAR)
     execute_process(
@@ -24,11 +38,14 @@ function(get_dylib_id DYLIB_PATH RESULT_VAR)
     if(NOT OTOOL_RESULT EQUAL 0)
         message(FATAL_ERROR "otool -D failed for ${DYLIB_PATH}")
     endif()
-    # Output format:
-    # /path/to/lib.dylib:
-    # /actual/install/name.dylib
+    # Output format from otool -D:
+    # <filename>:
+    # <install_name>
     string(REGEX MATCH "\n([^\n]+)$" MATCH "${OTOOL_OUTPUT}")
     string(STRIP "${CMAKE_MATCH_1}" INSTALL_NAME)
+    if("${INSTALL_NAME}" STREQUAL "")
+        message(FATAL_ERROR "Failed to extract install name from otool -D output for ${DYLIB_PATH}:\n${OTOOL_OUTPUT}")
+    endif()
     set(${RESULT_VAR} "${INSTALL_NAME}" PARENT_SCOPE)
 endfunction()
 
@@ -128,6 +145,8 @@ if(LWS_SSL_DEP)
     run_install_name_tool(-change
         "${LWS_SSL_DEP}" "@loader_path/${SSL_DYLIB_NAME}"
         "${BUNDLED_LWS}")
+else()
+    message(WARNING "libwebsockets does not appear to depend on libssl - this may indicate a detection problem")
 endif()
 
 # Fix libcrypto dependency
@@ -135,6 +154,8 @@ if(LWS_CRYPTO_DEP)
     run_install_name_tool(-change
         "${LWS_CRYPTO_DEP}" "@loader_path/${CRYPTO_DYLIB_NAME}"
         "${BUNDLED_LWS}")
+else()
+    message(WARNING "libwebsockets does not appear to depend on libcrypto - this may indicate a detection problem")
 endif()
 
 # === Fix libssl ===
@@ -145,11 +166,13 @@ run_install_name_tool(-id
     "@loader_path/../Frameworks/${SSL_DYLIB_NAME}"
     "${BUNDLED_SSL}")
 
-# Fix libcrypto dependency (critical: often uses Cellar path)
+# Fix libcrypto dependency (path detected dynamically - often uses Cellar path)
 if(SSL_CRYPTO_DEP)
     run_install_name_tool(-change
         "${SSL_CRYPTO_DEP}" "@loader_path/${CRYPTO_DYLIB_NAME}"
         "${BUNDLED_SSL}")
+else()
+    message(WARNING "libssl does not appear to depend on libcrypto - this may indicate a detection problem")
 endif()
 
 # === Fix libcrypto ===
@@ -169,8 +192,17 @@ message(STATUS "=== Verification ===")
 execute_process(
     COMMAND otool -L "${EXECUTABLE}"
     OUTPUT_VARIABLE EXEC_DEPS
+    RESULT_VARIABLE OTOOL_RESULT
 )
+if(NOT OTOOL_RESULT EQUAL 0)
+    message(FATAL_ERROR "Verification failed: otool -L could not read ${EXECUTABLE}")
+endif()
 message(STATUS "Executable dependencies:\n${EXEC_DEPS}")
+
+# Validate that no Homebrew paths remain in executable
+if(EXEC_DEPS MATCHES "/opt/homebrew|/usr/local/Cellar|/usr/local/opt")
+    message(FATAL_ERROR "Verification FAILED: Homebrew paths still present in executable")
+endif()
 
 execute_process(
     COMMAND otool -L "${BUNDLED_LWS}"

@@ -128,17 +128,20 @@ if(APPLE AND NOT SKIP_BUNDLE_DEPS)
             OUTPUT_VARIABLE BREW_PREFIX
             OUTPUT_STRIP_TRAILING_WHITESPACE
             RESULT_VARIABLE BREW_RESULT
-            ERROR_QUIET
+            ERROR_VARIABLE BREW_ERROR
         )
         if(NOT BREW_RESULT EQUAL 0)
-            message(FATAL_ERROR "Homebrew package not found: ${PACKAGE}")
+            message(FATAL_ERROR "Homebrew package not found: ${PACKAGE}\nError: ${BREW_ERROR}")
         endif()
         set(${RESULT_VAR} "${BREW_PREFIX}" PARENT_SCOPE)
     endfunction()
 
     # Helper: Find versioned dylib (e.g., libwebsockets.20.dylib, not symlinks)
+    # Symlinks are avoided because they may point to different versions across systems
     function(find_versioned_dylib PREFIX LIBNAME RESULT_VAR)
         file(GLOB DYLIB_CANDIDATES "${PREFIX}/lib/${LIBNAME}.*.dylib")
+        # Sort descending to prefer higher versions when multiple exist
+        list(SORT DYLIB_CANDIDATES COMPARE NATURAL ORDER DESCENDING)
         foreach(CANDIDATE ${DYLIB_CANDIDATES})
             if(NOT IS_SYMLINK "${CANDIDATE}")
                 get_filename_component(FILENAME "${CANDIDATE}" NAME)
@@ -183,22 +186,26 @@ if(APPLE AND NOT SKIP_BUNDLE_DEPS)
         COMMAND ${CMAKE_COMMAND} -E copy "${CRYPTO_DYLIB}"
             "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/"
         COMMENT "Bundling dylibs: ${LWS_DYLIB_NAME}, ${SSL_DYLIB_NAME}, ${CRYPTO_DYLIB_NAME}"
+        VERBATIM
     )
 
     # Fix install names using external CMake script
-    # This script uses otool to detect actual dependency paths (including Cellar paths)
+    # This script uses otool to detect actual dependency paths dynamically.
+    # Homebrew libraries often have install names referencing /opt/homebrew/Cellar/...
+    # (versioned installation paths) rather than the symlinked /opt/homebrew/opt/... paths.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND}
-            -DBUNDLE_DIR="$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
-            -DOUTPUT_NAME="${OUTPUT_NAME}"
-            -DLWS_DYLIB_NAME="${LWS_DYLIB_NAME}"
-            -DSSL_DYLIB_NAME="${SSL_DYLIB_NAME}"
-            -DCRYPTO_DYLIB_NAME="${CRYPTO_DYLIB_NAME}"
-            -DLWS_DYLIB="${LWS_DYLIB}"
-            -DSSL_DYLIB="${SSL_DYLIB}"
-            -DCRYPTO_DYLIB="${CRYPTO_DYLIB}"
-            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fix_install_names.cmake"
+            -DBUNDLE_DIR=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>
+            -DOUTPUT_NAME=${OUTPUT_NAME}
+            -DLWS_DYLIB_NAME=${LWS_DYLIB_NAME}
+            -DSSL_DYLIB_NAME=${SSL_DYLIB_NAME}
+            -DCRYPTO_DYLIB_NAME=${CRYPTO_DYLIB_NAME}
+            -DLWS_DYLIB=${LWS_DYLIB}
+            -DSSL_DYLIB=${SSL_DYLIB}
+            -DCRYPTO_DYLIB=${CRYPTO_DYLIB}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fix_install_names.cmake
         COMMENT "Fixing install names (dynamic detection)"
+        VERBATIM
     )
 endif()
 
