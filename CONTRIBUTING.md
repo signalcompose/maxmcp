@@ -91,26 +91,27 @@ ctest --output-on-failure
 
 ## Git Workflow
 
-MaxMCP uses **Git Flow** for branch management.
+MaxMCP uses **GitHub Flow** for branch management.
 
 ### Branch Strategy
 
 ```
-main          ← Production releases
-  └── develop ← Development (default branch)
-       ├── feature/xxx  ← New features
-       ├── bugfix/xxx   ← Bug fixes
-       └── docs/xxx     ← Documentation updates
+main              ← Production (default branch)
+  ├── feature/xxx ← New features
+  ├── bugfix/xxx  ← Bug fixes
+  └── docs/xxx    ← Documentation updates
 ```
+
+All changes are merged directly to `main` via Pull Request.
 
 ### Creating a Feature Branch
 
 1. **Sync with upstream**:
 
 ```bash
-git checkout develop
+git checkout main
 git fetch upstream
-git merge upstream/develop
+git merge upstream/main
 ```
 
 2. **Create feature branch**:
@@ -131,7 +132,13 @@ git checkout -b feature/99-your-feature-name
 git push origin feature/99-your-feature-name
 ```
 
-5. **Create Pull Request** to `signalcompose/MaxMCP:develop`
+5. **Create Pull Request** to `signalcompose/MaxMCP:main`
+
+### Merge Strategy
+
+- **Regular merge** is the default (preserves full commit history)
+- Squash merge and rebase merge are discouraged
+- All PRs require CI checks to pass before merging
 
 ### Commit Message Format
 
@@ -304,11 +311,11 @@ When you add/change functionality:
 
 ### Submitting
 
-1. **Create Pull Request** to `signalcompose/MaxMCP:develop`
+1. **Create Pull Request** to `signalcompose/MaxMCP:main`
 
 ```bash
 gh pr create --repo signalcompose/MaxMCP \
-  --base develop \
+  --base main \
   --head YOUR_USERNAME:feature/99-your-feature-name \
   --title "feat(scope): your feature title" \
   --body "Description of your changes..."
@@ -336,10 +343,10 @@ We review for:
 - **Sync your fork**:
 
 ```bash
-git checkout develop
+git checkout main
 git fetch upstream
-git merge upstream/develop
-git push origin develop
+git merge upstream/main
+git push origin main
 ```
 
 ---
