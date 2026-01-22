@@ -118,7 +118,9 @@ include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 #############################################################
 # BUNDLE DEPENDENCIES (macOS only)
 #############################################################
-if(APPLE)
+option(SKIP_BUNDLE_DEPS "Skip bundling dylib dependencies (for CI/testing)" OFF)
+
+if(APPLE AND NOT SKIP_BUNDLE_DEPS)
     # Create Frameworks directory in bundle
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
