@@ -22,6 +22,13 @@ if [ -z "$obj_name" ]; then
     exit 1
 fi
 
+# Check Max.app exists
+if [ ! -d "$MAX_APP" ]; then
+    echo "ERROR: Max.app not found at $MAX_APP"
+    echo "Please install Max or check the path"
+    exit 1
+fi
+
 # Search for the object in all reference directories
 found=""
 for dir in max-ref msp-ref jit-ref m4l-ref gen-ref; do

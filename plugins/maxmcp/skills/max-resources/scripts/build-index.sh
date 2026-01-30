@@ -68,6 +68,15 @@ cat >> "$CACHE_DIR/object-index.json" << 'FOOTER'
 }
 FOOTER
 
+# Validate JSON syntax (using Python if available)
+if command -v python3 &>/dev/null; then
+    if ! python3 -c "import json; json.load(open('$CACHE_DIR/object-index.json'))" 2>/dev/null; then
+        echo "ERROR: Generated JSON is invalid"
+        rm -f "$CACHE_DIR/object-index.json"
+        exit 1
+    fi
+fi
+
 # Record Max version
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" \
     "${MAX_APP}/Contents/Info.plist" 2>/dev/null || echo "unknown")
