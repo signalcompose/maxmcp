@@ -3,6 +3,7 @@
 # Creates a searchable index at ~/.maxmcp/cache/
 
 set -e
+set -o pipefail
 
 CACHE_DIR="${HOME}/.maxmcp/cache"
 MAX_APP="/Applications/Max.app"
@@ -68,13 +69,24 @@ cat >> "$CACHE_DIR/object-index.json" << 'FOOTER'
 }
 FOOTER
 
-# Validate JSON syntax (using Python if available)
+# Validate JSON syntax (using Python or jq if available)
 if command -v python3 &>/dev/null; then
-    if ! python3 -c "import json; json.load(open('$CACHE_DIR/object-index.json'))" 2>/dev/null; then
+    validation_error=$(python3 -c "import json; json.load(open('$CACHE_DIR/object-index.json'))" 2>&1) || {
         echo "ERROR: Generated JSON is invalid"
+        echo "Details: $validation_error"
         rm -f "$CACHE_DIR/object-index.json"
         exit 1
-    fi
+    }
+elif command -v jq &>/dev/null; then
+    validation_error=$(jq empty "$CACHE_DIR/object-index.json" 2>&1) || {
+        echo "ERROR: Generated JSON is invalid"
+        echo "Details: $validation_error"
+        rm -f "$CACHE_DIR/object-index.json"
+        exit 1
+    }
+else
+    echo "WARNING: Neither python3 nor jq found - cannot validate JSON syntax"
+    echo "If search-objects.sh fails, re-run this script after installing python3 or jq"
 fi
 
 # Record Max version

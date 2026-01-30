@@ -3,6 +3,7 @@
 # Usage: search-fts.sh <query> [limit]
 
 set -e
+set -o pipefail
 
 MAX_APP="/Applications/Max.app"
 SEARCH_DB="${MAX_APP}/Contents/Resources/C74/docs/userguide/userguide_search.sqlite"
@@ -46,7 +47,7 @@ safe_query=$(echo "$query" | sed "s/'/''/g")
 
 # Query the FTS database
 # The database has a pages_fts table for full-text search
-sqlite3 -header -column "$SEARCH_DB" << EOF
+query_result=$(sqlite3 -header -column "$SEARCH_DB" 2>&1 << EOF
 SELECT
     title,
     path,
@@ -55,6 +56,17 @@ FROM pages_fts
 WHERE pages_fts MATCH '$safe_query'
 LIMIT $limit;
 EOF
+) || {
+    echo "ERROR: Database query failed"
+    echo "Details: $query_result"
+    echo ""
+    echo "This may indicate:"
+    echo "  - Invalid search syntax (try simpler terms)"
+    echo "  - Database corruption (reinstall Max)"
+    exit 1
+}
+
+echo "$query_result"
 
 # Also check if there's a topics table
 echo ""

@@ -3,6 +3,7 @@
 # Usage: search-objects.sh <query> [category]
 
 set -e
+set -o pipefail
 
 CACHE_FILE="${HOME}/.maxmcp/cache/object-index.json"
 
@@ -32,27 +33,48 @@ echo "Searching for: $query"
 echo ""
 
 if [ -n "$category" ]; then
+    # Validate category
+    case "$category" in
+        max-ref|msp-ref|jit-ref|m4l-ref|gen-ref) ;;
+        *)
+            echo "ERROR: Invalid category: $category"
+            echo "Valid categories: max-ref, msp-ref, jit-ref, m4l-ref, gen-ref"
+            exit 1
+            ;;
+    esac
+
     # Search specific category
     echo "Category: $category"
     echo "---"
-    # Extract category content and search
-    grep -o "\"$category\": \[[^]]*\]" "$CACHE_FILE" 2>/dev/null | \
+    # Extract category content and search (use -F for literal matching on query)
+    matches=$(grep -o "\"$category\": \[[^]]*\]" "$CACHE_FILE" | \
         grep -oE '"[^"]+~?"' | \
-        grep -i "$query" | \
+        grep -Fi "$query" | \
         tr -d '"' | \
-        head -30 || echo "No matches found"
+        head -30) || true
+
+    if [ -z "$matches" ]; then
+        echo "No objects matching '$query' found in $category"
+    else
+        echo "$matches"
+    fi
 else
-    # Search all categories
+    # Search all categories (use -F for literal matching on query)
+    found_any=false
     for cat in max-ref msp-ref jit-ref m4l-ref gen-ref; do
-        matches=$(grep -o "\"$cat\": \[[^]]*\]" "$CACHE_FILE" 2>/dev/null | \
+        matches=$(grep -o "\"$cat\": \[[^]]*\]" "$CACHE_FILE" | \
             grep -oE '"[^"]+~?"' | \
-            grep -i "$query" | \
+            grep -Fi "$query" | \
             tr -d '"' | \
-            head -10)
+            head -10) || true
         if [ -n "$matches" ]; then
+            found_any=true
             echo "[$cat]"
             echo "$matches"
             echo ""
         fi
     done
+    if [ "$found_any" = false ]; then
+        echo "No objects matching '$query' found"
+    fi
 fi
