@@ -206,7 +206,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and `docs/` for detailed sp
 
 ## Claude Code Plugin
 
-MaxMCP provides a Claude Code plugin with patch creation guidelines.
+MaxMCP provides a Claude Code plugin with two skills for Max/MSP development.
 
 ### Installation
 
@@ -215,17 +215,41 @@ MaxMCP provides a Claude Code plugin with patch creation guidelines.
 /plugin install maxmcp@maxmcp
 ```
 
-### Usage
+### Available Skills
+
+#### patch-guidelines
+
+Guidelines for creating well-organized Max patches:
 
 ```bash
 /maxmcp:patch-guidelines
 ```
 
-The skill provides:
+Provides:
 - Layout rules for object positioning
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### max-resources
+
+Access Max.app built-in documentation and examples:
+
+```bash
+/maxmcp:max-resources
+```
+
+Provides:
+- Object reference pages (inlets, outlets, methods, attributes)
+- Example patches from Max.app
+- Code snippets
+- Full-text search of Max documentation
+
+**First-time setup** (required once, or after Max update):
+```bash
+cd plugins/maxmcp/skills/max-resources/scripts
+./build-index.sh
+```
 
 ## Example Patches
 

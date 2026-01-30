@@ -48,18 +48,17 @@ elif [ -d "$SNIPPETS_DIR/$category" ]; then
         # Search and show content
         echo "Search: $query"
         echo ""
-        # Use while-read loop to handle filenames with spaces
+        # Use process substitution to avoid subshell variable scope issues
         found_any=false
-        find "$SNIPPETS_DIR/$category" -name "*${query}*.maxsnip" 2>/dev/null | head -5 | while IFS= read -r file; do
+        while IFS= read -r file; do
             if [ -n "$file" ]; then
                 found_any=true
                 echo "=== $(basename "$file" .maxsnip) ==="
-                cat "$file"
+                cat "$file" || echo "(ERROR: Could not read file)"
                 echo ""
             fi
-        done
-        # Check if any files were found (alternative check since subshell)
-        if ! find "$SNIPPETS_DIR/$category" -name "*${query}*.maxsnip" 2>/dev/null | head -1 | grep -q .; then
+        done < <(find "$SNIPPETS_DIR/$category" -name "*${query}*.maxsnip" 2>/dev/null | head -5)
+        if [ "$found_any" = false ]; then
             echo "No snippets found matching: $query"
         fi
     else
@@ -73,20 +72,19 @@ else
     # Direct snippet name - try to find and display
     echo "Searching for snippet: $category"
     echo "---"
-    # Use while-read loop to handle filenames with spaces
-    found_count=0
-    find "$SNIPPETS_DIR" \( -name "${category}.maxsnip" -o -name "*${category}*.maxsnip" \) 2>/dev/null | head -3 | while IFS= read -r file; do
+    # Use process substitution to avoid subshell variable scope issues
+    found_any=false
+    while IFS= read -r file; do
         if [ -n "$file" ]; then
-            found_count=$((found_count + 1))
+            found_any=true
             echo "=== $(basename "$file" .maxsnip) ==="
             echo "Path: $file"
             echo "---"
-            cat "$file"
+            cat "$file" || echo "(ERROR: Could not read file)"
             echo ""
         fi
-    done
-    # Check if any files were found
-    if ! find "$SNIPPETS_DIR" \( -name "${category}.maxsnip" -o -name "*${category}*.maxsnip" \) 2>/dev/null | head -1 | grep -q .; then
+    done < <(find "$SNIPPETS_DIR" \( -name "${category}.maxsnip" -o -name "*${category}*.maxsnip" \) 2>/dev/null | head -3)
+    if [ "$found_any" = false ]; then
         echo "Snippet not found: $category"
         echo ""
         echo "Available categories:"

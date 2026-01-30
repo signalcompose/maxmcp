@@ -10,6 +10,13 @@ SEARCH_DB="${MAX_APP}/Contents/Resources/C74/docs/userguide/userguide_search.sql
 query="$1"
 limit="${2:-20}"
 
+# Validate limit is a positive integer (prevent SQL injection)
+if ! [[ "$limit" =~ ^[0-9]+$ ]] || [ "$limit" -lt 1 ] || [ "$limit" -gt 1000 ]; then
+    echo "ERROR: Invalid limit value: $limit"
+    echo "Limit must be a positive integer between 1 and 1000"
+    exit 1
+fi
+
 if [ -z "$query" ]; then
     echo "Usage: search-fts.sh <query> [limit]"
     echo ""

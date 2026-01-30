@@ -2,6 +2,8 @@
 # check-cache.sh - Check cache validity
 # Compares cached Max version with installed version
 
+set -e
+
 CACHE_DIR="${HOME}/.maxmcp/cache"
 MAX_APP="/Applications/Max.app"
 
