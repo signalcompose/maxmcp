@@ -226,7 +226,20 @@ Follow this exact order to reproduce the working installation from our latest de
    ```
    Restart Claude Code afterwards.
 
-10. **Smoke test**
+10. **(Optional) Install Claude Code Plugin**
+    ```bash
+    /plugin marketplace add signalcompose/maxmcp
+    /plugin install maxmcp@maxmcp
+
+    # Build max-resources index (first-time)
+    cd plugins/maxmcp/skills/max-resources/scripts
+    ./build-index.sh
+    ```
+    **Skills**:
+    - `/maxmcp:patch-guidelines` - Patch creation guidelines
+    - `/maxmcp:max-resources` - Access Max.app documentation
+
+11. **Smoke test**
     ```bash
     echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | \
       node bridge/websocket-mcp-bridge.js ws://localhost:7400
@@ -234,7 +247,7 @@ Follow this exact order to reproduce the working installation from our latest de
     - Expect a JSON response listing `list_active_patches`, `get_console_log`, etc.
     - For scripted testing without Max, use `node test-mcp-server.js 7400` to spin up the mock server first.
 
-11. **Troubleshooting commands**
+12. **Troubleshooting commands**
     - Port status: `lsof -i :7400`
     - Kill stray bridge: `pkill -f websocket-mcp-bridge.js`
     - Clear stuck agent thread: re-open the patcher and click `START` again.

@@ -191,17 +191,50 @@ MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
 /plugin install maxmcp@maxmcp
 ```
 
-### Using the Skill
+### Available Skills
+
+#### patch-guidelines
+
+Guidelines for creating well-organized Max patches.
 
 ```bash
 /maxmcp:patch-guidelines
 ```
 
-The skill provides:
+Provides:
 - Layout rules for object positioning
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### max-resources
+
+Access Max/MSP built-in documentation and examples.
+
+```bash
+/maxmcp:max-resources
+```
+
+Provides:
+- Object reference pages (inlets, outlets, methods, attributes)
+- Example patches from Max.app
+- Code snippets
+- Full-text search of Max documentation
+
+**First-time setup** (required once, or after Max update):
+```bash
+# Build object index cache
+cd plugins/maxmcp/skills/max-resources/scripts
+./build-index.sh
+```
+
+**Cache location**: `~/.maxmcp/cache/`
+
+**Workflow example**:
+1. User asks "How do I use cycle~?"
+2. Skill searches object index
+3. Returns reference information (digest, inlets, outlets, methods)
+4. Can also show related examples and snippets
 
 ### Plugin Structure
 
@@ -209,8 +242,14 @@ The skill provides:
 plugins/
 └── maxmcp/
     ├── .claude-plugin/plugin.json
-    ├── skills/patch-guidelines/
-    │   ├── SKILL.md
-    │   └── reference/
+    ├── skills/
+    │   ├── patch-guidelines/
+    │   │   ├── SKILL.md
+    │   │   └── reference/
+    │   └── max-resources/
+    │       ├── SKILL.md
+    │       ├── scripts/        # Search and retrieval scripts
+    │       ├── references/     # Format documentation
+    │       └── examples/       # Usage examples
     └── README.md
 ```
