@@ -1,0 +1,12 @@
+{
+  "name": "maxmcp",
+  "description": "Guidelines and tools for creating Max/MSP patches with MaxMCP",
+  "version": "1.0.0",
+  "author": {
+    "name": "signalcompose",
+    "email": "info@signalcompose.com"
+  },
+  "repository": "https://github.com/signalcompose/maxmcp",
+  "license": "MIT",
+  "keywords": ["maxmsp", "max", "mcp", "patch", "audio", "dsp"]
+}

@@ -176,3 +176,41 @@ Documentation is the single source of truth (DDD - Documentation Driven Developm
 - `docs/development-guide.md` - Development practices
 
 Always read and update documentation before/after code changes.
+
+## Claude Code Plugin Marketplace
+
+MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
+
+### Plugin Installation
+
+```bash
+# Add marketplace
+/plugin marketplace add signalcompose/maxmcp
+
+# Install plugin
+/plugin install maxmcp@maxmcp
+```
+
+### Using the Skill
+
+```bash
+/maxmcp:patch-guidelines
+```
+
+The skill provides:
+- Layout rules for object positioning
+- Varname naming conventions
+- JavaScript (v8/v8ui) best practices
+- MCP tools quick reference
+
+### Plugin Structure
+
+```
+plugins/
+└── maxmcp/
+    ├── .claude-plugin/plugin.json
+    ├── skills/patch-guidelines/
+    │   ├── SKILL.md
+    │   └── reference/
+    └── README.md
+```

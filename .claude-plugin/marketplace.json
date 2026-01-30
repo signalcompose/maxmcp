@@ -1,0 +1,20 @@
+{
+  "name": "maxmcp",
+  "owner": {
+    "name": "signalcompose",
+    "email": "info@signalcompose.com"
+  },
+  "metadata": {
+    "description": "MaxMCP - Claude Code plugins for Max/MSP patch creation",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "maxmcp",
+      "source": "./plugins/maxmcp",
+      "description": "Guidelines and tools for creating Max/MSP patches with MaxMCP",
+      "version": "1.0.0",
+      "keywords": ["maxmsp", "max", "mcp", "patch", "audio", "dsp"]
+    }
+  ]
+}
