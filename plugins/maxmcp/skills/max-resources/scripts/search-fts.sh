@@ -60,9 +60,16 @@ EOF
 echo ""
 echo "Related topics:"
 echo "---"
-sqlite3 -header -column "$SEARCH_DB" << EOF 2>/dev/null || true
+topics_result=$(sqlite3 -header -column "$SEARCH_DB" 2>&1 << EOF
 SELECT DISTINCT category, title
 FROM pages
 WHERE title LIKE '%$safe_query%' OR content LIKE '%$safe_query%'
 LIMIT 10;
 EOF
+) || true
+
+if [ -n "$topics_result" ]; then
+    echo "$topics_result"
+else
+    echo "(No related topics found)"
+fi

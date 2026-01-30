@@ -3,6 +3,7 @@
 # Usage: list-examples.sh [category] [query]
 
 set -e
+set -o pipefail
 
 MAX_APP="/Applications/Max.app"
 EXAMPLES_DIR="${MAX_APP}/Contents/Resources/Examples"
@@ -62,14 +63,12 @@ else
     # Search across all categories
     echo "Searching all categories for: $category"
     echo "---"
-    find "$EXAMPLES_DIR" -name "*${category}*.maxpat" -type f 2>/dev/null | \
-        sed "s|$EXAMPLES_DIR/||" | \
-        sort | \
-        head -30
-
-    if [ $? -ne 0 ] || [ -z "$(find "$EXAMPLES_DIR" -name "*${category}*.maxpat" 2>/dev/null)" ]; then
+    results=$(find "$EXAMPLES_DIR" -name "*${category}*.maxpat" -type f 2>/dev/null || true)
+    if [ -z "$results" ]; then
         echo "No patches found matching: $category"
         echo ""
         echo "Try listing categories: list-examples.sh"
+    else
+        echo "$results" | sed "s|$EXAMPLES_DIR/||" | sort | head -30
     fi
 fi

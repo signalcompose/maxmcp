@@ -43,16 +43,20 @@ if [ "$cached_version" != "$current_version" ]; then
 fi
 
 # Check cache age (warn if older than 30 days)
-if [ -f "$CACHE_DIR/last-updated.txt" ]; then
-    cache_time=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$last_updated" +%s 2>/dev/null || echo "0")
-    current_time=$(date +%s)
-    age_days=$(( (current_time - cache_time) / 86400 ))
+if [ -f "$CACHE_DIR/last-updated.txt" ] && [ "$last_updated" != "unknown" ]; then
+    cache_time=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$last_updated" +%s 2>/dev/null)
+    if [ -z "$cache_time" ] || [ "$cache_time" = "0" ]; then
+        echo "WARNING: Could not parse cache timestamp, skipping age check"
+    else
+        current_time=$(date +%s)
+        age_days=$(( (current_time - cache_time) / 86400 ))
 
-    if [ "$age_days" -gt 30 ]; then
-        echo "OK_STALE"
-        echo "Cache is $age_days days old (version: $current_version)"
-        echo "Consider running build-index.sh to refresh"
-        exit 0
+        if [ "$age_days" -gt 30 ]; then
+            echo "OK_STALE"
+            echo "Cache is $age_days days old (version: $current_version)"
+            echo "Consider running build-index.sh to refresh"
+            exit 0
+        fi
     fi
 fi
 
