@@ -1,6 +1,74 @@
+---
+name: max-resources
+description: |
+  Access Max/MSP built-in resources. Use when:
+  - User asks about Max objects ("How do I use cycle~?")
+  - User wants to check/rebuild cache ("check cache", "build index")
+  - Cache status shows VERSION_MISMATCH or NEEDS_BUILD
+  - User searches for examples or snippets
+argument-hint: "[check-cache|build-index|search <query>|<object-name>]"
+---
+
 # Max Resources Skill
 
 Access Max/MSP built-in resources: reference pages, snippets, example patches, and user guides.
+
+## Subcommands
+
+When invoked with `/maxmcp:max-resources <subcommand>`:
+
+| Subcommand | Action |
+|------------|--------|
+| `check-cache` | Check cache validity |
+| `build-index` | Rebuild object index |
+| `search <query>` | Search indexed objects |
+| `<object-name>` | Get object reference (e.g., `cycle~`) |
+| (no args) | Show usage or auto-detect from context |
+
+### Argument Handling
+
+- `$0` = First argument (subcommand)
+- `$1` = Second argument (query/object name)
+
+### Examples
+
+```
+/maxmcp:max-resources check-cache     → Check cache validity
+/maxmcp:max-resources build-index     → Rebuild object index
+/maxmcp:max-resources search filter   → Search for "filter" objects
+/maxmcp:max-resources cycle~          → Get cycle~ reference
+```
+
+### Script Execution
+
+Based on arguments, execute the appropriate script:
+
+| Condition | Script to Run |
+|-----------|---------------|
+| `$0` = "check-cache" | `./scripts/check-cache.sh` |
+| `$0` = "build-index" | `./scripts/build-index.sh` |
+| `$0` = "search" | `./scripts/search-objects.sh $1` |
+| `$0` = object name (contains `~` or alphanumeric) | `./scripts/get-reference.sh $0` |
+
+## Automatic Cache Check Workflow
+
+When this skill is invoked and cache operations are needed:
+
+1. **First**: Run `./scripts/check-cache.sh`
+2. **If NEEDS_BUILD or VERSION_MISMATCH**:
+   - Inform user: "Cache needs to be rebuilt. Run `/maxmcp:max-resources build-index` or say 'build index'."
+   - Wait for user confirmation before proceeding
+3. **If OK or OK_STALE**: Proceed with resource lookup
+
+### Output Status Codes
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `OK` | Cache is valid | Proceed |
+| `OK_STALE` | Cache is old (>30 days) | Proceed, suggest refresh |
+| `NEEDS_BUILD` | No cache exists | Prompt to run `build-index` |
+| `VERSION_MISMATCH` | Max was updated | Prompt to run `build-index` |
+| `ERROR` | Max.app not found | Report error |
 
 ## When to Use
 
@@ -10,8 +78,9 @@ Use this skill when users ask about:
 - Example patches ("Show me FM synthesis examples")
 - Snippets and code patterns
 - Max concepts and tutorials
+- Cache management ("check cache", "build index", "update cache")
 
-**Trigger words**: "Max object", "reference", "how to use", "example", "snippet", "documentation"
+**Trigger words**: "Max object", "reference", "how to use", "example", "snippet", "documentation", "check cache", "build index"
 
 ## Quick Reference
 
