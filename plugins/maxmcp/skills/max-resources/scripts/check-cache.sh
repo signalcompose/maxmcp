@@ -10,13 +10,19 @@ MAX_APP="/Applications/Max.app"
 # Check if cache exists
 if [ ! -f "$CACHE_DIR/object-index.json" ]; then
     echo "NEEDS_BUILD"
-    echo "Cache not found. Run: build-index.sh"
+    echo "Cache not found."
+    echo ""
+    echo "To build cache, run:"
+    echo "  /maxmcp:max-resources build-index"
     exit 0
 fi
 
 if [ ! -f "$CACHE_DIR/max-version.txt" ]; then
     echo "NEEDS_BUILD"
-    echo "Version file missing. Run: build-index.sh"
+    echo "Version file missing."
+    echo ""
+    echo "To build cache, run:"
+    echo "  /maxmcp:max-resources build-index"
     exit 0
 fi
 
@@ -38,7 +44,9 @@ if [ "$cached_version" != "$current_version" ]; then
     echo "VERSION_MISMATCH"
     echo "Cached version: $cached_version"
     echo "Current version: $current_version"
-    echo "Run build-index.sh to update cache"
+    echo ""
+    echo "To update cache, run:"
+    echo "  /maxmcp:max-resources build-index"
     exit 0
 fi
 
@@ -54,7 +62,9 @@ if [ -f "$CACHE_DIR/last-updated.txt" ] && [ "$last_updated" != "unknown" ]; the
         if [ "$age_days" -gt 30 ]; then
             echo "OK_STALE"
             echo "Cache is $age_days days old (version: $current_version)"
-            echo "Consider running build-index.sh to refresh"
+            echo ""
+            echo "Consider refreshing with:"
+            echo "  /maxmcp:max-resources build-index"
             exit 0
         fi
     fi
