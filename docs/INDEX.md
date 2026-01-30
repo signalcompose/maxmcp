@@ -1,6 +1,6 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-01-30
 **Project Status**: v1.1.1 Released ✅ (Phase 2 Complete + Infrastructure)
 
 ---
@@ -143,14 +143,21 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 ### Claude Code Plugin
 - **Directory**: [`plugins/maxmcp/`](../plugins/maxmcp/)
-- **Purpose**: Claude Code plugin for patch creation guidelines
-- **Contents**:
-  - Patch layout rules
-  - Object naming conventions
-  - JavaScript (v8/v8ui) guide
-  - MCP tools quick reference
+- **Purpose**: Claude Code plugin for patch creation guidelines and Max resource access
 - **Installation**: `/plugin marketplace add signalcompose/maxmcp && /plugin install maxmcp@maxmcp`
-- **Usage**: `/maxmcp:patch-guidelines`
+
+**Skills**:
+
+| Skill | Command | Purpose |
+|-------|---------|---------|
+| patch-guidelines | `/maxmcp:patch-guidelines` | Layout rules, naming conventions, JavaScript guide |
+| max-resources | `/maxmcp:max-resources` | Access Max.app built-in resources (references, examples, snippets) |
+
+**max-resources First-time Setup**:
+```bash
+cd plugins/maxmcp/skills/max-resources/scripts
+./build-index.sh
+```
 
 ---
 
@@ -242,6 +249,7 @@ Documentation should be updated when:
 | See version history | [CHANGELOG](../CHANGELOG.md) |
 | Find E2E test results | [E2E Test Results](e2e-test-results-phase2.md) |
 | Find research notes | [Research Directory](research/) |
+| Use Claude Code plugin | [Plugin README](../plugins/maxmcp/README.md) |
 
 ---
 
