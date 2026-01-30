@@ -141,6 +141,17 @@ This index provides a comprehensive overview of all MaxMCP documentation.
   - Max SDK API research
   - WebSocket protocol investigations
 
+### Claude Code Plugin
+- **Directory**: [`plugins/maxmcp/`](../plugins/maxmcp/)
+- **Purpose**: Claude Code plugin for patch creation guidelines
+- **Contents**:
+  - Patch layout rules
+  - Object naming conventions
+  - JavaScript (v8/v8ui) guide
+  - MCP tools quick reference
+- **Installation**: `/plugin marketplace add signalcompose/maxmcp && /plugin install maxmcp@maxmcp`
+- **Usage**: `/maxmcp:patch-guidelines`
+
 ---
 
 ## 🔄 Development Phases
