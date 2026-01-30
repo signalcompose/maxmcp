@@ -3,6 +3,7 @@
 # Compares cached Max version with installed version
 
 set -e
+set -o pipefail
 
 CACHE_DIR="${HOME}/.maxmcp/cache"
 MAX_APP="/Applications/Max.app"
@@ -34,7 +35,14 @@ if [ ! -d "$MAX_APP" ]; then
 fi
 
 # Compare versions
-cached_version=$(cat "$CACHE_DIR/max-version.txt")
+if ! cached_version=$(cat "$CACHE_DIR/max-version.txt" 2>&1); then
+    echo "ERROR: Could not read version file"
+    echo "Details: $cached_version"
+    echo ""
+    echo "To rebuild cache, run:"
+    echo "  /maxmcp:max-resources build-index"
+    exit 1
+fi
 current_version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" \
     "${MAX_APP}/Contents/Info.plist" 2>/dev/null || echo "unknown")
 

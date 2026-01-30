@@ -3,6 +3,7 @@
 # Usage: get-snippet.sh [category] [query]
 
 set -e
+set -o pipefail
 
 MAX_APP="/Applications/Max.app"
 SNIPPETS_DIR="${MAX_APP}/Contents/Resources/C74/snippets"

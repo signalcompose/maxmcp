@@ -3,6 +3,7 @@
 # Usage: get-reference.sh <object_name> [--summary]
 
 set -e
+set -o pipefail
 
 MAX_APP="/Applications/Max.app"
 MAX_REFPAGES="${MAX_APP}/Contents/Resources/C74/docs/refpages"
@@ -63,14 +64,24 @@ if [ "$summary_only" = "--summary" ]; then
     # Extract just digest and description
     echo ""
     echo "Digest:"
-    grep -o '<digest>[^<]*</digest>' "$found" | sed 's/<[^>]*>//g' | head -1
+    digest=$(grep -o '<digest>[^<]*</digest>' "$found" | sed 's/<[^>]*>//g' | head -1) || true
+    if [ -z "$digest" ]; then
+        echo "(No digest available)"
+    else
+        echo "$digest"
+    fi
 
     echo ""
     echo "Description:"
     # Extract description (may be multiline)
-    sed -n '/<description>/,/<\/description>/p' "$found" | \
+    description=$(sed -n '/<description>/,/<\/description>/p' "$found" | \
         sed 's/<[^>]*>//g' | \
-        head -10
+        head -10) || true
+    if [ -z "$description" ]; then
+        echo "(No description available)"
+    else
+        echo "$description"
+    fi
 else
     # Output full XML content
     cat "$found"
