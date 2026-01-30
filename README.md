@@ -204,6 +204,29 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and `docs/` for detailed sp
 - [Architecture](docs/architecture.md) - System design
 - [Specifications](docs/specifications.md) - Technical specs
 
+## Claude Code Plugin
+
+MaxMCP provides a Claude Code plugin with patch creation guidelines.
+
+### Installation
+
+```bash
+/plugin marketplace add signalcompose/maxmcp
+/plugin install maxmcp@maxmcp
+```
+
+### Usage
+
+```bash
+/maxmcp:patch-guidelines
+```
+
+The skill provides:
+- Layout rules for object positioning
+- Varname naming conventions
+- JavaScript (v8/v8ui) best practices
+- MCP tools quick reference
+
 ## Example Patches
 
 The package includes comprehensive example patches in `examples/`:
