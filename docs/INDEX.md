@@ -71,6 +71,16 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Testing strategies
 - Success metrics
 
+### 7. [MCP Tools Reference](mcp-tools-reference.md)
+**Purpose**: Complete reference for all MCP tools
+**Audience**: Developers, users
+**Contents**:
+- All 22 MCP tools documentation
+- Parameter specifications
+- Response formats
+- Error codes
+- Usage examples
+
 ---
 
 ## 📖 Phase Completion Reports
@@ -243,6 +253,7 @@ Documentation should be updated when:
 | Understand system design | [Architecture](architecture.md) |
 | Start development | [Development Guide](development-guide.md) |
 | See implementation roadmap | [Implementation Plan](implementation-plan.md) |
+| Find MCP tool reference | [MCP Tools Reference](mcp-tools-reference.md) |
 | Check Phase 1 results | [Phase 1 Completion](PHASE1_COMPLETION.md) |
 | Check Phase 2 results | [Phase 2 Completion](PHASE2_COMPLETION.md) |
 | Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |
