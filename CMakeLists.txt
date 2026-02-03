@@ -75,6 +75,18 @@ set(UTILS_SRC
 set(TOOLS_SRC
     src/tools/tool_common.cpp
     src/tools/tool_common.h
+    src/tools/patch_tools.cpp
+    src/tools/patch_tools.h
+    src/tools/object_tools.cpp
+    src/tools/object_tools.h
+    src/tools/connection_tools.cpp
+    src/tools/connection_tools.h
+    src/tools/state_tools.cpp
+    src/tools/state_tools.h
+    src/tools/hierarchy_tools.cpp
+    src/tools/hierarchy_tools.h
+    src/tools/utility_tools.cpp
+    src/tools/utility_tools.h
 )
 
 # Source files (unified object with @mode attribute)
