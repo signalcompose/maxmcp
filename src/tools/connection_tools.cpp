@@ -310,7 +310,8 @@ json execute(const std::string& tool, const json& params) {
         return execute_disconnect_max_objects(params);
     }
 
-    return ToolCommon::make_error(-32601, "Unknown connection tool: " + tool);
+    // Tool not handled by this module - return nullptr to signal routing should continue
+    return nullptr;
 }
 
 }  // namespace ConnectionTools

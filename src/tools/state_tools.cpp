@@ -375,7 +375,8 @@ json execute(const std::string& tool, const json& params) {
     }
 #endif
 
-    return ToolCommon::make_error(-32602, "Unknown state tool: " + tool);
+    // Tool not handled by this module - return nullptr to signal routing should continue
+    return nullptr;
 }
 
 }  // namespace StateTools
