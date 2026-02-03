@@ -70,23 +70,47 @@ npm run format:check
 ### Key Components
 
 - **`src/maxmcp.cpp`**: Unified external object supporting both agent and patch modes via `@mode` attribute
-- **`src/mcp_server.cpp`**: MCP protocol handler (JSON-RPC), implements all 10 MCP tools
+- **`src/mcp_server.cpp`**: MCP protocol handler (JSON-RPC), implements all MCP tools
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
-- **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry)
+- **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
 
-### MCP Tools (11 total)
+### MCP Tools (22 total)
 
+#### Patch Management (3)
 1. `list_active_patches` - List registered patches
-2. `get_console_log` - Retrieve Max Console messages
-3. `add_max_object` - Create Max objects
-4. `get_objects_in_patch` - List objects in patch
-5. `set_object_attribute` - Modify object attributes
-6. `connect_max_objects` - Create patchcords
-7. `disconnect_max_objects` - Remove patchcords
-8. `remove_max_object` - Delete objects
-9. `get_patch_info` - Get patch metadata
-10. `get_frontmost_patch` - Get currently focused patch
-11. `get_avoid_rect_position` - Find safe placement positions
+2. `get_patch_info` - Get patch metadata
+3. `get_frontmost_patch` - Get currently focused patch
+
+#### Object Operations (8)
+4. `add_max_object` - Create Max objects
+5. `remove_max_object` - Delete objects
+6. `get_objects_in_patch` - List objects in patch
+7. `set_object_attribute` - Modify object attributes
+8. `get_object_io_info` - Get inlet/outlet counts
+9. `get_object_hidden` - Check visibility
+10. `set_object_hidden` - Set visibility
+11. `redraw_object` - Force redraw
+
+#### Connection Operations (2)
+12. `connect_max_objects` - Create patchcords
+13. `disconnect_max_objects` - Remove patchcords
+
+#### Patch State (3)
+14. `get_patch_lock_state` - Get lock state
+15. `set_patch_lock_state` - Set lock state
+16. `get_patch_dirty` - Check unsaved changes
+
+#### Undo/Redo (2)
+17. `begin_undo_group` - Start undo transaction
+18. `end_undo_group` - End undo transaction
+
+#### Hierarchy (2)
+19. `get_parent_patcher` - Get parent patcher
+20. `get_subpatchers` - List subpatchers
+
+#### Utilities (2)
+21. `get_console_log` - Retrieve Max Console messages
+22. `get_avoid_rect_position` - Find safe placement positions
 
 ### Threading Model
 
