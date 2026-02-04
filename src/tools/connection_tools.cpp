@@ -18,6 +18,7 @@
 
 #include "maxmcp.h"
 #include "utils/console_logger.h"
+#include "utils/patch_helpers.h"
 #include "utils/patch_registry.h"
 
 namespace ConnectionTools {
@@ -58,22 +59,9 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
     t_object* patcher = data->patch->patcher;
 
-    // Find source and destination boxes by varname
-    t_object* src_box = nullptr;
-    t_object* dst_box = nullptr;
-
-    t_object* box = nullptr;
-    for (box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
-        t_symbol* varname = jbox_get_varname(box);
-        if (varname == gensym(data->src_varname.c_str())) {
-            src_box = box;
-        }
-        if (varname == gensym(data->dst_varname.c_str())) {
-            dst_box = box;
-        }
-        if (src_box && dst_box)
-            break;
-    }
+    // Find source and destination boxes by varname using PatchHelpers
+    t_object* src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
+    t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
 
     if (!src_box || !dst_box) {
         ConsoleLogger::log("ERROR: Cannot find source or destination box");
@@ -106,22 +94,10 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
     VALIDATE_DEFERRED_ARGS("disconnect_objects_deferred");
     EXTRACT_DEFERRED_DATA(t_disconnect_objects_data, data, argv);
 
-    // Find source and destination boxes
+    // Find source and destination boxes using PatchHelpers
     t_object* patcher = data->patch->patcher;
-    t_object* src_box = nullptr;
-    t_object* dst_box = nullptr;
-
-    for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
-        t_symbol* varname = jbox_get_varname(box);
-        if (varname == gensym(data->src_varname.c_str())) {
-            src_box = box;
-        }
-        if (varname == gensym(data->dst_varname.c_str())) {
-            dst_box = box;
-        }
-        if (src_box && dst_box)
-            break;
-    }
+    t_object* src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
+    t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
 
     if (!src_box || !dst_box) {
         ConsoleLogger::log("Source or destination object not found for disconnect");

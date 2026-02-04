@@ -1,13 +1,11 @@
 /**
     @file state_tools.h
-    MaxMCP - State and Undo MCP Tools
+    MaxMCP - State MCP Tools
 
-    Tools for patch state queries and undo/redo operations:
+    Tools for patch state queries:
     - get_patch_lock_state
     - set_patch_lock_state
     - get_patch_dirty
-    - begin_undo_group
-    - end_undo_group
 
     @ingroup maxmcp
 */
@@ -28,22 +26,20 @@ namespace StateTools {
 using json = nlohmann::json;
 
 /**
- * Get tool schemas for state and undo tools.
+ * Get tool schemas for state tools.
  * Returns schema definitions for tools/list response.
  *
  * Tools included:
  * - get_patch_lock_state: Query lock/edit state
  * - set_patch_lock_state: Set lock/edit state
  * - get_patch_dirty: Check for unsaved changes
- * - begin_undo_group: Start undo transaction
- * - end_undo_group: End undo transaction
  *
  * @return JSON array of tool schema objects
  */
 json get_tool_schemas();
 
 /**
- * Execute a state or undo tool.
+ * Execute a state tool.
  *
  * @param tool Tool name
  * @param params Tool parameters
