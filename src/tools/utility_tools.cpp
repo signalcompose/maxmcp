@@ -144,7 +144,7 @@ static json execute_get_console_log(const json& params) {
  */
 static json execute_get_avoid_rect_position(const json& params) {
 #ifdef MAXMCP_TEST_MODE
-    return ToolCommon::make_error(-32603, "Not available in test mode");
+    return ToolCommon::test_mode_error();
 #else
     std::string patch_id = params.value("patch_id", "");
     double width = params.value("width", 50.0);

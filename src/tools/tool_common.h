@@ -4,6 +4,11 @@
 
     Shared types, structures, and utilities for MCP tools.
 
+    This file follows the TRY principle:
+    - Testable: Clear error codes and Result type for easy testing
+    - Readable: Named constants instead of magic numbers
+    - Yieldable: RAII patterns for efficient resource management
+
     @ingroup maxmcp
 */
 
@@ -12,8 +17,12 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <functional>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include <nlohmann/json.hpp>
 
@@ -24,6 +33,88 @@ typedef struct _maxmcp t_maxmcp;
 namespace ToolCommon {
 
 using json = nlohmann::json;
+
+// ============================================================================
+// JSON-RPC Error Codes (Readable: Named constants instead of magic numbers)
+// ============================================================================
+// Standard JSON-RPC 2.0 error codes
+// See: https://www.jsonrpc.org/specification#error_object
+
+namespace ErrorCode {
+// Parse error: Invalid JSON was received
+constexpr int PARSE_ERROR = -32700;
+// Invalid Request: The JSON sent is not a valid Request object
+constexpr int INVALID_REQUEST = -32600;
+// Method not found: The method does not exist / is not available
+constexpr int METHOD_NOT_FOUND = -32601;
+// Invalid params: Invalid method parameter(s)
+constexpr int INVALID_PARAMS = -32602;
+// Internal error: Internal JSON-RPC error
+constexpr int INTERNAL_ERROR = -32603;
+}  // namespace ErrorCode
+
+// ============================================================================
+// Result Type (Testable: Type-safe error handling)
+// ============================================================================
+
+/**
+ * @brief Result type for operations that can fail.
+ *
+ * Provides type-safe error handling that is easy to test.
+ * Use std::variant to represent either success (json) or error (json).
+ *
+ * Example:
+ *   auto result = validate_patch_id(params);
+ *   if (auto* error = std::get_if<Error>(&result)) {
+ *       return error->to_json();
+ *   }
+ *   auto& success = std::get<Success>(result);
+ */
+struct Success {
+    json data;
+    explicit Success(json d = json::object()) : data(std::move(d)) {}
+};
+
+struct Error {
+    int code;
+    std::string message;
+
+    Error(int c, std::string m) : code(c), message(std::move(m)) {}
+
+    json to_json() const {
+        return {{"error", {{"code", code}, {"message", message}}}};
+    }
+};
+
+using Result = std::variant<Success, Error>;
+
+/// Check if result is an error
+inline bool is_error(const Result& r) {
+    return std::holds_alternative<Error>(r);
+}
+
+/// Check if result is success
+inline bool is_success(const Result& r) {
+    return std::holds_alternative<Success>(r);
+}
+
+/// Get error from result (throws if not error)
+inline const Error& get_error(const Result& r) {
+    return std::get<Error>(r);
+}
+
+/// Get success from result (throws if not success)
+inline const Success& get_success(const Result& r) {
+    return std::get<Success>(r);
+}
+
+/// Convert Result to JSON response
+inline json result_to_json(const Result& r) {
+    if (is_error(r)) {
+        return get_error(r).to_json();
+    }
+    return {{"result", get_success(r).data}};
+}
 
 // ============================================================================
 // DeferredResult - Thread synchronization for deferred callbacks
@@ -62,6 +153,29 @@ struct DeferredResult {
         cv.notify_one();
     }
 };
+
+// ============================================================================
+// DeferredResultPtr - RAII wrapper (Yieldable: Automatic resource cleanup)
+// ============================================================================
+
+/**
+ * @brief RAII smart pointer for DeferredResult.
+ *
+ * Ensures proper cleanup of DeferredResult even if exceptions occur
+ * or early returns happen. Automatically deletes the DeferredResult
+ * when going out of scope.
+ *
+ * Usage:
+ *   DeferredResultPtr deferred = make_deferred_result();
+ *   // ... use deferred.get() ...
+ *   // Automatically cleaned up when scope exits
+ */
+using DeferredResultPtr = std::unique_ptr<DeferredResult>;
+
+/// Create a new DeferredResult with RAII management
+inline DeferredResultPtr make_deferred_result() {
+    return std::make_unique<DeferredResult>();
+}
 
 // ============================================================================
 // Helper Macros for Deferred Callbacks
@@ -132,8 +246,8 @@ struct DeferredResult {
         ConsoleLogger::log(                                                                        \
             "ERROR: Invalid deferred callback data (data/patch/patcher/deferred_result null)");    \
         if (data_ptr && data_ptr->deferred_result) {                                               \
-            data_ptr->deferred_result->result =                                                    \
-                ToolCommon::make_error(-32603, "Internal error: invalid callback data");           \
+            data_ptr->deferred_result->result = ToolCommon::make_error(                            \
+                ToolCommon::ErrorCode::INTERNAL_ERROR, "Internal error: invalid callback data");   \
             data_ptr->deferred_result->notify();                                                   \
         }                                                                                          \
         if (data_ptr)                                                                              \
@@ -162,12 +276,12 @@ struct DeferredResult {
 constexpr auto DEFAULT_DEFER_TIMEOUT = std::chrono::milliseconds(5000);
 
 // ============================================================================
-// Error Response Helpers
+// Error Response Helpers (Readable: Using named constants)
 // ============================================================================
 
 /**
  * Create a JSON-RPC error response.
- * @param code Error code (e.g., -32602 for invalid params)
+ * @param code Error code (use ErrorCode constants)
  * @param message Error message
  * @return JSON error object
  */
@@ -181,7 +295,7 @@ inline json make_error(int code, const std::string& message) {
  * @return JSON error object
  */
 inline json missing_param_error(const std::string& param_name) {
-    return make_error(-32602, "Missing required parameter: " + param_name);
+    return make_error(ErrorCode::INVALID_PARAMS, "Missing required parameter: " + param_name);
 }
 
 /**
@@ -190,7 +304,7 @@ inline json missing_param_error(const std::string& param_name) {
  * @return JSON error object
  */
 inline json patch_not_found_error(const std::string& patch_id) {
-    return make_error(-32602, "Patch not found: " + patch_id);
+    return make_error(ErrorCode::INVALID_PARAMS, "Patch not found: " + patch_id);
 }
 
 /**
@@ -199,7 +313,7 @@ inline json patch_not_found_error(const std::string& patch_id) {
  * @return JSON error object
  */
 inline json timeout_error(const std::string& operation) {
-    return make_error(-32603, "Timeout " + operation);
+    return make_error(ErrorCode::INTERNAL_ERROR, "Timeout " + operation);
 }
 
 /**
@@ -208,7 +322,79 @@ inline json timeout_error(const std::string& operation) {
  * @return JSON error object
  */
 inline json object_not_found_error(const std::string& varname) {
-    return make_error(-32602, "Object not found: " + varname);
+    return make_error(ErrorCode::INVALID_PARAMS, "Object not found: " + varname);
+}
+
+/**
+ * Create an unknown tool error response.
+ * @param tool_name The tool name that was not found
+ * @return JSON error object
+ */
+inline json unknown_tool_error(const std::string& tool_name) {
+    return make_error(ErrorCode::INVALID_PARAMS, "Unknown tool: " + tool_name);
+}
+
+/**
+ * Create a method not found error response.
+ * @param method The method that was not found
+ * @return JSON error object
+ */
+inline json method_not_found_error(const std::string& method) {
+    return make_error(ErrorCode::METHOD_NOT_FOUND, "Method not found: " + method);
+}
+
+/**
+ * Create a test mode error response.
+ * @return JSON error object
+ */
+inline json test_mode_error() {
+    return make_error(ErrorCode::INTERNAL_ERROR, "Not available in test mode");
+}
+
+// ============================================================================
+// Validation Helpers (Testable: Composable validation functions)
+// ============================================================================
+
+/**
+ * @brief Validate that a required string parameter exists and is non-empty.
+ *
+ * @param params The JSON parameters object
+ * @param param_name The name of the parameter to validate
+ * @return std::optional<std::string> The value if valid, std::nullopt if invalid
+ */
+inline std::optional<std::string> get_required_string(const json& params,
+                                                      const std::string& param_name) {
+    std::string value = params.value(param_name, "");
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+/**
+ * @brief Validate patch_id parameter and return error JSON if invalid.
+ *
+ * Common pattern used by most tools. Returns error JSON or nullptr.
+ *
+ * @param params The JSON parameters object
+ * @return json Error JSON if validation fails, nullptr if valid
+ */
+inline json validate_patch_id_param(const json& params) {
+    auto patch_id = get_required_string(params, "patch_id");
+    if (!patch_id) {
+        return missing_param_error("patch_id");
+    }
+    return nullptr;
+}
+
+/**
+ * @brief Get validated patch_id from params.
+ *
+ * @param params The JSON parameters object
+ * @return std::string The patch_id (empty if not present)
+ */
+inline std::string get_patch_id(const json& params) {
+    return params.value("patch_id", "");
 }
 
 }  // namespace ToolCommon
