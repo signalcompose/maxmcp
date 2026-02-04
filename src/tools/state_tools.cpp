@@ -1,6 +1,6 @@
 /**
     @file state_tools.cpp
-    MaxMCP - State and Undo MCP Tools Implementation
+    MaxMCP - State MCP Tools Implementation
 
     @ingroup maxmcp
 */

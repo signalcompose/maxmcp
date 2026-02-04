@@ -106,6 +106,7 @@ struct DeferredResult {
 #define EXTRACT_DEFERRED_DATA(DataType, data_ptr, argv)                                            \
     DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));                                \
     if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher) {                              \
+        ConsoleLogger::log("ERROR: Invalid deferred callback data (data/patch/patcher null)");     \
         if (data_ptr)                                                                              \
             delete data_ptr;                                                                       \
         return;                                                                                    \
@@ -128,6 +129,12 @@ struct DeferredResult {
     DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));                                \
     if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher ||                              \
         !data_ptr->deferred_result) {                                                              \
+        ConsoleLogger::log("ERROR: Invalid deferred callback data (data/patch/patcher null)");     \
+        if (data_ptr && data_ptr->deferred_result) {                                               \
+            data_ptr->deferred_result->result =                                                    \
+                ToolCommon::make_error(-32603, "Internal error: invalid callback data");           \
+            data_ptr->deferred_result->notify();                                                   \
+        }                                                                                          \
         if (data_ptr)                                                                              \
             delete data_ptr;                                                                       \
         return;                                                                                    \
