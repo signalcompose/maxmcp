@@ -11,6 +11,7 @@
 
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
+
 #include "jpatcher_api.h"
 #endif
 
@@ -51,8 +52,9 @@ static void get_parent_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     t_object* parent = jpatcher_get_parentpatcher(data->patch->patcher);
 
     if (!parent) {
-        COMPLETE_DEFERRED(data,
-            (json{{"error", {{"code", -32602}, {"message", "No parent patcher (top-level patch)"}}}}));
+        COMPLETE_DEFERRED(
+            data, (json{{"error",
+                         {{"code", -32602}, {"message", "No parent patcher (top-level patch)"}}}}));
         return;
     }
 
@@ -123,27 +125,24 @@ static void get_subpatchers_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 // ============================================================================
 
 json get_tool_schemas() {
-    return json::array({
-        // get_parent_patcher
-        {{"name", "get_parent_patcher"},
-         {"description", "Get the parent patcher of a subpatcher"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id",
-              {{"type", "string"}, {"description", "Child patch ID to query"}}}}},
-           {"required", json::array({"patch_id"})}}}},
+    return json::array(
+        {// get_parent_patcher
+         {{"name", "get_parent_patcher"},
+          {"description", "Get the parent patcher of a subpatcher"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Child patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}},
 
-        // get_subpatchers
-        {{"name", "get_subpatchers"},
-         {"description", "List all subpatchers in a patch"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id",
-              {{"type", "string"}, {"description", "Parent patch ID to query"}}}}},
-           {"required", json::array({"patch_id"})}}}}
-    });
+         // get_subpatchers
+         {{"name", "get_subpatchers"},
+          {"description", "List all subpatchers in a patch"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Parent patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}}});
 }
 
 // ============================================================================

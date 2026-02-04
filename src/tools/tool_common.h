@@ -10,13 +10,13 @@
 #ifndef TOOL_COMMON_H
 #define TOOL_COMMON_H
 
-#include <nlohmann/json.hpp>
-
 #include <chrono>
 #include <condition_variable>
 #include <map>
 #include <mutex>
 #include <string>
+
+#include <nlohmann/json.hpp>
 
 // Forward declarations
 struct _maxmcp;
@@ -116,12 +116,12 @@ bool end_undo_transaction(const std::string& patch_id);
  *
  * @param func_name String literal for error logging
  */
-#define VALIDATE_DEFERRED_ARGS(func_name)                                   \
-    do {                                                                    \
-        if (argc < 1 || !argv) {                                            \
-            ConsoleLogger::log("ERROR: " func_name " called with no data"); \
-            return;                                                         \
-        }                                                                   \
+#define VALIDATE_DEFERRED_ARGS(func_name)                                                          \
+    do {                                                                                           \
+        if (argc < 1 || !argv) {                                                                   \
+            ConsoleLogger::log("ERROR: " func_name " called with no data");                        \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
@@ -137,12 +137,12 @@ bool end_undo_transaction(const std::string& patch_id);
  * @param data_ptr Variable name for the extracted pointer
  * @param argv The t_atom array from callback
  */
-#define EXTRACT_DEFERRED_DATA(DataType, data_ptr, argv)                \
-    DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));    \
-    if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher) {  \
-        if (data_ptr)                                                  \
-            delete data_ptr;                                           \
-        return;                                                        \
+#define EXTRACT_DEFERRED_DATA(DataType, data_ptr, argv)                                            \
+    DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));                                \
+    if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher) {                              \
+        if (data_ptr)                                                                              \
+            delete data_ptr;                                                                       \
+        return;                                                                                    \
     }
 
 /**
@@ -158,13 +158,13 @@ bool end_undo_transaction(const std::string& patch_id);
  * @param data_ptr Variable name for the extracted pointer
  * @param argv The t_atom array from callback
  */
-#define EXTRACT_DEFERRED_DATA_WITH_RESULT(DataType, data_ptr, argv)       \
-    DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));       \
-    if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher ||     \
-        !data_ptr->deferred_result) {                                     \
-        if (data_ptr)                                                     \
-            delete data_ptr;                                              \
-        return;                                                           \
+#define EXTRACT_DEFERRED_DATA_WITH_RESULT(DataType, data_ptr, argv)                                \
+    DataType* data_ptr = static_cast<DataType*>(atom_getobj(argv));                                \
+    if (!data_ptr || !data_ptr->patch || !data_ptr->patch->patcher ||                              \
+        !data_ptr->deferred_result) {                                                              \
+        if (data_ptr)                                                                              \
+            delete data_ptr;                                                                       \
+        return;                                                                                    \
     }
 
 /**
@@ -174,11 +174,11 @@ bool end_undo_transaction(const std::string& patch_id);
  * @param data_ptr Pointer to data structure (must have deferred_result member)
  * @param result_json The JSON result to return
  */
-#define COMPLETE_DEFERRED(data_ptr, result_json)             \
-    do {                                                     \
-        data_ptr->deferred_result->result = result_json;     \
-        data_ptr->deferred_result->notify();                 \
-        delete data_ptr;                                     \
+#define COMPLETE_DEFERRED(data_ptr, result_json)                                                   \
+    do {                                                                                           \
+        data_ptr->deferred_result->result = result_json;                                           \
+        data_ptr->deferred_result->notify();                                                       \
+        delete data_ptr;                                                                           \
     } while (0)
 
 // ============================================================================

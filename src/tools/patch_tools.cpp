@@ -18,33 +18,32 @@ namespace PatchTools {
 // ============================================================================
 
 json get_tool_schemas() {
-    return json::array({
-        // list_active_patches
-        {{"name", "list_active_patches"},
-         {"description",
-          "List all registered MaxMCP client patches. Optionally filter by group name."},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"group",
-              {{"type", "string"},
-               {"description",
-                "Optional group name to filter patches (e.g., 'synths', 'effects')"}}}}}}}},
+    return json::array(
+        {// list_active_patches
+         {{"name", "list_active_patches"},
+          {"description",
+           "List all registered MaxMCP client patches. Optionally filter by group name."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"group",
+               {{"type", "string"},
+                {"description",
+                 "Optional group name to filter patches (e.g., 'synths', 'effects')"}}}}}}}},
 
-        // get_patch_info
-        {{"name", "get_patch_info"},
-         {"description", "Get detailed information about a specific patch"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
-           {"required", json::array({"patch_id"})}}}},
+         // get_patch_info
+         {{"name", "get_patch_info"},
+          {"description", "Get detailed information about a specific patch"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}},
 
-        // get_frontmost_patch
-        {{"name", "get_frontmost_patch"},
-         {"description", "Get the currently focused/frontmost patch"},
-         {"inputSchema", {{"type", "object"}, {"properties", json::object()}}}}
-    });
+         // get_frontmost_patch
+         {{"name", "get_frontmost_patch"},
+          {"description", "Get the currently focused/frontmost patch"},
+          {"inputSchema", {{"type", "object"}, {"properties", json::object()}}}}});
 }
 
 // ============================================================================
