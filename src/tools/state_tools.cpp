@@ -240,7 +240,13 @@ static json execute_get_patch_dirty(const json& params) {
 // ============================================================================
 
 json execute(const std::string& tool, const json& params) {
-#ifndef MAXMCP_TEST_MODE
+#ifdef MAXMCP_TEST_MODE
+    // In test mode, return explicit error for known tools (consistent with other modules)
+    if (tool == "get_patch_lock_state" || tool == "set_patch_lock_state" ||
+        tool == "get_patch_dirty") {
+        return ToolCommon::make_error(-32603, "Not available in test mode");
+    }
+#else
     if (tool == "get_patch_lock_state") {
         return execute_get_patch_lock_state(params);
     } else if (tool == "set_patch_lock_state") {
