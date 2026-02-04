@@ -1,100 +1,92 @@
 # Object Lookup Examples
 
+## Tool Usage
+
+**Always prefer Claude Code's dedicated tools over Bash commands:**
+
+| Task | Tool | Example |
+|------|------|---------|
+| Find files | **Glob** | `pattern="**/cycle~.maxref.xml"` |
+| Search content | **Grep** | `pattern="oscillator" glob="*.maxref.xml"` |
+| Read files | **Read** | `file_path="/path/to/file.xml"` |
+
 ## Example 1: Basic Object Lookup
 
 **User request**: "How do I use cycle~?"
 
 ### Step 1: Find the reference file
 
-```bash
-find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
-    -name "cycle~.maxref.xml" -type f
+```
+Glob: pattern="**/cycle~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
-Output:
+Result:
 ```
 /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/cycle~.maxref.xml
 ```
 
-### Step 2: Get summary (using helper script)
+### Step 2: Read the reference
 
-```bash
-./scripts/get-reference.sh cycle~ --summary
+```
+Read: file_path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/cycle~.maxref.xml"
 ```
 
-Output:
-```
-Object: cycle~
-Category: msp-ref
-Path: /Applications/Max.app/.../msp-ref/cycle~.maxref.xml
----
+### Step 3: Extract key information
 
-Digest:
-Sinusoidal oscillator
-
-Description:
-Use the cycle~ object to generate a sinusoidal waveform.
-The object uses a 512-sample wavetable which can be
-replaced by loading an audio file.
-```
-
-### Step 3: Full reference (if needed)
-
-```bash
-./scripts/get-reference.sh cycle~
-```
-
-Returns complete XML with inlets, outlets, methods, attributes.
+From the XML, extract:
+- `<digest>` - One-line summary
+- `<description>` - Full description
+- `<inletlist>` - Inputs
+- `<outletlist>` - Outputs
+- `<objarglist>` - Creation arguments
 
 ## Example 2: Finding Filter Objects
 
 **User request**: "What filter objects are available in MSP?"
 
-### Direct filesystem search
+### Using Glob for pattern search
 
-```bash
-find /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref \
-    -name "*filter*.maxref.xml" -type f
+```
+Glob: pattern="**/*filter*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref"
 ```
 
-Or list all MSP objects and grep:
-
-```bash
-ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/*.maxref.xml | \
-    xargs -n1 basename | sed 's/.maxref.xml//' | grep -i filter
+Result:
+```
+filtercoeff~.maxref.xml
+filtergraph~.maxref.xml
 ```
 
-Output:
+### Alternative: List all and filter conceptually
+
 ```
-biquad~
-filtercoeff~
-filtergraph~
-lores~
-reson~
-svf~
+Glob: pattern="*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref"
 ```
 
-## Example 3: Search by Keyword
+Then identify filter-related objects: biquad~, lores~, reson~, svf~, onepole~
 
-**User request**: "Looking for something to generate random numbers"
+## Example 3: Search by Keyword in Content
 
-### Search filenames
-
-```bash
-find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
-    -name "*random*.maxref.xml" -o -name "*rand*.maxref.xml" -o -name "*noise*.maxref.xml"
-```
+**User request**: "Looking for objects related to random numbers"
 
 ### Search within XML content
 
-```bash
-grep -r "random" /Applications/Max.app/Contents/Resources/C74/docs/refpages \
-    --include="*.maxref.xml" -l | head -10
 ```
+Grep: pattern="random"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
+      glob="*.maxref.xml"
+      output_mode="files_with_matches"
+```
+
+Result includes files mentioning "random" in their documentation.
 
 ## Example 4: Full-Text Search
 
 **User request**: "How do I do FM synthesis?"
+
+Use the helper script for SQLite FTS:
 
 ```bash
 ./scripts/search-fts.sh "FM synthesis"
@@ -106,19 +98,13 @@ Full-text search: FM synthesis
 ---
 title                path                          excerpt
 -----------------    --------------------------    ----------------
-FM Synthesis         /userguide/audio/fm          ...frequency >>>modulation<<< creates...
-Oscillators          /userguide/audio/oscillators ...used for >>>FM synthesis<<<...
+FM Synthesis         /userguide/audio/fm          ...frequency modulation...
 ```
 
 ## Example 5: Finding Related Objects
 
-After reading a reference file, look at `<seealsolist>`:
+After reading a reference, look at `<seealsolist>`:
 
-```bash
-./scripts/get-reference.sh cycle~
-```
-
-Extract related objects:
 ```xml
 <seealsolist>
     <seealso name="phasor~"/>
@@ -128,22 +114,24 @@ Extract related objects:
 </seealsolist>
 ```
 
-Then get related references:
+Then look up related objects:
 
-```bash
-./scripts/get-reference.sh phasor~ --summary
-./scripts/get-reference.sh wave~ --summary
+```
+Glob: pattern="**/phasor~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
 ## Example 6: Understanding Object Parameters
 
 **User request**: "What arguments does metro take?"
 
-```bash
-./scripts/get-reference.sh metro
+```
+Glob: pattern="**/metro.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
-Look at `<objarglist>`:
+Then Read the file and extract `<objarglist>`:
+
 ```xml
 <objarglist>
     <objarg name="interval" optional="1" type="number">
@@ -153,6 +141,7 @@ Look at `<objarglist>`:
 ```
 
 And `<methodlist>` for messages:
+
 ```xml
 <methodlist>
     <method name="int">
@@ -171,11 +160,12 @@ And `<methodlist>` for messages:
 
 **User request**: "How many inlets does biquad~ have?"
 
-```bash
-./scripts/get-reference.sh biquad~
+```
+Read: file_path="/Applications/Max.app/.../msp-ref/biquad~.maxref.xml"
 ```
 
-Look at `<inletlist>`:
+Extract `<inletlist>`:
+
 ```xml
 <inletlist>
     <inlet id="0" type="signal">
@@ -188,33 +178,24 @@ Look at `<inletlist>`:
 </inletlist>
 ```
 
-Or extract directly:
-
-```bash
-grep -A2 '<inlet' /Applications/Max.app/.../msp-ref/biquad~.maxref.xml
-```
-
 ## Example 8: List All Objects in a Category
 
 **User request**: "What Max objects are available?"
 
-```bash
-# List all Max control objects
-ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref/*.maxref.xml | \
-    wc -l
-# Output: ~300
-
-# List first 20
-ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref/*.maxref.xml | \
-    head -20 | xargs -n1 basename | sed 's/.maxref.xml//'
 ```
+Glob: pattern="*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref"
+```
+
+Returns all Max control objects (~300 files).
 
 ## Summary
 
-| Task | Method | Example |
-|------|--------|---------|
-| Find object by name | `find` or helper | `./scripts/get-reference.sh delay~` |
-| Search by pattern | `find -name "*pattern*"` | `find ... -name "*filter*"` |
-| Search content | `grep -r` | `grep -r "oscillator" .../refpages` |
-| Search documentation | `search-fts.sh` | `./scripts/search-fts.sh "envelope"` |
-| List category | `ls` | `ls .../refpages/msp-ref/` |
+| Task | Tool | Pattern Example |
+|------|------|-----------------|
+| Find object by name | Glob | `**/delay~.maxref.xml` |
+| Search by pattern | Glob | `**/*filter*.maxref.xml` |
+| Search content | Grep | `pattern="oscillator" glob="*.maxref.xml"` |
+| Read reference | Read | Direct file path |
+| Full-text search | Bash | `./scripts/search-fts.sh "query"` |
+| List category | Glob | `*.maxref.xml` in category dir |
