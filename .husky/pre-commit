@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# MaxMCP pre-commit hook
+# Runs lint-staged for staged file validation
+
+# Exit on error
+set -e
+
+# Run lint-staged (checks only staged files)
+npx lint-staged
+
+# Optional: Run C++ tests if build directory exists
+if [ -d "build" ]; then
+    echo "Running C++ tests..."
+    cd build && ctest --output-on-failure && cd ..
+fi
+
+echo "Pre-commit checks passed!"
