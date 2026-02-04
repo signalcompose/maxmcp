@@ -140,6 +140,59 @@ cmake --build build
 }
 ```
 
+### 2.4 Pre-commit Hooks Setup
+
+MaxMCP uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/lint-staged/lint-staged) for pre-commit validation.
+
+**Initial Setup** (one-time):
+
+```bash
+# Install Node.js dependencies (installs husky and lint-staged)
+npm install
+
+# Build the project (required for tests)
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+cmake --build build
+```
+
+**What Pre-commit Hooks Check**:
+
+| Check | Description |
+|-------|-------------|
+| `clang-format` | C++ code formatting (staged files only) |
+| `eslint` | Node.js bridge code linting |
+| `prettier` | Node.js bridge code formatting |
+| `ctest` | C++ unit tests (if build directory exists) |
+
+**Manual Hook Commands**:
+
+```bash
+# Run lint-staged manually
+npx lint-staged
+
+# Run all C++ format check
+npm run lint:cpp
+
+# Format all C++ files
+npm run format:cpp
+
+# Run C++ tests
+npm run test:cpp
+```
+
+**Skipping Hooks** (emergency only):
+
+```bash
+# Skip pre-commit hook (not recommended)
+git commit --no-verify -m "emergency: fix critical bug"
+```
+
+**Troubleshooting**:
+
+- If hook fails with "clang-format not found": `brew install clang-format`
+- If tests fail: Ensure `build/` directory exists with `cmake --build build`
+- If Node.js errors: Run `cd package/MaxMCP/support/bridge && npm install`
+
 ---
 
 ## 3. Build System
