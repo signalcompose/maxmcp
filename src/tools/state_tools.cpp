@@ -12,8 +12,8 @@
 #endif
 
 #include "maxmcp.h"
-#include "tools/state_tools.h"
-#include "tools/tool_common.h"
+#include "state_tools.h"
+#include "tool_common.h"
 #include "utils/console_logger.h"
 #include "utils/patch_registry.h"
 
@@ -41,13 +41,11 @@ struct t_get_dirty_data {
     DeferredResult* deferred_result;
 };
 
-// NOTE: Undo transaction data structures removed because jpatcher_beginundo and
-// jpatcher_endundo APIs do not exist in the current Max SDK headers.
-// The begin_undo_group and end_undo_group tools have been disabled.
-
 // ============================================================================
 // Deferred Callbacks
 // ============================================================================
+// NOTE: Undo tools (begin_undo_group, end_undo_group) were removed because
+// jpatcher_beginundo/jpatcher_endundo APIs do not exist in Max SDK.
 
 #ifndef MAXMCP_TEST_MODE
 
@@ -56,16 +54,22 @@ static void get_lock_state_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
     VALIDATE_DEFERRED_ARGS("get_lock_state_deferred");
     EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_lock_state_data, data, argv);
 
-    // Get lock state using patcherview (recommended by Max SDK documentation)
-    // Note: jpatcher_get_locked exists in header but not in linker flags
-    // Use jpatcher_get_firstview + patcherview_get_locked instead
+    // Get lock state using patcherview
+    // Note: jpatcher_get_locked exists in header but not in linker, use patcherview instead
     t_object* patcherview = jpatcher_get_firstview(data->patch->patcher);
     char locked = 0;
+    bool state_verified = false;
+
     if (patcherview) {
         locked = patcherview_get_locked(patcherview);
+        state_verified = true;
+    } else {
+        ConsoleLogger::log("Warning: No patcherview available, defaulting lock state to false");
     }
 
-    COMPLETE_DEFERRED(data, (json{{"locked", locked != 0}, {"patch_id", data->patch->patch_id}}));
+    COMPLETE_DEFERRED(data, (json{{"locked", locked != 0},
+                                  {"patch_id", data->patch->patch_id},
+                                  {"state_verified", state_verified}}));
 }
 
 // Deferred callback for setting patch lock state
@@ -93,9 +97,6 @@ static void get_dirty_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* 
     COMPLETE_DEFERRED(data, (json{{"dirty", dirty != 0}, {"patch_id", data->patch->patch_id}}));
 }
 
-// NOTE: begin_undo_deferred and end_undo_deferred callbacks removed because
-// jpatcher_beginundo and jpatcher_endundo APIs do not exist in Max SDK.
-
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -103,36 +104,34 @@ static void get_dirty_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* 
 // ============================================================================
 
 json get_tool_schemas() {
-    return json::array({
-        // Query tools
-        {{"name", "get_patch_lock_state"},
-         {"description", "Get the lock/edit state of a patch (locked=presentation, unlocked=edit)"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
-           {"required", json::array({"patch_id"})}}}},
-        {{"name", "get_patch_dirty"},
-         {"description", "Check if a patch has unsaved changes"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
-           {"required", json::array({"patch_id"})}}}},
-        // State mutation tools
-        {{"name", "set_patch_lock_state"},
-         {"description", "Set the lock/edit state of a patch"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
-             {"locked",
-              {{"type", "boolean"},
-               {"description", "true=lock (presentation), false=unlock (edit)"}}}}},
-           {"required", json::array({"patch_id", "locked"})}}}}
-        // NOTE: begin_undo_group and end_undo_group tools removed because
-        // jpatcher_beginundo and jpatcher_endundo APIs do not exist in Max SDK.
-    });
+    return json::array(
+        {// Query tools
+         {{"name", "get_patch_lock_state"},
+          {"description",
+           "Get the lock/edit state of a patch (locked=presentation, unlocked=edit)"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}},
+         {{"name", "get_patch_dirty"},
+          {"description", "Check if a patch has unsaved changes"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}},
+         // State mutation tools
+         {{"name", "set_patch_lock_state"},
+          {"description", "Set the lock/edit state of a patch"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+              {"locked",
+               {{"type", "boolean"},
+                {"description", "true=lock (presentation), false=unlock (edit)"}}}}},
+            {"required", json::array({"patch_id", "locked"})}}}}});
 }
 
 // ============================================================================
@@ -234,9 +233,6 @@ static json execute_get_patch_dirty(const json& params) {
     return {{"result", result}};
 }
 
-// NOTE: execute_begin_undo_group and execute_end_undo_group removed because
-// jpatcher_beginundo and jpatcher_endundo APIs do not exist in Max SDK.
-
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -252,7 +248,6 @@ json execute(const std::string& tool, const json& params) {
     } else if (tool == "get_patch_dirty") {
         return execute_get_patch_dirty(params);
     }
-    // NOTE: begin_undo_group and end_undo_group removed (APIs don't exist in Max SDK)
 #endif
 
     // Tool not handled by this module - return nullptr to signal routing should continue

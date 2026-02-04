@@ -93,6 +93,31 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
     t_atom result;
     object_method_typed(patcher, gensym("connect"), 4, connect_args, &result);
 
+    // Verify connection was created by searching for matching patchline
+    bool verified = false;
+    for (t_object* line = jpatcher_get_firstline(patcher); line;
+         line = jpatchline_get_nextline(line)) {
+        t_object* line_box1 = (t_object*)jpatchline_get_box1(line);
+        long line_outlet = jpatchline_get_outletnum(line);
+        t_object* line_box2 = (t_object*)jpatchline_get_box2(line);
+        long line_inlet = jpatchline_get_inletnum(line);
+
+        if (line_box1 == src_box && line_outlet == data->outlet && line_box2 == dst_box &&
+            line_inlet == data->inlet) {
+            verified = true;
+            break;
+        }
+    }
+
+    if (!verified) {
+        std::string msg = "Connect failed: could not verify connection " + data->src_varname + "[" +
+                          std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
+                          std::to_string(data->inlet) + "]";
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32603, msg));
+        return;
+    }
+
     std::string msg = "Connected: " + data->src_varname + "[" + std::to_string(data->outlet) +
                       "] -> " + data->dst_varname + "[" + std::to_string(data->inlet) + "]";
     ConsoleLogger::log(msg.c_str());
@@ -269,7 +294,8 @@ static json execute_connect_max_objects(const json& params) {
     return result;
 #else
     return {{"result",
-             {{"status", "success"},
+             {{"status", "mock_success"},
+              {"warning", "Test mode - no actual connection made"},
               {"patch_id", patch_id},
               {"src_varname", src_varname},
               {"outlet", outlet},
@@ -326,7 +352,8 @@ static json execute_disconnect_max_objects(const json& params) {
     return result;
 #else
     return {{"result",
-             {{"status", "success"},
+             {{"status", "mock_success"},
+              {"warning", "Test mode - no actual disconnection made"},
               {"patch_id", patch_id},
               {"src_varname", src_varname},
               {"outlet", outlet},

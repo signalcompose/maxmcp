@@ -7,9 +7,9 @@
 
 #include "patch_tools.h"
 
-#include "../utils/console_logger.h"
-#include "../utils/patch_registry.h"
 #include "tool_common.h"
+#include "utils/console_logger.h"
+#include "utils/patch_registry.h"
 
 namespace PatchTools {
 

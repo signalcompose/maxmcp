@@ -48,7 +48,8 @@ struct t_get_position_data {
  * @brief Deferred callback for finding empty position
  *
  * Executed on main thread via defer(). Scans existing objects and finds
- * position to the right of all existing objects with margin.
+ * position to the right of all existing objects with margin, considering
+ * the requested object dimensions.
  */
 static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("get_position_deferred");
@@ -57,6 +58,7 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
     t_object* patcher = data->patch->patcher;
     double max_x = 50.0;  // Default starting position
     double start_y = 50.0;
+    double margin = 50.0;
 
     // Find bounding box of existing objects
     for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
@@ -70,15 +72,22 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
         }
     }
 
-    // Add margin and return position
-    double margin = 50.0;
+    // Calculate position with margin, ensuring the new object fits
     double new_x = max_x + margin;
     double new_y = start_y;
 
-    COMPLETE_DEFERRED(
-        data,
-        json({{"position", json::array({new_x, new_y})},
-              {"rationale", "Positioned to the right of existing objects with 50px margin"}}));
+    // Build rationale including dimensions if non-default
+    std::string rationale = "Positioned to the right of existing objects with " +
+                            std::to_string(static_cast<int>(margin)) + "px margin";
+    if (data->width != 50.0 || data->height != 20.0) {
+        rationale += " (for object " + std::to_string(static_cast<int>(data->width)) + "x" +
+                     std::to_string(static_cast<int>(data->height)) + ")";
+    }
+
+    COMPLETE_DEFERRED(data, json({{"position", json::array({new_x, new_y})},
+                                  {"width", data->width},
+                                  {"height", data->height},
+                                  {"rationale", rationale}}));
 }
 
 #endif  // MAXMCP_TEST_MODE
