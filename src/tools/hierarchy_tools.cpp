@@ -91,14 +91,17 @@ static void get_subpatchers_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
             // Get subpatcher name if available
             std::string name_str = "";
-            t_object* subpatcher = nullptr;
+            t_object* subpatcher = nullptr;  // Explicitly initialized
 
             if (class_name == "patcher" || class_name == "bpatcher") {
-                // Try to get the subpatcher object
+                // Try to get the subpatcher object (subpatcher may remain null if method fails)
                 object_method(box, gensym("subpatcher"), &subpatcher);
                 if (subpatcher) {
                     t_symbol* sub_name = jpatcher_get_name(subpatcher);
                     name_str = (sub_name && sub_name->s_name) ? sub_name->s_name : "";
+                } else {
+                    ConsoleLogger::log(
+                        ("Warning: Could not get subpatcher for " + varname_str).c_str());
                 }
             }
 
