@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
 **Last Updated**: 2026-01-22
-**Project Status**: v1.1.2 Released ✅ (22 MCP Tools + Tool Refactoring)
+**Project Status**: v1.1.2 Released ✅ (20 MCP Tools + Tool Refactoring)
 
 ---
 
@@ -75,7 +75,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 **Purpose**: Complete reference for all MCP tools
 **Audience**: Developers, users
 **Contents**:
-- All 22 MCP tools documentation
+- All 20 MCP tools documentation
 - Parameter specifications
 - Response formats
 - Error codes
@@ -132,12 +132,20 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Known issues and resolutions
 
 ### 11. [Manual Test Guide - Phase 2](manual-test-phase2.md)
-**Purpose**: Manual testing procedures
+**Purpose**: Manual testing procedures for Phase 2 (10 tools)
 **Date**: 2025-11-09
 **Contents**:
 - Step-by-step test procedures
 - Expected behaviors
 - Troubleshooting tips
+
+### 12. [Manual Test Guide - New Tools](manual-test-new-tools.md)
+**Purpose**: Manual testing procedures for all 20 MCP tools
+**Date**: 2026-02-04
+**Contents**:
+- Complete test cases for all MCP tools
+- Claude Code prompts for testing
+- Expected results and error scenarios
 
 ---
 
