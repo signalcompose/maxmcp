@@ -14,7 +14,15 @@ Access Max/MSP built-in resources directly from Max.app: reference pages, snippe
 
 ## Agentic Search Approach
 
-This skill uses **direct filesystem exploration** instead of pre-built indexes. The AI dynamically searches Max.app resources as needed, ensuring information is always current and eliminating cache maintenance.
+This skill uses **direct filesystem exploration** with Claude Code's built-in tools. No pre-built indexes required - information is always current.
+
+**Use Claude Code's dedicated tools instead of Bash commands:**
+
+| Purpose | Use This Tool | Not This |
+|---------|---------------|----------|
+| Find files by pattern | **Glob** | ~~find~~ |
+| Search file contents | **Grep** | ~~grep~~ |
+| Read file contents | **Read** | ~~cat~~ |
 
 ## Resource Locations
 
@@ -42,19 +50,19 @@ All resources are located within Max.app:
     └── jitter-examples/
 ```
 
-## Search Methods
+## Search Methods Using Claude Code Tools
 
-### 1. Object Reference Lookup (Direct)
+### 1. Object Reference Lookup
 
 When user asks about a specific object (e.g., "How do I use cycle~?"):
 
-```bash
-# Find the reference file
-find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
-    -name "cycle~.maxref.xml" -type f
+```
+# Use Glob to find the reference file
+Glob: pattern="**/cycle~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 
-# Read the XML file directly
-cat /Applications/Max.app/.../refpages/msp-ref/cycle~.maxref.xml
+# Use Read to get the content
+Read: file_path="/Applications/Max.app/.../msp-ref/cycle~.maxref.xml"
 ```
 
 **Reference file naming**: `{object-name}.maxref.xml`
@@ -65,55 +73,50 @@ cat /Applications/Max.app/.../refpages/msp-ref/cycle~.maxref.xml
 
 When user searches for objects by keyword:
 
-```bash
+```
 # Find objects matching a pattern
-find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
-    -name "*filter*.maxref.xml" -type f
+Glob: pattern="**/*filter*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 
-# Search within XML content (grep)
-grep -r "frequency" /Applications/Max.app/.../refpages/ --include="*.maxref.xml" -l
+# Search within XML content
+Grep: pattern="frequency"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
+      glob="*.maxref.xml"
 ```
 
 ### 3. Full-Text Search (SQLite FTS)
 
-For comprehensive documentation search, use Max's built-in FTS database:
+For comprehensive documentation search, use Max's built-in FTS database via helper script:
 
 ```bash
-# Helper script available
 ./scripts/search-fts.sh "oscillator" 20
-
-# Or direct SQLite query
-sqlite3 "/Applications/Max.app/.../userguide/userguide_search.sqlite" \
-    "SELECT title, path, snippet(pages_fts, -1, '**', '**', '...', 30)
-     FROM pages_fts WHERE pages_fts MATCH 'oscillator' LIMIT 20"
 ```
+
+This uses Max's pre-built SQLite FTS database (no index building required).
 
 ### 4. Example Patches
 
-```bash
+```
 # List example categories
-ls /Applications/Max.app/Contents/Resources/Examples/
+Glob: pattern="*"
+      path="/Applications/Max.app/Contents/Resources/Examples"
 
-# Find examples by keyword
-find /Applications/Max.app/Contents/Resources/Examples \
-    -name "*.maxpat" | xargs grep -l "cycle~"
-
-# Or use helper
-./scripts/list-examples.sh synths
+# Find examples containing specific objects
+Grep: pattern="cycle~"
+      path="/Applications/Max.app/Contents/Resources/Examples"
+      glob="*.maxpat"
 ```
 
 ### 5. Snippets
 
-```bash
+```
 # List snippet categories
-ls /Applications/Max.app/Contents/Resources/C74/snippets/
+Glob: pattern="*"
+      path="/Applications/Max.app/Contents/Resources/C74/snippets"
 
 # Find snippets
-find /Applications/Max.app/Contents/Resources/C74/snippets \
-    -name "*.maxsnip" | head -20
-
-# Or use helper
-./scripts/get-snippet.sh msp
+Glob: pattern="**/*.maxsnip"
+      path="/Applications/Max.app/Contents/Resources/C74/snippets"
 ```
 
 ## XML Reference Format
@@ -157,38 +160,31 @@ Reference files use `.maxref.xml` format. Key elements to extract:
 </c74object>
 ```
 
-## Quick Extraction Commands
+## Key XML Elements to Extract
 
-```bash
-# Get object digest (one-line summary)
-grep -o '<digest>[^<]*</digest>' file.maxref.xml | head -1 | sed 's/<[^>]*>//g'
+| Element | Content | Use For |
+|---------|---------|---------|
+| `<digest>` | One-line summary | Quick overview |
+| `<description>` | Full description | Detailed explanation |
+| `<inletlist>/<inlet>` | Input specs | Understanding inputs |
+| `<outletlist>/<outlet>` | Output specs | Understanding outputs |
+| `<objarglist>/<objarg>` | Creation arguments | Object instantiation |
+| `<methodlist>/<method>` | Available methods | Messages the object accepts |
+| `<attributelist>/<attribute>` | Object attributes | Configurable properties |
+| `<seealsolist>/<seealso>` | Related objects | Finding alternatives |
 
-# Get inlets
-grep -A2 '<inlet' file.maxref.xml
+## Helper Scripts (Optional)
 
-# Get outlets
-grep -A2 '<outlet' file.maxref.xml
+Lightweight helper scripts for operations that require Bash:
 
-# Get methods
-grep -o '<method name="[^"]*"' file.maxref.xml | sed 's/.*name="//;s/"//'
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `search-fts.sh` | SQLite FTS query | Full-text documentation search |
+| `get-reference.sh` | Get object reference | Convenient summary extraction |
+| `list-examples.sh` | List example patches | Browse examples |
+| `get-snippet.sh` | Get code snippets | Browse snippets |
 
-# Get attributes
-grep -o '<attribute name="[^"]*"' file.maxref.xml | sed 's/.*name="//;s/"//'
-
-# Get related objects
-grep -o '<seealso name="[^"]*"' file.maxref.xml | sed 's/.*name="//;s/"//'
-```
-
-## Helper Scripts
-
-Lightweight helper scripts for common operations:
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `search-fts.sh` | Full-text search via SQLite | `./scripts/search-fts.sh "query" [limit]` |
-| `get-reference.sh` | Get object reference | `./scripts/get-reference.sh cycle~ [--summary]` |
-| `list-examples.sh` | List example patches | `./scripts/list-examples.sh [category] [search]` |
-| `get-snippet.sh` | Get code snippets | `./scripts/get-snippet.sh [category] [search]` |
+**Note**: Prefer using Glob/Grep/Read tools directly. Use scripts only when SQLite access is needed.
 
 ## When to Use
 
@@ -207,8 +203,8 @@ Use this skill when users ask about:
 
 User: "How do I use metro?"
 
-1. Find reference: `find ... -name "metro.maxref.xml"`
-2. Read the XML file
+1. **Glob** to find: `**/metro.maxref.xml`
+2. **Read** the XML file
 3. Extract digest, description, inlets, outlets
 4. Present formatted information
 
@@ -216,30 +212,25 @@ User: "How do I use metro?"
 
 User: "What filter objects are available?"
 
-1. Search: `find ... -name "*filter*.maxref.xml"`
+1. **Glob** to search: `**/*filter*.maxref.xml`
 2. List matching objects
-3. For top results, extract digests
+3. **Read** top results to extract digests
 4. Present categorized list
 
 ### Example 3: Find Examples
 
 User: "Show me reverb examples"
 
-1. Search examples: `find .../Examples -name "*reverb*" -o -name "*verb*"`
-2. Or grep inside patches: `grep -r "reverb" .../Examples --include="*.maxpat" -l`
+1. **Grep** in Examples directory for "reverb"
+2. Or **Glob** for `**/*reverb*.maxpat`
 3. List matching patches with paths
 
 ## Max.app Path Detection
 
-If Max.app is not at the default location:
+If Max.app is not at the default location, use Bash to detect:
 
 ```bash
-# Find Max.app via Spotlight
 mdfind "kMDItemCFBundleIdentifier == 'com.cycling74.Max'" | head -1
-
-# Get version
-/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" \
-    /Applications/Max.app/Contents/Info.plist
 ```
 
 ## Detailed Documentation
