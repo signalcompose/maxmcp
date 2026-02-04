@@ -20,6 +20,7 @@ typedef struct _object t_object;
 // Include Max SDK for full type definitions
 #include "ext.h"
 #include "ext_obex.h"
+
 #include "jpatcher_api.h"
 #endif
 

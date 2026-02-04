@@ -15,8 +15,9 @@
 #ifndef STATE_TOOLS_H
 #define STATE_TOOLS_H
 
-#include <nlohmann/json.hpp>
 #include <string>
+
+#include <nlohmann/json.hpp>
 
 // Forward declarations
 struct _maxmcp;

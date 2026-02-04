@@ -10,8 +10,9 @@
 #ifndef OBJECT_TOOLS_H
 #define OBJECT_TOOLS_H
 
-#include <nlohmann/json.hpp>
 #include <string>
+
+#include <nlohmann/json.hpp>
 
 // Forward declarations
 struct _maxmcp;

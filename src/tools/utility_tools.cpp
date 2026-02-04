@@ -15,6 +15,7 @@
 
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
+
 #include "jpatcher_api.h"
 #endif
 
@@ -54,7 +55,7 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
     EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_position_data, data, argv);
 
     t_object* patcher = data->patch->patcher;
-    double max_x = 50.0;   // Default starting position
+    double max_x = 50.0;  // Default starting position
     double start_y = 50.0;
 
     // Find bounding box of existing objects
@@ -74,10 +75,10 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
     double new_x = max_x + margin;
     double new_y = start_y;
 
-    COMPLETE_DEFERRED(data, json({
-        {"position", json::array({new_x, new_y})},
-        {"rationale", "Positioned to the right of existing objects with 50px margin"}
-    }));
+    COMPLETE_DEFERRED(
+        data,
+        json({{"position", json::array({new_x, new_y})},
+              {"rationale", "Positioned to the right of existing objects with 50px margin"}}));
 }
 
 #endif  // MAXMCP_TEST_MODE
@@ -87,31 +88,30 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
 // ============================================================================
 
 json get_tool_schemas() {
-    return json::array({
-        // get_console_log
-        {{"name", "get_console_log"},
-         {"description", "Retrieve recent Max Console messages"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"lines",
-              {{"type", "number"},
-               {"description", "Number of recent lines (default: 50, max: 1000)"}}},
-             {"clear",
-              {{"type", "boolean"},
-               {"description", "Clear log after reading (default: false)"}}}}}}}},
+    return json::array(
+        {// get_console_log
+         {{"name", "get_console_log"},
+          {"description", "Retrieve recent Max Console messages"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"lines",
+               {{"type", "number"},
+                {"description", "Number of recent lines (default: 50, max: 1000)"}}},
+              {"clear",
+               {{"type", "boolean"},
+                {"description", "Clear log after reading (default: false)"}}}}}}}},
 
-        // get_avoid_rect_position
-        {{"name", "get_avoid_rect_position"},
-         {"description", "Find an empty position for placing new objects"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}},
-             {"width", {{"type", "number"}, {"description", "Object width (default: 50)"}}},
-             {"height", {{"type", "number"}, {"description", "Object height (default: 20)"}}}}},
-           {"required", json::array({"patch_id"})}}}}
-    });
+         // get_avoid_rect_position
+         {{"name", "get_avoid_rect_position"},
+          {"description", "Find an empty position for placing new objects"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}},
+              {"width", {{"type", "number"}, {"description", "Object width (default: 50)"}}},
+              {"height", {{"type", "number"}, {"description", "Object height (default: 20)"}}}}},
+            {"required", json::array({"patch_id"})}}}}});
 }
 
 // ============================================================================

@@ -6,11 +6,13 @@
 */
 
 #include "connection_tools.h"
+
 #include "tool_common.h"
 
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
 #include "ext_obex.h"
+
 #include "jpatcher_api.h"
 #endif
 
@@ -167,42 +169,37 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
 // ============================================================================
 
 json get_tool_schemas() {
-    return json::array({
-        {{"name", "connect_max_objects"},
-         {"description", "Create a patchcord connection between two Max objects"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id",
-              {{"type", "string"}, {"description", "Patch ID containing the objects"}}},
-             {"src_varname",
-              {{"type", "string"}, {"description", "Source object variable name"}}},
-             {"outlet",
-              {{"type", "number"}, {"description", "Source outlet index (0-based)"}}},
-             {"dst_varname",
-              {{"type", "string"}, {"description", "Destination object variable name"}}},
-             {"inlet",
-              {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}}}},
-           {"required",
-            json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}},
-        {{"name", "disconnect_max_objects"},
-         {"description", "Remove a patchcord connection between two Max objects"},
-         {"inputSchema",
-          {{"type", "object"},
-           {"properties",
-            {{"patch_id",
-              {{"type", "string"}, {"description", "Patch ID containing the objects"}}},
-             {"src_varname",
-              {{"type", "string"}, {"description", "Source object variable name"}}},
-             {"outlet",
-              {{"type", "number"}, {"description", "Source outlet index (0-based)"}}},
-             {"dst_varname",
-              {{"type", "string"}, {"description", "Destination object variable name"}}},
-             {"inlet",
-              {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}}}},
-           {"required",
-            json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}}
-    });
+    return json::array(
+        {{{"name", "connect_max_objects"},
+          {"description", "Create a patchcord connection between two Max objects"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id",
+               {{"type", "string"}, {"description", "Patch ID containing the objects"}}},
+              {"src_varname", {{"type", "string"}, {"description", "Source object variable name"}}},
+              {"outlet", {{"type", "number"}, {"description", "Source outlet index (0-based)"}}},
+              {"dst_varname",
+               {{"type", "string"}, {"description", "Destination object variable name"}}},
+              {"inlet",
+               {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}}}},
+            {"required",
+             json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}},
+         {{"name", "disconnect_max_objects"},
+          {"description", "Remove a patchcord connection between two Max objects"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id",
+               {{"type", "string"}, {"description", "Patch ID containing the objects"}}},
+              {"src_varname", {{"type", "string"}, {"description", "Source object variable name"}}},
+              {"outlet", {{"type", "number"}, {"description", "Source outlet index (0-based)"}}},
+              {"dst_varname",
+               {{"type", "string"}, {"description", "Destination object variable name"}}},
+              {"inlet",
+               {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}}}},
+            {"required",
+             json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}}});
 }
 
 // ============================================================================
@@ -221,8 +218,7 @@ static json execute_connect_max_objects(const json& params) {
     long outlet = params.value("outlet", -1);
     long inlet = params.value("inlet", -1);
 
-    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 ||
-        inlet < 0) {
+    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
         return ToolCommon::make_error(-32602, "Missing or invalid required parameters");
     }
 
@@ -266,8 +262,7 @@ static json execute_disconnect_max_objects(const json& params) {
     long outlet = params.value("outlet", -1);
     long inlet = params.value("inlet", -1);
 
-    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 ||
-        inlet < 0) {
+    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
         return ToolCommon::make_error(-32602, "Missing or invalid required parameters");
     }
 

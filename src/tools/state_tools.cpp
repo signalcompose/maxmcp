@@ -7,13 +7,13 @@
 
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
+
 #include "jpatcher_api.h"
 #endif
 
+#include "maxmcp.h"
 #include "tools/state_tools.h"
 #include "tools/tool_common.h"
-
-#include "maxmcp.h"
 #include "utils/console_logger.h"
 #include "utils/patch_registry.h"
 
@@ -106,8 +106,7 @@ json get_tool_schemas() {
     return json::array({
         // Query tools
         {{"name", "get_patch_lock_state"},
-         {"description",
-          "Get the lock/edit state of a patch (locked=presentation, unlocked=edit)"},
+         {"description", "Get the lock/edit state of a patch (locked=presentation, unlocked=edit)"},
          {"inputSchema",
           {{"type", "object"},
            {"properties",
