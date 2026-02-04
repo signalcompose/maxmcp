@@ -12,7 +12,6 @@
 
 #include <chrono>
 #include <condition_variable>
-#include <map>
 #include <mutex>
 #include <string>
 
@@ -63,39 +62,6 @@ struct DeferredResult {
         cv.notify_one();
     }
 };
-
-// ============================================================================
-// Undo Transaction Management
-// ============================================================================
-
-/**
- * Check if an undo transaction is active for a patch.
- * @param patch_id The patch ID to check
- * @return true if an undo transaction is active
- */
-bool has_active_undo_transaction(const std::string& patch_id);
-
-/**
- * Get the name of the active undo transaction for a patch.
- * @param patch_id The patch ID to query
- * @return The undo transaction name, or empty string if none active
- */
-std::string get_active_undo_name(const std::string& patch_id);
-
-/**
- * Start an undo transaction for a patch.
- * @param patch_id The patch ID
- * @param undo_name The name for the undo action
- * @return true if successful, false if transaction already active
- */
-bool start_undo_transaction(const std::string& patch_id, const std::string& undo_name);
-
-/**
- * End an undo transaction for a patch.
- * @param patch_id The patch ID
- * @return true if successful, false if no transaction active
- */
-bool end_undo_transaction(const std::string& patch_id);
 
 // ============================================================================
 // Helper Macros for Deferred Callbacks
