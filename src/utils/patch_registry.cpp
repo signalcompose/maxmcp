@@ -9,6 +9,7 @@
 
 #include "console_logger.h"
 #include "maxmcp.h"
+#include "tools/tool_common.h"
 
 #include <algorithm>
 
@@ -123,7 +124,7 @@ json PatchRegistry::get_patch_info(const std::string& patch_id) {
     }
 
     if (!patch) {
-        return {{"error", {{"code", -32602}, {"message", "Patch not found: " + patch_id}}}};
+        return ToolCommon::patch_not_found_error(patch_id);
     }
 
     // Get group name (may be empty)
@@ -153,7 +154,7 @@ json PatchRegistry::get_frontmost_patch() {
 
     // Check if any patches are registered
     if (patches_.empty()) {
-        return {{"error", {{"code", -32603}, {"message", "No active patches"}}}};
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INTERNAL_ERROR, "No active patches");
     }
 
     // Simplified implementation: return first patch
@@ -162,7 +163,8 @@ json PatchRegistry::get_frontmost_patch() {
     t_maxmcp* patch = patches_[0];
 
     if (!patch) {
-        return {{"error", {{"code", -32603}, {"message", "Invalid patch reference"}}}};
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INTERNAL_ERROR,
+                                      "Invalid patch reference");
     }
 
     // Get group name (may be empty)

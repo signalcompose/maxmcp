@@ -187,7 +187,7 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     } else {
         std::string msg = "Failed to create object: " + obj_string;
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32603, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INTERNAL_ERROR, msg));
     }
 }
 
@@ -247,7 +247,7 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
     } else {
         std::string msg = "Unsupported value type for attribute: " + data->attribute;
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
     }
 }
 
@@ -461,7 +461,7 @@ json get_tool_schemas() {
 
 json execute(const std::string& tool, const json& params) {
 #ifdef MAXMCP_TEST_MODE
-    return ToolCommon::make_error(-32603, "Tool execution not available in test mode");
+    return ToolCommon::test_mode_error();
 #else
     if (tool == "add_max_object") {
         std::string patch_id = params.value("patch_id", "");
@@ -475,8 +475,9 @@ json execute(const std::string& tool, const json& params) {
                 try {
                     attributes = json::parse(params["attributes"].get<std::string>());
                 } catch (const json::exception& e) {
-                    return ToolCommon::make_error(-32602, "Invalid attributes JSON: " +
-                                                              std::string(e.what()));
+                    return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                                  "Invalid attributes JSON: " +
+                                                      std::string(e.what()));
                 }
             } else if (params["attributes"].is_object()) {
                 attributes = params["attributes"];
@@ -484,13 +485,13 @@ json execute(const std::string& tool, const json& params) {
         }
 
         if (patch_id.empty() || obj_type.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and obj_type");
         }
 
         if (!params.contains("position") || !params["position"].is_array() ||
             params["position"].size() < 2) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Invalid position parameter: must be array [x, y]");
         }
 
@@ -524,7 +525,7 @@ json execute(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
 
         if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and varname");
         }
 
@@ -584,7 +585,8 @@ json execute(const std::string& tool, const json& params) {
 
         if (patch_id.empty() || varname.empty() || attribute.empty()) {
             return ToolCommon::make_error(
-                -32602, "Missing required parameters: patch_id, varname, and attribute");
+                ToolCommon::ErrorCode::INVALID_PARAMS,
+                "Missing required parameters: patch_id, varname, and attribute");
         }
 
         if (!params.contains("value")) {
@@ -619,7 +621,7 @@ json execute(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
 
         if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and varname");
         }
 
@@ -653,7 +655,7 @@ json execute(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
 
         if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and varname");
         }
 
@@ -687,7 +689,7 @@ json execute(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
 
         if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and varname");
         }
 
@@ -727,7 +729,7 @@ json execute(const std::string& tool, const json& params) {
         std::string varname = params.value("varname", "");
 
         if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(-32602,
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
                                           "Missing required parameters: patch_id and varname");
         }
 
