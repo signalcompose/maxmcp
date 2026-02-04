@@ -12,9 +12,16 @@
 
 #include <string>
 
-// Forward declarations (avoid including Max SDK in header)
+#ifdef MAXMCP_TEST_MODE
+// Forward declarations for test mode (no Max SDK)
 struct _object;
 typedef struct _object t_object;
+#else
+// Include Max SDK for full type definitions
+#include "ext.h"
+#include "ext_obex.h"
+#include "jpatcher_api.h"
+#endif
 
 namespace PatchHelpers {
 

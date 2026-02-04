@@ -9,7 +9,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 22 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 20 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -21,7 +21,6 @@ MaxMCP provides 22 MCP tools for controlling Max/MSP patches through natural lan
 | Object Operations | 8 | Create, modify, and query objects |
 | Connection Operations | 2 | Create and remove patchcords |
 | Patch State | 3 | Lock state and dirty flag management |
-| Undo/Redo | 2 | Undo transaction management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
 
@@ -379,82 +378,6 @@ Check if a patch has unsaved changes.
     "patch_id": "synth_a7f2"
   }
 }
-```
-
----
-
-## Undo/Redo
-
-### `begin_undo_group`
-
-Begin an undo transaction group. Multiple operations within the group become a single undo step.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "name": {"type": "string", "required": true, "description": "Name for the undo action, e.g., 'Add synthesizer'"}
-}
-```
-
-**Response**:
-```json
-{
-  "result": {
-    "success": true,
-    "undo_name": "Add synthesizer"
-  }
-}
-```
-
-**Error** (if undo group already active):
-```json
-{
-  "error": {
-    "code": -32600,
-    "message": "Undo group already active: Previous action"
-  }
-}
-```
-
-### `end_undo_group`
-
-End an undo transaction group.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true}
-}
-```
-
-**Response**:
-```json
-{
-  "result": {
-    "success": true
-  }
-}
-```
-
-**Error** (if no active undo group):
-```json
-{
-  "error": {
-    "code": -32600,
-    "message": "No active undo group"
-  }
-}
-```
-
-**Usage Example**:
-```
-1. begin_undo_group(patch_id, "Add synth voice")
-2. add_max_object(patch_id, "cycle~", ...)
-3. add_max_object(patch_id, "*~", ...)
-4. connect_max_objects(patch_id, ...)
-5. end_undo_group(patch_id)
-→ All operations can be undone with a single Cmd+Z
 ```
 
 ---

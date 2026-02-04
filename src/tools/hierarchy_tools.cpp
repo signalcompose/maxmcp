@@ -52,7 +52,7 @@ static void get_parent_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
     if (!parent) {
         COMPLETE_DEFERRED(data,
-            json{{"error", {{"code", -32602}, {"message", "No parent patcher (top-level patch)"}}}});
+            (json{{"error", {{"code", -32602}, {"message", "No parent patcher (top-level patch)"}}}}));
         return;
     }
 
@@ -62,7 +62,7 @@ static void get_parent_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
     // Note: We don't have direct access to find patch by patcher pointer
     // Return the parent's name instead
-    COMPLETE_DEFERRED(data, json{{"parent_name", name_str}, {"has_parent", true}});
+    COMPLETE_DEFERRED(data, (json{{"parent_name", name_str}, {"has_parent", true}}));
 }
 
 // Defer callback for getting subpatchers
@@ -113,7 +113,7 @@ static void get_subpatchers_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
         }
     }
 
-    COMPLETE_DEFERRED(data, json{{"subpatchers", subpatchers}, {"count", subpatchers.size()}});
+    COMPLETE_DEFERRED(data, (json{{"subpatchers", subpatchers}, {"count", subpatchers.size()}}));
 }
 
 #endif  // MAXMCP_TEST_MODE
