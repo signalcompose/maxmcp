@@ -1,24 +1,22 @@
 # Object Lookup Examples
 
-## Example 1: Basic Object Search
+## Example 1: Basic Object Lookup
 
 **User request**: "How do I use cycle~?"
 
-### Step 1: Search for the object
+### Step 1: Find the reference file
 
 ```bash
-./scripts/search-objects.sh cycle
+find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    -name "cycle~.maxref.xml" -type f
 ```
 
 Output:
 ```
-Searching for: cycle
-
-[msp-ref]
-cycle~
+/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/cycle~.maxref.xml
 ```
 
-### Step 2: Get reference
+### Step 2: Get summary (using helper script)
 
 ```bash
 ./scripts/get-reference.sh cycle~ --summary
@@ -52,43 +50,46 @@ Returns complete XML with inlets, outlets, methods, attributes.
 
 **User request**: "What filter objects are available in MSP?"
 
+### Direct filesystem search
+
 ```bash
-./scripts/search-objects.sh filter msp-ref
+find /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref \
+    -name "*filter*.maxref.xml" -type f
+```
+
+Or list all MSP objects and grep:
+
+```bash
+ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/*.maxref.xml | \
+    xargs -n1 basename | sed 's/.maxref.xml//' | grep -i filter
 ```
 
 Output:
 ```
-Searching for: filter
-Category: msp-ref
----
 biquad~
 filtercoeff~
 filtergraph~
 lores~
 reson~
 svf~
-onepole~
 ```
 
-## Example 3: Fuzzy Search
+## Example 3: Search by Keyword
 
 **User request**: "Looking for something to generate random numbers"
 
+### Search filenames
+
 ```bash
-./scripts/search-objects.sh random
+find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    -name "*random*.maxref.xml" -o -name "*rand*.maxref.xml" -o -name "*noise*.maxref.xml"
 ```
 
-Output:
-```
-[max-ref]
-random
-drunk
-urn
+### Search within XML content
 
-[msp-ref]
-rand~
-noise~
-pink~
+```bash
+grep -r "random" /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    --include="*.maxref.xml" -l | head -10
 ```
 
 ## Example 4: Full-Text Search
@@ -111,13 +112,13 @@ Oscillators          /userguide/audio/oscillators ...used for >>>FM synthesis<<<
 
 ## Example 5: Finding Related Objects
 
-After getting a reference:
+After reading a reference file, look at `<seealsolist>`:
 
 ```bash
 ./scripts/get-reference.sh cycle~
 ```
 
-Look at `<seealsolist>`:
+Extract related objects:
 ```xml
 <seealsolist>
     <seealso name="phasor~"/>
@@ -187,38 +188,33 @@ Look at `<inletlist>`:
 </inletlist>
 ```
 
-## Example 8: Cache Management
-
-### First-time setup
+Or extract directly:
 
 ```bash
-./scripts/check-cache.sh
-# Output: NEEDS_BUILD
-
-./scripts/build-index.sh
-# Output: Index built successfully!
-#   Total objects: 1175
-#   Max version: 9.0.5
+grep -A2 '<inlet' /Applications/Max.app/.../msp-ref/biquad~.maxref.xml
 ```
 
-### After Max update
+## Example 8: List All Objects in a Category
+
+**User request**: "What Max objects are available?"
 
 ```bash
-./scripts/check-cache.sh
-# Output: VERSION_MISMATCH
-#   Cached version: 9.0.4
-#   Current version: 9.0.5
+# List all Max control objects
+ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref/*.maxref.xml | \
+    wc -l
+# Output: ~300
 
-./scripts/build-index.sh
-# Rebuilds cache
+# List first 20
+ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref/*.maxref.xml | \
+    head -20 | xargs -n1 basename | sed 's/.maxref.xml//'
 ```
 
 ## Summary
 
-| Task | Script | Example |
+| Task | Method | Example |
 |------|--------|---------|
-| Find object by name | `search-objects.sh` | `./scripts/search-objects.sh delay` |
-| Get object reference | `get-reference.sh` | `./scripts/get-reference.sh delay~` |
+| Find object by name | `find` or helper | `./scripts/get-reference.sh delay~` |
+| Search by pattern | `find -name "*pattern*"` | `find ... -name "*filter*"` |
+| Search content | `grep -r` | `grep -r "oscillator" .../refpages` |
 | Search documentation | `search-fts.sh` | `./scripts/search-fts.sh "envelope"` |
-| Check cache | `check-cache.sh` | `./scripts/check-cache.sh` |
-| Build cache | `build-index.sh` | `./scripts/build-index.sh` |
+| List category | `ls` | `ls .../refpages/msp-ref/` |

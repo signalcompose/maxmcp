@@ -113,18 +113,44 @@ sqlite3 userguide_search.sqlite \
 ]
 ```
 
-## Cache Strategy
+## Direct Search Strategies
 
-The skill uses a local cache at `~/.maxmcp/cache/`:
+### Find Object Reference
 
+```bash
+# By exact name
+find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    -name "cycle~.maxref.xml" -type f
+
+# By pattern
+find /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    -name "*filter*.maxref.xml" -type f
 ```
-~/.maxmcp/cache/
-├── object-index.json    # Indexed objects by category
-├── max-version.txt      # Max version when cache was built
-└── last-updated.txt     # Cache timestamp
+
+### Search Content
+
+```bash
+# Search within reference pages
+grep -r "frequency modulation" \
+    /Applications/Max.app/Contents/Resources/C74/docs/refpages \
+    --include="*.maxref.xml" -l
+
+# Search examples
+grep -r "cycle~" \
+    /Applications/Max.app/Contents/Resources/Examples \
+    --include="*.maxpat" -l
 ```
 
-Cache is invalidated when:
-- Max version changes
-- Cache is older than 30 days (warning only)
-- User explicitly rebuilds
+### List Resources
+
+```bash
+# List all objects in a category
+ls /Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/*.maxref.xml | \
+    xargs -n1 basename | sed 's/.maxref.xml//'
+
+# List example categories
+ls /Applications/Max.app/Contents/Resources/Examples/
+
+# List snippet categories
+ls /Applications/Max.app/Contents/Resources/C74/snippets/
+```
