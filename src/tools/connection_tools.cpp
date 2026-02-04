@@ -23,6 +23,8 @@
 
 namespace ConnectionTools {
 
+using DeferredResult = ToolCommon::DeferredResult;
+
 // ============================================================================
 // Data Structures for Deferred Callbacks
 // ============================================================================
@@ -33,6 +35,7 @@ struct t_connect_objects_data {
     long outlet;
     std::string dst_varname;
     long inlet;
+    DeferredResult* deferred_result;
 };
 
 struct t_disconnect_objects_data {
@@ -41,6 +44,7 @@ struct t_disconnect_objects_data {
     long outlet;
     std::string dst_varname;
     long inlet;
+    DeferredResult* deferred_result;
 };
 
 // ============================================================================
@@ -55,7 +59,7 @@ struct t_disconnect_objects_data {
  */
 static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("connect_objects_deferred");
-    EXTRACT_DEFERRED_DATA(t_connect_objects_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_connect_objects_data, data, argv);
 
     t_object* patcher = data->patch->patcher;
 
@@ -65,14 +69,17 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
     if (!src_box || !dst_box) {
         std::string msg = "Connect failed: ";
-        if (!src_box)
+        if (!src_box) {
             msg += "source '" + data->src_varname + "' not found";
-        if (!src_box && !dst_box)
+        }
+        if (!src_box && !dst_box) {
             msg += ", ";
-        if (!dst_box)
+        }
+        if (!dst_box) {
             msg += "destination '" + data->dst_varname + "' not found";
+        }
         ConsoleLogger::log(msg.c_str());
-        delete data;
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
         return;
     }
 
@@ -90,7 +97,12 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
                       "] -> " + data->dst_varname + "[" + std::to_string(data->inlet) + "]";
     ConsoleLogger::log(msg.c_str());
 
-    delete data;
+    COMPLETE_DEFERRED(data, (json{{"result",
+                                   {{"status", "success"},
+                                    {"src_varname", data->src_varname},
+                                    {"outlet", data->outlet},
+                                    {"dst_varname", data->dst_varname},
+                                    {"inlet", data->inlet}}}}));
 }
 
 /**
@@ -99,7 +111,7 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
  */
 static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("disconnect_objects_deferred");
-    EXTRACT_DEFERRED_DATA(t_disconnect_objects_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_disconnect_objects_data, data, argv);
 
     // Find source and destination boxes using PatchHelpers
     t_object* patcher = data->patch->patcher;
@@ -108,14 +120,17 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
 
     if (!src_box || !dst_box) {
         std::string msg = "Disconnect failed: ";
-        if (!src_box)
+        if (!src_box) {
             msg += "source '" + data->src_varname + "' not found";
-        if (!src_box && !dst_box)
+        }
+        if (!src_box && !dst_box) {
             msg += ", ";
-        if (!dst_box)
+        }
+        if (!dst_box) {
             msg += "destination '" + data->dst_varname + "' not found";
+        }
         ConsoleLogger::log(msg.c_str());
-        delete data;
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
         return;
     }
 
@@ -150,9 +165,16 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
                           std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
                           std::to_string(data->inlet) + "]";
         ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        return;
     }
 
-    delete data;
+    COMPLETE_DEFERRED(data, (json{{"result",
+                                   {{"status", "success"},
+                                    {"src_varname", data->src_varname},
+                                    {"outlet", data->outlet},
+                                    {"dst_varname", data->dst_varname},
+                                    {"inlet", data->inlet}}}}));
 }
 
 #endif  // MAXMCP_TEST_MODE
@@ -222,9 +244,12 @@ static json execute_connect_max_objects(const json& params) {
     }
 
 #ifndef MAXMCP_TEST_MODE
+    // Create deferred result for synchronization
+    auto* deferred_result = new DeferredResult();
+
     // Create defer data
-    t_connect_objects_data* data =
-        new t_connect_objects_data{patch, src_varname, outlet, dst_varname, inlet};
+    auto* data =
+        new t_connect_objects_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
 
     // Create atom to hold pointer
     t_atom a;
@@ -232,8 +257,17 @@ static json execute_connect_max_objects(const json& params) {
 
     // Defer to main thread
     defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
-#endif
 
+    // Wait for completion
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("connecting objects");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+#else
     return {{"result",
              {{"status", "success"},
               {"patch_id", patch_id},
@@ -241,6 +275,7 @@ static json execute_connect_max_objects(const json& params) {
               {"outlet", outlet},
               {"dst_varname", dst_varname},
               {"inlet", inlet}}}};
+#endif
 }
 
 /**
@@ -266,9 +301,12 @@ static json execute_disconnect_max_objects(const json& params) {
     }
 
 #ifndef MAXMCP_TEST_MODE
+    // Create deferred result for synchronization
+    auto* deferred_result = new DeferredResult();
+
     // Create defer data
-    t_disconnect_objects_data* data =
-        new t_disconnect_objects_data{patch, src_varname, outlet, dst_varname, inlet};
+    auto* data = new t_disconnect_objects_data{patch,       src_varname, outlet,
+                                               dst_varname, inlet,       deferred_result};
 
     // Create atom to hold pointer
     t_atom a;
@@ -276,8 +314,17 @@ static json execute_disconnect_max_objects(const json& params) {
 
     // Defer to main thread
     defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
-#endif
 
+    // Wait for completion
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("disconnecting objects");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+#else
     return {{"result",
              {{"status", "success"},
               {"patch_id", patch_id},
@@ -285,6 +332,7 @@ static json execute_disconnect_max_objects(const json& params) {
               {"outlet", outlet},
               {"dst_varname", dst_varname},
               {"inlet", inlet}}}};
+#endif
 }
 
 // ============================================================================
