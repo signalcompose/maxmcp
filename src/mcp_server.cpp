@@ -89,7 +89,7 @@ void MCPServer::stop() {
  * - PatchTools (3 tools)
  * - ObjectTools (8 tools)
  * - ConnectionTools (2 tools)
- * - StateTools (5 tools)
+ * - StateTools (3 tools)
  * - HierarchyTools (2 tools)
  * - UtilityTools (2 tools)
  *
