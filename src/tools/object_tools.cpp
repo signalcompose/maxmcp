@@ -34,11 +34,13 @@ struct t_add_object_data {
     std::string varname;
     json arguments;
     json attributes;
+    ToolCommon::DeferredResult* deferred_result;
 };
 
 struct t_remove_object_data {
     t_maxmcp* patch;
     std::string varname;
+    ToolCommon::DeferredResult* deferred_result;
 };
 
 struct t_set_attribute_data {
@@ -46,6 +48,7 @@ struct t_set_attribute_data {
     std::string varname;
     std::string attribute;
     json value;
+    ToolCommon::DeferredResult* deferred_result;
 };
 
 struct t_get_objects_data {
@@ -86,7 +89,7 @@ struct t_redraw_data {
 
 static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("add_object_deferred");
-    EXTRACT_DEFERRED_DATA(t_add_object_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_add_object_data, data, argv);
 
     // Build object string with arguments
     std::string obj_string = data->obj_type;
@@ -175,38 +178,47 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         object_method(obj, gensym("bringtofront"));
         object_attr_setlong(obj, gensym("presentation"), 1);
         ConsoleLogger::log(("Object created: " + obj_string).c_str());
-    } else {
-        ConsoleLogger::log(("Failed to create object: " + obj_string).c_str());
-    }
 
-    delete data;
+        COMPLETE_DEFERRED(data, (json{{"result",
+                                       {{"status", "success"},
+                                        {"obj_type", data->obj_type},
+                                        {"position", json::array({data->x, data->y})},
+                                        {"varname", data->varname}}}}));
+    } else {
+        std::string msg = "Failed to create object: " + obj_string;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32603, msg));
+    }
 }
 
 static void remove_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("remove_object_deferred");
-    EXTRACT_DEFERRED_DATA(t_remove_object_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_remove_object_data, data, argv);
 
     t_object* box = PatchHelpers::find_box_by_varname(data->patch->patcher, data->varname);
 
     if (box) {
         object_free(box);
         ConsoleLogger::log(("Object removed: " + data->varname).c_str());
+        COMPLETE_DEFERRED(data,
+                          (json{{"result", {{"status", "success"}, {"varname", data->varname}}}}));
     } else {
-        ConsoleLogger::log(("Object not found: " + data->varname).c_str());
+        std::string msg = "Object not found: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
     }
-
-    delete data;
 }
 
 static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("set_attribute_deferred");
-    EXTRACT_DEFERRED_DATA(t_set_attribute_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_set_attribute_data, data, argv);
 
     t_object* box = PatchHelpers::find_box_by_varname(data->patch->patcher, data->varname);
 
     if (!box) {
-        ConsoleLogger::log(("Object not found: " + data->varname).c_str());
-        delete data;
+        std::string msg = "Object not found: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
         return;
     }
 
@@ -220,15 +232,23 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
             object_attr_setfloat(box, attr_sym, val);
         }
         ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
+        COMPLETE_DEFERRED(data, (json{{"result",
+                                       {{"status", "success"},
+                                        {"varname", data->varname},
+                                        {"attribute", data->attribute}}}}));
     } else if (data->value.is_string()) {
         std::string str_val = data->value.get<std::string>();
         object_attr_setsym(box, attr_sym, gensym(str_val.c_str()));
         ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
+        COMPLETE_DEFERRED(data, (json{{"result",
+                                       {{"status", "success"},
+                                        {"varname", data->varname},
+                                        {"attribute", data->attribute}}}}));
     } else {
-        ConsoleLogger::log(("Unsupported value type for attribute: " + data->attribute).c_str());
+        std::string msg = "Unsupported value type for attribute: " + data->attribute;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
     }
-
-    delete data;
 }
 
 static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -482,19 +502,22 @@ json execute(const std::string& tool, const json& params) {
             return ToolCommon::patch_not_found_error(patch_id);
         }
 
-        t_add_object_data* data =
-            new t_add_object_data{patch, obj_type, x, y, varname, arguments, attributes};
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_add_object_data{patch,   obj_type,  x,          y,
+                                           varname, arguments, attributes, deferred_result};
 
         t_atom a;
         atom_setobj(&a, data);
         defer(patch, (method)add_object_deferred, gensym("add_object"), 1, &a);
 
-        return {{"result",
-                 {{"status", "success"},
-                  {"patch_id", patch_id},
-                  {"obj_type", obj_type},
-                  {"position", json::array({x, y})},
-                  {"arguments", arguments}}}};
+        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("creating object");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
 
     } else if (tool == "remove_max_object") {
         std::string patch_id = params.value("patch_id", "");
@@ -510,13 +533,21 @@ json execute(const std::string& tool, const json& params) {
             return ToolCommon::patch_not_found_error(patch_id);
         }
 
-        t_remove_object_data* data = new t_remove_object_data{patch, varname};
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_remove_object_data{patch, varname, deferred_result};
 
         t_atom a;
         atom_setobj(&a, data);
         defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, &a);
 
-        return {{"result", {{"status", "success"}, {"patch_id", patch_id}, {"varname", varname}}}};
+        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("removing object");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
 
     } else if (tool == "get_objects_in_patch") {
         std::string patch_id = params.value("patch_id", "");
@@ -567,17 +598,21 @@ json execute(const std::string& tool, const json& params) {
             return ToolCommon::patch_not_found_error(patch_id);
         }
 
-        t_set_attribute_data* data = new t_set_attribute_data{patch, varname, attribute, value};
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_set_attribute_data{patch, varname, attribute, value, deferred_result};
 
         t_atom a;
         atom_setobj(&a, data);
         defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, &a);
 
-        return {{"result",
-                 {{"status", "success"},
-                  {"patch_id", patch_id},
-                  {"varname", varname},
-                  {"attribute", attribute}}}};
+        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("setting attribute");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
 
     } else if (tool == "get_object_io_info") {
         std::string patch_id = params.value("patch_id", "");
