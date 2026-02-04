@@ -7,9 +7,9 @@
 
 #include "patch_helpers.h"
 
-#include "ext.h"
-#include "ext_obex.h"
+#ifndef MAXMCP_TEST_MODE
 #include "jpatcher_api.h"
+#endif
 
 namespace PatchHelpers {
 
@@ -33,14 +33,16 @@ long get_inlet_count(t_object* box) {
     if (!box) {
         return -1;
     }
-    return jbox_get_numins(box);
+    // Get inlet count via attribute (jbox_get_numins doesn't exist in current SDK)
+    return object_attr_getlong(box, gensym("numinlets"));
 }
 
 long get_outlet_count(t_object* box) {
     if (!box) {
         return -1;
     }
-    return jbox_get_numouts(box);
+    // Get outlet count via attribute (jbox_get_numouts doesn't exist in current SDK)
+    return object_attr_getlong(box, gensym("numoutlets"));
 }
 
 }  // namespace PatchHelpers

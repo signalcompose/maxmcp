@@ -74,7 +74,7 @@ npm run format:check
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
 
-### MCP Tools (22 total)
+### MCP Tools (20 total)
 
 #### Patch Management (3)
 1. `list_active_patches` - List registered patches
@@ -100,17 +100,13 @@ npm run format:check
 15. `set_patch_lock_state` - Set lock state
 16. `get_patch_dirty` - Check unsaved changes
 
-#### Undo/Redo (2)
-17. `begin_undo_group` - Start undo transaction
-18. `end_undo_group` - End undo transaction
-
 #### Hierarchy (2)
-19. `get_parent_patcher` - Get parent patcher
-20. `get_subpatchers` - List subpatchers
+17. `get_parent_patcher` - Get parent patcher
+18. `get_subpatchers` - List subpatchers
 
 #### Utilities (2)
-21. `get_console_log` - Retrieve Max Console messages
-22. `get_avoid_rect_position` - Find safe placement positions
+19. `get_console_log` - Retrieve Max Console messages
+20. `get_avoid_rect_position` - Find safe placement positions
 
 ### Threading Model
 

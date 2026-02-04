@@ -259,11 +259,11 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         objects.push_back(obj_info);
     }
 
-    COMPLETE_DEFERRED(data, json{
+    COMPLETE_DEFERRED(data, (json{
         {"patch_id", data->patch->patch_id},
         {"objects", objects},
         {"count", objects.size()}
-    });
+    }));
 }
 
 static void get_io_info_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -280,11 +280,11 @@ static void get_io_info_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
     long inlet_count = PatchHelpers::get_inlet_count(box);
     long outlet_count = PatchHelpers::get_outlet_count(box);
 
-    COMPLETE_DEFERRED(data, json{
+    COMPLETE_DEFERRED(data, (json{
         {"varname", data->varname},
         {"inlet_count", inlet_count},
         {"outlet_count", outlet_count}
-    });
+    }));
 }
 
 static void get_hidden_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -300,7 +300,7 @@ static void get_hidden_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
     char hidden = jbox_get_hidden(box);
 
-    COMPLETE_DEFERRED(data, json{{"varname", data->varname}, {"hidden", hidden != 0}});
+    COMPLETE_DEFERRED(data, (json{{"varname", data->varname}, {"hidden", hidden != 0}}));
 }
 
 static void set_hidden_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -320,11 +320,11 @@ static void set_hidden_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         ("Object " + data->varname + " hidden set to: " +
          std::string(data->hidden ? "true" : "false")).c_str());
 
-    COMPLETE_DEFERRED(data, json{
+    COMPLETE_DEFERRED(data, (json{
         {"success", true},
         {"varname", data->varname},
         {"hidden", data->hidden}
-    });
+    }));
 }
 
 static void redraw_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -338,10 +338,10 @@ static void redraw_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* arg
         return;
     }
 
-    jbox_redraw(box);
+    jbox_redraw(reinterpret_cast<t_jbox*>(box));
     ConsoleLogger::log(("Object redrawn: " + data->varname).c_str());
 
-    COMPLETE_DEFERRED(data, json{{"success", true}, {"varname", data->varname}});
+    COMPLETE_DEFERRED(data, (json{{"success", true}, {"varname", data->varname}}));
 }
 
 #endif  // MAXMCP_TEST_MODE
