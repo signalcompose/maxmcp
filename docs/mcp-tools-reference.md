@@ -503,7 +503,7 @@ Find an empty position for placing new objects.
 
 | Code | Meaning |
 |------|---------|
-| -32600 | Invalid Request (e.g., undo group state error) |
+| -32600 | Invalid Request |
 | -32602 | Invalid Params (missing/invalid parameters, object not found) |
 | -32603 | Internal Error (timeout, execution error) |
 | -32700 | Parse Error (invalid JSON) |

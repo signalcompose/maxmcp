@@ -64,7 +64,14 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
     t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
 
     if (!src_box || !dst_box) {
-        ConsoleLogger::log("ERROR: Cannot find source or destination box");
+        std::string msg = "Connect failed: ";
+        if (!src_box)
+            msg += "source '" + data->src_varname + "' not found";
+        if (!src_box && !dst_box)
+            msg += ", ";
+        if (!dst_box)
+            msg += "destination '" + data->dst_varname + "' not found";
+        ConsoleLogger::log(msg.c_str());
         delete data;
         return;
     }
@@ -100,7 +107,14 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
     t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
 
     if (!src_box || !dst_box) {
-        ConsoleLogger::log("Source or destination object not found for disconnect");
+        std::string msg = "Disconnect failed: ";
+        if (!src_box)
+            msg += "source '" + data->src_varname + "' not found";
+        if (!src_box && !dst_box)
+            msg += ", ";
+        if (!dst_box)
+            msg += "destination '" + data->dst_varname + "' not found";
+        ConsoleLogger::log(msg.c_str());
         delete data;
         return;
     }
@@ -132,7 +146,10 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
     }
 
     if (!found) {
-        ConsoleLogger::log("Connection not found for disconnect");
+        std::string msg = "Connection not found: " + data->src_varname + "[" +
+                          std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
+                          std::to_string(data->inlet) + "]";
+        ConsoleLogger::log(msg.c_str());
     }
 
     delete data;

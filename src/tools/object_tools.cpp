@@ -455,8 +455,8 @@ json execute(const std::string& tool, const json& params) {
                 try {
                     attributes = json::parse(params["attributes"].get<std::string>());
                 } catch (const json::exception& e) {
-                    ConsoleLogger::log(
-                        ("Failed to parse attributes JSON: " + std::string(e.what())).c_str());
+                    return ToolCommon::make_error(-32602, "Invalid attributes JSON: " +
+                                                              std::string(e.what()));
                 }
             } else if (params["attributes"].is_object()) {
                 attributes = params["attributes"];
