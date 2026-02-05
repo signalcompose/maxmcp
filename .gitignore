@@ -181,6 +181,8 @@ bridge/package-lock.json
 package/MaxMCP/externals/*.mxo
 package/MaxMCP/support/maxmcp-bridge
 
-# Claude Code / AI assistant local configs (not tracked)
-.claude/
+# Claude Code
+.claude/*
+!.claude/plans/
+.claude/settings.local.json
 *.local.md

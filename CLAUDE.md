@@ -176,3 +176,73 @@ Documentation is the single source of truth (DDD - Documentation Driven Developm
 - `docs/development-guide.md` - Development practices
 
 Always read and update documentation before/after code changes.
+
+## Claude Code Plugin Marketplace
+
+MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
+
+### Plugin Installation
+
+```bash
+# Add marketplace
+/plugin marketplace add signalcompose/maxmcp
+
+# Install plugin
+/plugin install maxmcp@maxmcp
+```
+
+### Available Skills
+
+#### patch-guidelines
+
+Guidelines for creating well-organized Max patches.
+
+```bash
+/maxmcp:patch-guidelines
+```
+
+Provides:
+- Layout rules for object positioning
+- Varname naming conventions
+- JavaScript (v8/v8ui) best practices
+- MCP tools quick reference
+
+#### max-resources
+
+Access Max/MSP built-in documentation and examples.
+
+```bash
+/maxmcp:max-resources
+```
+
+Provides:
+- Object reference pages (inlets, outlets, methods, attributes)
+- Example patches from Max.app
+- Code snippets
+- Full-text search of Max documentation
+
+**Agentic search approach**: This skill uses direct filesystem exploration instead of pre-built indexes. No setup required - information is always current.
+
+**Workflow example**:
+1. User asks "How do I use cycle~?"
+2. AI searches Max.app refpages directly: `find ... -name "cycle~.maxref.xml"`
+3. Reads XML and extracts reference information (digest, inlets, outlets, methods)
+4. Can also find related examples and snippets via filesystem search
+
+### Plugin Structure
+
+```
+plugins/
+└── maxmcp/
+    ├── .claude-plugin/plugin.json
+    ├── skills/
+    │   ├── patch-guidelines/
+    │   │   ├── SKILL.md
+    │   │   └── reference/
+    │   └── max-resources/
+    │       ├── SKILL.md
+    │       ├── scripts/        # Search and retrieval scripts
+    │       ├── references/     # Format documentation
+    │       └── examples/       # Usage examples
+    └── README.md
+```

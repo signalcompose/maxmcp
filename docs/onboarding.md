@@ -80,6 +80,26 @@ cp build/maxmcp.mxo ~/Documents/Max\ 9/Library/
 # Check Max console for "MaxMCP initialized!"
 ```
 
+### 6. (Optional) Install Claude Code Plugin
+
+If you're using Claude Code:
+
+```bash
+# Add marketplace
+/plugin marketplace add signalcompose/maxmcp
+
+# Install plugin
+/plugin install maxmcp@maxmcp
+
+# Build max-resources index (first-time setup)
+cd plugins/maxmcp/skills/max-resources/scripts
+./build-index.sh
+```
+
+**Available Skills**:
+- `/maxmcp:patch-guidelines` - Guidelines for creating Max patches
+- `/maxmcp:max-resources` - Access Max.app built-in documentation
+
 ---
 
 ## 🏗️ Project Structure
@@ -102,6 +122,10 @@ MaxMCP/
 │   ├── unit/
 │   ├── integration/
 │   └── e2e/
+├── plugins/                # Claude Code plugin
+│   └── maxmcp/
+│       ├── skills/patch-guidelines/   # Patch creation guidelines
+│       └── skills/max-resources/      # Max.app resource access
 ├── examples/               # Example Max patches
 ├── .claude/                # Claude Code configuration
 │   └── settings.json      # Security permissions
