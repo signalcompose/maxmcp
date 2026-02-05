@@ -5,6 +5,24 @@ All notable changes to MaxMCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/signalcompose/maxmcp/compare/v1.0.2...v1.1.0) (2026-02-05)
+
+
+### Features
+
+* **max-resources:** add argument support for subcommands ([11933c7](https://github.com/signalcompose/maxmcp/commit/11933c7f5474bdbdc6e453c713a35c1e2468b0ef))
+* **plugin:** add Claude Code plugin marketplace for patch guidelines ([a4cfbdd](https://github.com/signalcompose/maxmcp/commit/a4cfbdd7542b4372ba2f8b708c7092977acf803d))
+* **plugin:** add Claude Code plugin with patch-guidelines and max-resources skills ([cae5505](https://github.com/signalcompose/maxmcp/commit/cae5505bfbb0cd7f2eca37df1ed1a6d5029aa823))
+* **plugin:** add max-resources skill for Max.app resource access ([bd24736](https://github.com/signalcompose/maxmcp/commit/bd24736b7d9cbac69dba2979f4e69c0868615033))
+
+
+### Bug Fixes
+
+* **max-resources:** improve error handling in shell scripts ([4b128f5](https://github.com/signalcompose/maxmcp/commit/4b128f51d2824f01dac6b053657f9b04ac84a9b5))
+* **max-resources:** improve error handling in shell scripts ([84d3965](https://github.com/signalcompose/maxmcp/commit/84d39656bafbeac9949179b843b3ac187d97148e))
+* **plugin:** address PR review issues in shell scripts ([c9eb611](https://github.com/signalcompose/maxmcp/commit/c9eb611d347d9da43291d55e1eabc037f99ebfb5))
+* **release:** sync package-info.json version with Release Please ([5ae4f88](https://github.com/signalcompose/maxmcp/commit/5ae4f88a6c1fa52a365ad945d8803fb4e7d4cb16))
+
 ## [1.0.2](https://github.com/signalcompose/maxmcp/compare/v1.0.1...v1.0.2) (2026-01-22)
 
 
