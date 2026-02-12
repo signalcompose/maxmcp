@@ -226,31 +226,26 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
 
     t_symbol* attr_sym = gensym(data->attribute.c_str());
 
-    if (data->value.is_number()) {
-        double val = data->value.get<double>();
-        if (val == (long)val) {
-            object_attr_setlong(box, attr_sym, (long)val);
-        } else {
-            object_attr_setfloat(box, attr_sym, val);
-        }
-        ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
-        COMPLETE_DEFERRED(data, (json{{"result",
-                                       {{"status", "success"},
-                                        {"varname", data->varname},
-                                        {"attribute", data->attribute}}}}));
-    } else if (data->value.is_string()) {
-        std::string str_val = data->value.get<std::string>();
-        object_attr_setsym(box, attr_sym, gensym(str_val.c_str()));
-        ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
-        COMPLETE_DEFERRED(data, (json{{"result",
-                                       {{"status", "success"},
-                                        {"varname", data->varname},
-                                        {"attribute", data->attribute}}}}));
-    } else {
+    if (!data->value.is_number() && !data->value.is_string()) {
         std::string msg = "Unsupported value type for attribute: " + data->attribute;
         ConsoleLogger::log(msg.c_str());
         COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        return;
     }
+
+    if (data->value.is_number_integer()) {
+        object_attr_setlong(box, attr_sym, data->value.get<long>());
+    } else if (data->value.is_number_float()) {
+        object_attr_setfloat(box, attr_sym, data->value.get<double>());
+    } else {
+        object_attr_setsym(box, attr_sym, gensym(data->value.get<std::string>().c_str()));
+    }
+
+    ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
+    COMPLETE_DEFERRED(data, (json{{"result",
+                                   {{"status", "success"},
+                                    {"varname", data->varname},
+                                    {"attribute", data->attribute}}}}));
 }
 
 static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
