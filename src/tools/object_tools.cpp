@@ -97,7 +97,9 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     if (!data->arguments.is_null() && data->arguments.is_array()) {
         for (const auto& arg : data->arguments) {
             obj_string += " ";
-            if (arg.is_number()) {
+            if (arg.is_number_integer()) {
+                obj_string += std::to_string(arg.get<int>());
+            } else if (arg.is_number_float()) {
                 obj_string += std::to_string(arg.get<double>());
             } else if (arg.is_string()) {
                 obj_string += arg.get<std::string>();
