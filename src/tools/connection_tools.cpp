@@ -40,10 +40,8 @@ struct t_connection_data {
 
 // Find source and destination boxes by varname, completing with error if not found.
 // Returns true if both boxes were found, false otherwise (deferred already completed with error).
-static bool find_connection_boxes(t_connection_data* data,
-                                  const std::string& operation,
-                                  t_object*& src_box,
-                                  t_object*& dst_box) {
+static bool find_connection_boxes(t_connection_data* data, const std::string& operation,
+                                  t_object*& src_box, t_object*& dst_box) {
     t_object* patcher = data->patch->patcher;
     src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
     dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
@@ -82,7 +80,8 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
     t_object* src_box;
     t_object* dst_box;
-    if (!find_connection_boxes(data, "Connect", src_box, dst_box)) return;
+    if (!find_connection_boxes(data, "Connect", src_box, dst_box))
+        return;
 
     t_object* patcher = data->patch->patcher;
 
@@ -143,7 +142,8 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
 
     t_object* src_box;
     t_object* dst_box;
-    if (!find_connection_boxes(data, "Disconnect", src_box, dst_box)) return;
+    if (!find_connection_boxes(data, "Disconnect", src_box, dst_box))
+        return;
 
     // Find and remove matching patchline
     t_object* patcher = data->patch->patcher;
@@ -318,8 +318,8 @@ static json execute_disconnect_max_objects(const json& params) {
     auto* deferred_result = new DeferredResult();
 
     // Create defer data
-    auto* data = new t_connection_data{patch,       src_varname, outlet,
-                                               dst_varname, inlet,       deferred_result};
+    auto* data =
+        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
 
     // Create atom to hold pointer
     t_atom a;
