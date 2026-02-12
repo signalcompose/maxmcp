@@ -29,7 +29,7 @@ using DeferredResult = ToolCommon::DeferredResult;
 // Data Structures for Deferred Callbacks
 // ============================================================================
 
-struct t_connect_objects_data {
+struct t_connection_data {
     t_maxmcp* patch;
     std::string src_varname;
     long outlet;
@@ -38,14 +38,33 @@ struct t_connect_objects_data {
     DeferredResult* deferred_result;
 };
 
-struct t_disconnect_objects_data {
-    t_maxmcp* patch;
-    std::string src_varname;
-    long outlet;
-    std::string dst_varname;
-    long inlet;
-    DeferredResult* deferred_result;
-};
+// Find source and destination boxes by varname, completing with error if not found.
+// Returns true if both boxes were found, false otherwise (deferred already completed with error).
+static bool find_connection_boxes(t_connection_data* data,
+                                  const std::string& operation,
+                                  t_object*& src_box,
+                                  t_object*& dst_box) {
+    t_object* patcher = data->patch->patcher;
+    src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
+    dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
+
+    if (!src_box || !dst_box) {
+        std::string msg = operation + " failed: ";
+        if (!src_box) {
+            msg += "source '" + data->src_varname + "' not found";
+        }
+        if (!src_box && !dst_box) {
+            msg += ", ";
+        }
+        if (!dst_box) {
+            msg += "destination '" + data->dst_varname + "' not found";
+        }
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        return false;
+    }
+    return true;
+}
 
 // ============================================================================
 // Deferred Callbacks (execute on Max main thread)
@@ -59,29 +78,13 @@ struct t_disconnect_objects_data {
  */
 static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("connect_objects_deferred");
-    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_connect_objects_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_connection_data, data, argv);
+
+    t_object* src_box;
+    t_object* dst_box;
+    if (!find_connection_boxes(data, "Connect", src_box, dst_box)) return;
 
     t_object* patcher = data->patch->patcher;
-
-    // Find source and destination boxes by varname using PatchHelpers
-    t_object* src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
-    t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
-
-    if (!src_box || !dst_box) {
-        std::string msg = "Connect failed: ";
-        if (!src_box) {
-            msg += "source '" + data->src_varname + "' not found";
-        }
-        if (!src_box && !dst_box) {
-            msg += ", ";
-        }
-        if (!dst_box) {
-            msg += "destination '" + data->dst_varname + "' not found";
-        }
-        ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
-        return;
-    }
 
     t_atom connect_args[4];
     atom_setobj(&connect_args[0], src_box);
@@ -136,30 +139,14 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
  */
 static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("disconnect_objects_deferred");
-    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_disconnect_objects_data, data, argv);
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_connection_data, data, argv);
 
-    // Find source and destination boxes using PatchHelpers
-    t_object* patcher = data->patch->patcher;
-    t_object* src_box = PatchHelpers::find_box_by_varname(patcher, data->src_varname);
-    t_object* dst_box = PatchHelpers::find_box_by_varname(patcher, data->dst_varname);
-
-    if (!src_box || !dst_box) {
-        std::string msg = "Disconnect failed: ";
-        if (!src_box) {
-            msg += "source '" + data->src_varname + "' not found";
-        }
-        if (!src_box && !dst_box) {
-            msg += ", ";
-        }
-        if (!dst_box) {
-            msg += "destination '" + data->dst_varname + "' not found";
-        }
-        ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
-        return;
-    }
+    t_object* src_box;
+    t_object* dst_box;
+    if (!find_connection_boxes(data, "Disconnect", src_box, dst_box)) return;
 
     // Find and remove matching patchline
+    t_object* patcher = data->patch->patcher;
     t_object* line = jpatcher_get_firstline(patcher);
     bool found = false;
 
@@ -274,7 +261,7 @@ static json execute_connect_max_objects(const json& params) {
 
     // Create defer data
     auto* data =
-        new t_connect_objects_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
+        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
 
     // Create atom to hold pointer
     t_atom a;
@@ -331,7 +318,7 @@ static json execute_disconnect_max_objects(const json& params) {
     auto* deferred_result = new DeferredResult();
 
     // Create defer data
-    auto* data = new t_disconnect_objects_data{patch,       src_varname, outlet,
+    auto* data = new t_connection_data{patch,       src_varname, outlet,
                                                dst_varname, inlet,       deferred_result};
 
     // Create atom to hold pointer
