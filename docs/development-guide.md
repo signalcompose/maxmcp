@@ -614,15 +614,39 @@ MaxMCP/
 └── README.md
 ```
 
-### 9.3 Testing Package
+### 9.3 Testing Package (Build → Deploy → Test)
+
+Complete workflow for deploying and testing changes in Max:
 
 ```bash
-# Install to Max Packages
-cp -r MaxMCP ~/Documents/Max\ 9/Packages/
+# 1. Build
+cmake --build build
 
-# Restart Max
-# Test installation
+# 2. Run unit tests
+cd build && ctest --output-on-failure && cd ..
+
+# 3. Install to package directory
+cmake --install build --prefix package/MaxMCP
+
+# 4. Deploy to Max 9 Packages (remove old, copy new)
+rm -rf ~/Documents/Max\ 9/Packages/MaxMCP
+cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/MaxMCP
+
+# 5. Restart Max to load updated external
+# 6. Open test patch and verify functionality
 ```
+
+**One-liner** (build + install + deploy, without tests):
+
+```bash
+cmake --build build && \
+cmake --install build --prefix package/MaxMCP && \
+rm -rf ~/Documents/Max\ 9/Packages/MaxMCP && \
+cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/MaxMCP
+```
+
+> **Note**: Max must be restarted after deploying for changes to take effect.
+> If using Claude Code with MCP, Claude Code may also need to be restarted to reconnect.
 
 ---
 

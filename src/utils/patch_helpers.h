@@ -11,6 +11,7 @@
 #define PATCH_HELPERS_H
 
 #include <string>
+#include <unordered_set>
 
 #include <nlohmann/json.hpp>
 
@@ -29,6 +30,20 @@ typedef struct _atom t_atom;
 #endif
 
 namespace PatchHelpers {
+
+/**
+ * @brief Object types where the textfield IS the displayed content.
+ *
+ * These need explicit textfield setting because newobject_fromboxtext
+ * does not populate their text. Other textfield objects (number, flonum,
+ * metro, etc.) have their content managed internally by Max.
+ */
+inline const std::unordered_set<std::string> kTextfieldContentTypes = {
+    "message",
+    "comment",
+    "textedit",
+    "live.comment",
+};
 
 /**
  * @brief Find a box in a patcher by its varname
@@ -96,6 +111,19 @@ bool set_box_attribute(t_object* box, const std::string& attr_name, const nlohma
  * @return Concatenated text string, or empty string if arguments is null/empty
  */
 std::string build_text_from_arguments(const nlohmann::json& arguments);
+
+/**
+ * @brief Check if an object type uses textfield as its primary content.
+ *
+ * Objects like message, comment, and textedit display their textfield
+ * content directly. Other objects with textfields (number, flonum, metro, etc.)
+ * use the textfield for internal display but their content is managed
+ * differently by newobject_fromboxtext.
+ *
+ * @param obj_type The object type string (e.g. "message", "comment")
+ * @return true if the object type uses textfield as its displayed content
+ */
+bool is_textfield_content_type(const std::string& obj_type);
 
 /**
  * @brief Set text content on a textfield-based object (message, comment, etc.)

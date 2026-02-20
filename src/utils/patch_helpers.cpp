@@ -14,6 +14,11 @@
 namespace PatchHelpers {
 
 // Max SDK independent - shared between test and production
+
+bool is_textfield_content_type(const std::string& obj_type) {
+    return kTextfieldContentTypes.count(obj_type) > 0;
+}
+
 std::string build_text_from_arguments(const nlohmann::json& arguments) {
     if (arguments.is_null() || !arguments.is_array() || arguments.empty()) {
         return "";

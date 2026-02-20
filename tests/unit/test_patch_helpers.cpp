@@ -79,6 +79,46 @@ TEST(BuildTextFromArguments, UnsupportedTypeSkipped) {
 }
 
 // =============================================================================
+// is_textfield_content_type (SDK-independent, fully testable)
+// =============================================================================
+
+TEST(IsTextfieldContentType, MessageIsTextfieldContent) {
+    EXPECT_TRUE(PatchHelpers::is_textfield_content_type("message"));
+}
+
+TEST(IsTextfieldContentType, CommentIsTextfieldContent) {
+    EXPECT_TRUE(PatchHelpers::is_textfield_content_type("comment"));
+}
+
+TEST(IsTextfieldContentType, TexteditIsTextfieldContent) {
+    EXPECT_TRUE(PatchHelpers::is_textfield_content_type("textedit"));
+}
+
+TEST(IsTextfieldContentType, LiveCommentIsTextfieldContent) {
+    EXPECT_TRUE(PatchHelpers::is_textfield_content_type("live.comment"));
+}
+
+TEST(IsTextfieldContentType, MetroIsNotTextfieldContent) {
+    EXPECT_FALSE(PatchHelpers::is_textfield_content_type("metro"));
+}
+
+TEST(IsTextfieldContentType, NumberIsNotTextfieldContent) {
+    EXPECT_FALSE(PatchHelpers::is_textfield_content_type("number"));
+}
+
+TEST(IsTextfieldContentType, FlonumIsNotTextfieldContent) {
+    EXPECT_FALSE(PatchHelpers::is_textfield_content_type("flonum"));
+}
+
+TEST(IsTextfieldContentType, EmptyStringIsNotTextfieldContent) {
+    EXPECT_FALSE(PatchHelpers::is_textfield_content_type(""));
+}
+
+TEST(IsTextfieldContentType, UnknownTypeIsNotTextfieldContent) {
+    EXPECT_FALSE(PatchHelpers::is_textfield_content_type("cycle~"));
+}
+
+// =============================================================================
 // Test mode stubs (verify expected stub behavior)
 // =============================================================================
 

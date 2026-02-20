@@ -128,10 +128,14 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
             }
         }
 
-        // Set text content for textfield-based objects (message, comment, etc.)
-        std::string text_content = PatchHelpers::build_text_from_arguments(data->arguments);
-        if (!text_content.empty()) {
-            PatchHelpers::set_textfield_content(obj, text_content);
+        // Set text content for textfield-content objects (message, comment, textedit).
+        // newobject_fromboxtext handles arguments for normal objects (e.g. "metro 500"),
+        // but does NOT populate displayed text for these types.
+        if (PatchHelpers::is_textfield_content_type(data->obj_type)) {
+            std::string text_content = PatchHelpers::build_text_from_arguments(data->arguments);
+            if (!text_content.empty()) {
+                PatchHelpers::set_textfield_content(obj, text_content);
+            }
         }
 
         object_method(obj, gensym("bringtofront"));
