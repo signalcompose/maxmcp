@@ -55,6 +55,34 @@ Comprehensive guidelines for creating well-organized Max/MSP patches:
 /maxmcp:patch-guidelines
 ```
 
+### max-techniques
+
+Max/MSP implementation techniques and best practices:
+
+- **poly~ & bpatcher**: Voice management, modular design, instance-specific messaging
+- **pattr & Parameters**: State persistence, Parameter Inspector, naming collision avoidance
+- **Tips**: Safe constant parameters, sampling rate handling
+
+```bash
+/maxmcp:max-techniques
+```
+
+**Trigger words**: "poly~", "bpatcher", "pattr", "parameter", "voice", "instance"
+
+### m4l-techniques
+
+Max for Live development techniques and best practices:
+
+- **Live Object Model**: live.path, live.object, live.observer
+- **Namespaces**: `---` vs `#0`, pattr persistence pitfalls
+- **Tips**: Logarithmic mapping, dBFS reference, Push2 automapping
+
+```bash
+/maxmcp:m4l-techniques
+```
+
+**Trigger words**: "Max for Live", "M4L", "live.object", "live.path", "LOM", "Push2"
+
 ### max-resources
 
 Access Max/MSP built-in resources directly from Claude Code:
@@ -82,6 +110,16 @@ Access Max/MSP built-in resources directly from Claude Code:
 - [Layout Rules](skills/patch-guidelines/reference/layout-rules.md) - Detailed positioning guidelines
 - [Naming Conventions](skills/patch-guidelines/reference/naming-conventions.md) - Object naming standards
 - [JavaScript Guide](skills/patch-guidelines/reference/javascript-guide.md) - v8/v8ui scripting
+
+### max-techniques
+- [poly~ & bpatcher](skills/max-techniques/reference/poly-bpatcher.md) - Voice management and modular design
+- [pattr & Parameters](skills/max-techniques/reference/pattr-parameters.md) - State persistence and parameter control
+- [Tips](skills/max-techniques/reference/tips.md) - Constant parameters and sampling rate handling
+
+### m4l-techniques
+- [Live Object Model](skills/m4l-techniques/reference/live-object-model.md) - LOM path/id/object/observer pipeline
+- [Namespaces & Parameters](skills/m4l-techniques/reference/namespace-parameters.md) - Device scoping and pattr persistence
+- [Tips](skills/m4l-techniques/reference/tips.md) - Controller mapping, dBFS values, Push2 layout
 
 ### max-resources
 - [Resource Paths](skills/max-resources/references/resource-paths.md) - Max.app resource locations

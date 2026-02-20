@@ -227,6 +227,32 @@ Provides:
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
 
+#### max-techniques
+
+Max/MSP implementation techniques and best practices.
+
+```bash
+/maxmcp:max-techniques
+```
+
+Provides:
+- poly~ & bpatcher architecture patterns
+- pattr/pattrstorage parameter management
+- Constant parameter safety, sampling rate handling
+
+#### m4l-techniques
+
+Max for Live development techniques and best practices.
+
+```bash
+/maxmcp:m4l-techniques
+```
+
+Provides:
+- Live Object Model (path → id → live.object → live.observer)
+- Device namespaces (`---` vs `#0`) and pattr persistence
+- Controller mapping, dBFS reference, Push2 automapping
+
 #### max-resources
 
 Access Max/MSP built-in documentation and examples.
@@ -259,6 +285,12 @@ plugins/
     │   ├── patch-guidelines/
     │   │   ├── SKILL.md
     │   │   └── reference/
+    │   ├── max-techniques/
+    │   │   ├── SKILL.md
+    │   │   └── reference/        # poly~, bpatcher, pattr, tips
+    │   ├── m4l-techniques/
+    │   │   ├── SKILL.md
+    │   │   └── reference/        # LOM, namespaces, M4L tips
     │   └── max-resources/
     │       ├── SKILL.md
     │       ├── scripts/        # Search and retrieval scripts
