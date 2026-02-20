@@ -58,7 +58,7 @@ static bool find_connection_boxes(t_connection_data* data, const std::string& op
             msg += "destination '" + data->dst_varname + "' not found";
         }
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
         return false;
     }
     return true;
