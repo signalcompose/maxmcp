@@ -108,8 +108,7 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     }
 
     // Create object using newobject_fromboxtext (same as typing in object box)
-    t_object* obj =
-        (t_object*)newobject_fromboxtext(data->patch->patcher, obj_string.c_str());
+    t_object* obj = (t_object*)newobject_fromboxtext(data->patch->patcher, obj_string.c_str());
 
     if (obj) {
         // Set position

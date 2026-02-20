@@ -86,8 +86,8 @@ static void get_subpatchers_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
         // Check if this is a subpatcher type
         // Max may report "jpatcher" (jbox variant) instead of "patcher"
-        if (class_name == "patcher" || class_name == "jpatcher" ||
-            class_name == "bpatcher" || class_name == "poly~") {
+        if (class_name == "patcher" || class_name == "jpatcher" || class_name == "bpatcher" ||
+            class_name == "poly~") {
             t_symbol* varname = object_attr_getsym(box, gensym("varname"));
             std::string varname_str = (varname && varname->s_name) ? varname->s_name : "";
 
