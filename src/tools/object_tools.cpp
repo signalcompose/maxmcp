@@ -187,21 +187,11 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
         return;
     }
 
-    t_symbol* attr_sym = gensym(data->attribute.c_str());
-
-    if (!data->value.is_number() && !data->value.is_string()) {
+    if (!PatchHelpers::set_box_attribute(box, data->attribute, data->value)) {
         std::string msg = "Unsupported value type for attribute: " + data->attribute;
         ConsoleLogger::log(msg.c_str());
         COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
         return;
-    }
-
-    if (data->value.is_number_integer()) {
-        object_attr_setlong(box, attr_sym, data->value.get<long>());
-    } else if (data->value.is_number_float()) {
-        object_attr_setfloat(box, attr_sym, data->value.get<double>());
-    } else {
-        object_attr_setsym(box, attr_sym, gensym(data->value.get<std::string>().c_str()));
     }
 
     jpatcher_set_dirty(data->patch->patcher, 1);
@@ -369,14 +359,19 @@ json get_tool_schemas() {
             {"required", json::array({"patch_id"})}}}},
 
          {{"name", "set_object_attribute"},
-          {"description", "Set an attribute of a Max object"},
+          {"description", "Set an attribute of a Max object. "
+                          "Supports scalar (number, string) and array values. "
+                          "Array examples: patching_rect [x, y, width, height], "
+                          "patching_position [x, y], bgcolor [r, g, b, a]"},
           {"inputSchema",
            {{"type", "object"},
             {"properties",
              {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
               {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
               {"attribute", {{"type", "string"}, {"description", "Attribute name to set"}}},
-              {"value", {{"description", "Attribute value (number, string, or array)"}}}}},
+              {"value",
+               {{"description", "Attribute value (number, string, or array). "
+                                "e.g. 440, \"hello\", [100, 200, 300, 50]"}}}}},
             {"required", json::array({"patch_id", "varname", "attribute", "value"})}}}},
 
          {{"name", "get_object_io_info"},
