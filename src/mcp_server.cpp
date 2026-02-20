@@ -182,7 +182,9 @@ json MCPServer::handle_request(const json& req) {
         if (!req.contains("params") || !req["params"].contains("name")) {
             return {{"jsonrpc", "2.0"},
                     {"id", req.contains("id") ? req["id"] : nullptr},
-                    {"error", {{"code", -32602}, {"message", "Missing tool name"}}}};
+                    {"error",
+                     {{"code", ToolCommon::ErrorCode::INVALID_PARAMS},
+                      {"message", "Missing tool name"}}}};
         }
 
         std::string tool_name = req["params"]["name"].get<std::string>();
@@ -223,7 +225,9 @@ json MCPServer::handle_request(const json& req) {
         ConsoleLogger::log(("MCP: Unknown method: " + method).c_str());
         return {{"jsonrpc", "2.0"},
                 {"id", req.contains("id") ? req["id"] : nullptr},
-                {"error", {{"code", -32601}, {"message", "Method not found: " + method}}}};
+                {"error",
+                 {{"code", ToolCommon::ErrorCode::METHOD_NOT_FOUND},
+                  {"message", "Method not found: " + method}}}};
     }
 }
 
@@ -274,7 +278,7 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
     }
 
     // Tool not found in any module
-    return ToolCommon::make_error(-32602, "Unknown tool: " + tool);
+    return ToolCommon::unknown_tool_error(tool);
 }
 
 // ============================================================================
@@ -300,10 +304,11 @@ std::string MCPServer::handle_request_string(const std::string& request_str) {
         // Return JSON-RPC error
         ConsoleLogger::log(("Parse error on message: " + request_str).c_str());
         ConsoleLogger::log(("Exception: " + std::string(e.what())).c_str());
-        json error_response = {
-            {"jsonrpc", "2.0"},
-            {"error", {{"code", -32700}, {"message", std::string("Parse error: ") + e.what()}}},
-            {"id", nullptr}};
+        json error_response = {{"jsonrpc", "2.0"},
+                               {"error",
+                                {{"code", ToolCommon::ErrorCode::PARSE_ERROR},
+                                 {"message", std::string("Parse error: ") + e.what()}}},
+                               {"id", nullptr}};
         return error_response.dump();
     }
 }

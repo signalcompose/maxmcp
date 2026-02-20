@@ -52,9 +52,8 @@ static void get_parent_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     t_object* parent = jpatcher_get_parentpatcher(data->patch->patcher);
 
     if (!parent) {
-        COMPLETE_DEFERRED(
-            data, (json{{"error",
-                         {{"code", -32602}, {"message", "No parent patcher (top-level patch)"}}}}));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                                       "No parent patcher (top-level patch)"));
         return;
     }
 
@@ -158,7 +157,7 @@ json execute(const std::string& tool, const json& params) {
 #ifdef MAXMCP_TEST_MODE
     // Test mode: return mock results
     if (tool == "get_parent_patcher" || tool == "get_subpatchers") {
-        return ToolCommon::make_error(-32603, "Not available in test mode");
+        return ToolCommon::test_mode_error();
     }
     return nullptr;
 #else

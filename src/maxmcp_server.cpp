@@ -8,6 +8,7 @@
 #include "maxmcp_server.h"
 
 #include "mcp_server.h"
+#include "tools/tool_common.h"
 #include "utils/console_logger.h"
 #include "websocket_server.h"
 
@@ -113,11 +114,11 @@ void* maxmcp_server_new(t_symbol* s, long argc, t_atom* argv) {
                 object_error((t_object*)x, "Request processing error: %s", e.what());
 
                 // Return error response
-                json error_response = {
-                    {"jsonrpc", "2.0"},
-                    {"error",
-                     {{"code", -32603}, {"message", std::string("Internal error: ") + e.what()}}},
-                    {"id", nullptr}};
+                json error_response = {{"jsonrpc", "2.0"},
+                                       {"error",
+                                        {{"code", ToolCommon::ErrorCode::INTERNAL_ERROR},
+                                         {"message", std::string("Internal error: ") + e.what()}}},
+                                       {"id", nullptr}};
 
                 return error_response.dump();
             }
