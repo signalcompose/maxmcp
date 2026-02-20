@@ -124,24 +124,7 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         // Set attributes if provided
         if (!data->attributes.is_null() && data->attributes.is_object()) {
             for (auto& [attr_name, attr_value] : data->attributes.items()) {
-                if (attr_value.is_array() && attr_value.size() == 4) {
-                    // Color array [r, g, b, a]
-                    t_atom color_atoms[4];
-                    for (size_t i = 0; i < 4; i++) {
-                        atom_setfloat(&color_atoms[i], attr_value[i].get<double>());
-                    }
-                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 4, color_atoms);
-                } else if (attr_value.is_number()) {
-                    double val = attr_value.get<double>();
-                    t_atom a;
-                    atom_setfloat(&a, val);
-                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 1, &a);
-                } else if (attr_value.is_string()) {
-                    std::string val = attr_value.get<std::string>();
-                    t_atom a;
-                    atom_setsym(&a, gensym(val.c_str()));
-                    object_attr_setvalueof(obj, gensym(attr_name.c_str()), 1, &a);
-                }
+                PatchHelpers::set_box_attribute(obj, attr_name, attr_value);
             }
         }
 

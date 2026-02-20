@@ -53,6 +53,17 @@ long get_outlet_count(t_object* box) {
     return -1;
 }
 
+std::vector<t_atom> json_to_atoms(const nlohmann::json& value) {
+    return {};
+}
+
+bool set_box_attribute(t_object* box, const std::string& attr_name, const nlohmann::json& value) {
+    (void)box;
+    (void)attr_name;
+    (void)value;
+    return false;
+}
+
 bool set_textfield_content(t_object* box, const std::string& text) {
     (void)box;
     (void)text;
@@ -91,6 +102,48 @@ long get_outlet_count(t_object* box) {
     }
     // Get outlet count via attribute (jbox_get_numouts doesn't exist in current SDK)
     return object_attr_getlong(box, gensym("numoutlets"));
+}
+
+static void json_value_to_atom(t_atom& atom, const nlohmann::json& value) {
+    if (value.is_number_integer())
+        atom_setlong(&atom, value.get<long>());
+    else if (value.is_number_float())
+        atom_setfloat(&atom, value.get<double>());
+    else if (value.is_string())
+        atom_setsym(&atom, gensym(value.get<std::string>().c_str()));
+}
+
+std::vector<t_atom> json_to_atoms(const nlohmann::json& value) {
+    if (value.is_array()) {
+        std::vector<t_atom> atoms(value.size());
+        for (size_t i = 0; i < value.size(); ++i) {
+            json_value_to_atom(atoms[i], value[i]);
+        }
+        return atoms;
+    }
+
+    if (value.is_number() || value.is_string()) {
+        std::vector<t_atom> atoms(1);
+        json_value_to_atom(atoms[0], value);
+        return atoms;
+    }
+
+    return {};
+}
+
+bool set_box_attribute(t_object* box, const std::string& attr_name, const nlohmann::json& value) {
+    if (!box) {
+        return false;
+    }
+
+    auto atoms = json_to_atoms(value);
+    if (atoms.empty()) {
+        return false;
+    }
+
+    object_attr_setvalueof(box, gensym(attr_name.c_str()), static_cast<long>(atoms.size()),
+                           atoms.data());
+    return true;
 }
 
 bool set_textfield_content(t_object* box, const std::string& text) {

@@ -18,6 +18,8 @@
 // Forward declarations for test mode (no Max SDK)
 struct _object;
 typedef struct _object t_object;
+struct _atom;
+typedef struct _atom t_atom;
 #else
 // Include Max SDK for full type definitions
 #include "ext.h"
@@ -57,6 +59,32 @@ long get_inlet_count(t_object* box);
  * @return Number of outlets, or -1 on error
  */
 long get_outlet_count(t_object* box);
+
+/**
+ * @brief Convert a JSON value to a vector of t_atom
+ *
+ * Handles integer, float, string scalars and arrays containing these types.
+ * For arrays, each element is recursively converted to a single atom.
+ *
+ * @param value JSON value (number, string, or array of these)
+ * @return Vector of t_atom, empty if the value type is unsupported
+ */
+std::vector<t_atom> json_to_atoms(const nlohmann::json& value);
+
+/**
+ * @brief Set an attribute on a box from a JSON value
+ *
+ * Converts the JSON value to atoms via json_to_atoms() and sets the attribute
+ * using object_attr_setvalueof().
+ *
+ * @param box The box object to set the attribute on
+ * @param attr_name The attribute name
+ * @param value The JSON value (number, string, or array)
+ * @return true if the attribute was set, false if box is null or value is unsupported
+ *
+ * @note This function must be called on the main thread (or via defer)
+ */
+bool set_box_attribute(t_object* box, const std::string& attr_name, const nlohmann::json& value);
 
 /**
  * @brief Build a space-separated text string from a JSON arguments array
