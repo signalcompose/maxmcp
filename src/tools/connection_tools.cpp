@@ -120,6 +120,8 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
         return;
     }
 
+    jpatcher_set_dirty(data->patch->patcher, 1);
+
     std::string msg = "Connected: " + data->src_varname + "[" + std::to_string(data->outlet) +
                       "] -> " + data->dst_varname + "[" + std::to_string(data->inlet) + "]";
     ConsoleLogger::log(msg.c_str());
@@ -160,6 +162,7 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
             line_inlet == data->inlet) {
 
             object_free(line);
+            jpatcher_set_dirty(data->patch->patcher, 1);
             found = true;
 
             std::string msg = "Disconnected: " + data->src_varname + "[" +

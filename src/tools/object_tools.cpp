@@ -179,6 +179,7 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
 
         object_method(obj, gensym("bringtofront"));
         object_attr_setlong(obj, gensym("presentation"), 1);
+        jpatcher_set_dirty(data->patch->patcher, 1);
         ConsoleLogger::log(("Object created: " + obj_string).c_str());
 
         COMPLETE_DEFERRED(data, (json{{"result",
@@ -201,6 +202,7 @@ static void remove_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
 
     if (box) {
         object_free(box);
+        jpatcher_set_dirty(data->patch->patcher, 1);
         ConsoleLogger::log(("Object removed: " + data->varname).c_str());
         COMPLETE_DEFERRED(data,
                           (json{{"result", {{"status", "success"}, {"varname", data->varname}}}}));
@@ -241,6 +243,7 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
         object_attr_setsym(box, attr_sym, gensym(data->value.get<std::string>().c_str()));
     }
 
+    jpatcher_set_dirty(data->patch->patcher, 1);
     ConsoleLogger::log(("Attribute set: " + data->varname + "." + data->attribute).c_str());
     COMPLETE_DEFERRED(data, (json{{"result",
                                    {{"status", "success"},
@@ -328,6 +331,7 @@ static void set_hidden_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
     }
 
     jbox_set_hidden(box, data->hidden ? 1 : 0);
+    jpatcher_set_dirty(data->patch->patcher, 1);
 
     ConsoleLogger::log(("Object " + data->varname +
                         " hidden set to: " + std::string(data->hidden ? "true" : "false"))
