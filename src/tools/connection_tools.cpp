@@ -38,6 +38,17 @@ struct t_connection_data {
     DeferredResult* deferred_result;
 };
 
+struct t_get_patchlines_data {
+    t_maxmcp* patch;
+    DeferredResult* deferred_result;
+};
+
+// ============================================================================
+// Production Code (Max SDK required)
+// ============================================================================
+
+#ifndef MAXMCP_TEST_MODE
+
 // Find source and destination boxes by varname, completing with error if not found.
 // Returns true if both boxes were found, false otherwise (deferred already completed with error).
 static bool find_connection_boxes(t_connection_data* data, const std::string& operation,
@@ -67,8 +78,6 @@ static bool find_connection_boxes(t_connection_data* data, const std::string& op
 // ============================================================================
 // Deferred Callbacks (execute on Max main thread)
 // ============================================================================
-
-#ifndef MAXMCP_TEST_MODE
 
 /**
  * Deferred callback for connecting Max objects.
@@ -192,6 +201,168 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
                                     {"inlet", data->inlet}}}}));
 }
 
+/**
+ * Deferred callback for getting patchline information.
+ * Executes on the Max main thread via defer().
+ */
+static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("get_patchlines_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_patchlines_data, data, argv);
+
+    json patchlines = json::array();
+    t_object* patcher = data->patch->patcher;
+
+    for (t_object* line = jpatcher_get_firstline(patcher); line;
+         line = jpatchline_get_nextline(line)) {
+        t_object* box1 = (t_object*)jpatchline_get_box1(line);
+        t_object* box2 = (t_object*)jpatchline_get_box2(line);
+        long outlet = jpatchline_get_outletnum(line);
+        long inlet = jpatchline_get_inletnum(line);
+
+        auto get_varname = [](t_object* box) -> std::string {
+            t_symbol* v = object_attr_getsym(box, gensym("varname"));
+            return (v && v->s_name) ? v->s_name : "";
+        };
+
+        double sx, sy, ex, ey;
+        jpatchline_get_startpoint(line, &sx, &sy);
+        jpatchline_get_endpoint(line, &ex, &ey);
+
+        t_jrgba color;
+        jpatchline_get_color(line, &color);
+
+        json pl = {{"src_varname", get_varname(box1)},
+                   {"outlet", outlet},
+                   {"dst_varname", get_varname(box2)},
+                   {"inlet", inlet},
+                   {"start_point", {{"x", sx}, {"y", sy}}},
+                   {"end_point", {{"x", ex}, {"y", ey}}},
+                   {"num_midpoints", jpatchline_get_nummidpoints(line)},
+                   {"hidden", (bool)jpatchline_get_hidden(line)},
+                   {"color",
+                    {{"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}}}};
+        patchlines.push_back(pl);
+    }
+
+    COMPLETE_DEFERRED(data, (json{{"patch_id", data->patch->patch_id},
+                                  {"patchlines", patchlines},
+                                  {"count", patchlines.size()}}));
+}
+
+// ============================================================================
+// Tool Executors
+// ============================================================================
+
+/**
+ * Execute connect_max_objects tool.
+ * Creates a patchcord between two objects.
+ */
+static json execute_connect_max_objects(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string src_varname = params.value("src_varname", "");
+    std::string dst_varname = params.value("dst_varname", "");
+    long outlet = params.value("outlet", -1);
+    long inlet = params.value("inlet", -1);
+
+    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid required parameters");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new DeferredResult();
+    auto* data =
+        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("connecting objects");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+/**
+ * Execute disconnect_max_objects tool.
+ * Removes a patchcord between two objects.
+ */
+static json execute_disconnect_max_objects(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string src_varname = params.value("src_varname", "");
+    std::string dst_varname = params.value("dst_varname", "");
+    long outlet = params.value("outlet", -1);
+    long inlet = params.value("inlet", -1);
+
+    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid required parameters");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new DeferredResult();
+    auto* data =
+        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("disconnecting objects");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+/**
+ * Execute get_patchlines tool.
+ * Lists all patchlines in a patch with metadata.
+ */
+static json execute_get_patchlines(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    if (patch_id.empty()) {
+        return ToolCommon::missing_param_error("patch_id");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new DeferredResult();
+    auto* data = new t_get_patchlines_data{patch, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_patchlines_deferred, gensym("get_patchlines"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting patchlines");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return {{"result", result}};
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -229,129 +400,16 @@ json get_tool_schemas() {
               {"inlet",
                {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}}}},
             {"required",
-             json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}}});
-}
-
-// ============================================================================
-// Tool Executors
-// ============================================================================
-
-/**
- * Execute connect_max_objects tool.
- * Creates a patchcord between two objects.
- */
-static json execute_connect_max_objects(const json& params) {
-    // Parse parameters
-    std::string patch_id = params.value("patch_id", "");
-    std::string src_varname = params.value("src_varname", "");
-    std::string dst_varname = params.value("dst_varname", "");
-    long outlet = params.value("outlet", -1);
-    long inlet = params.value("inlet", -1);
-
-    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
-        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                      "Missing or invalid required parameters");
-    }
-
-    // Find patch
-    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-    if (!patch) {
-        return ToolCommon::patch_not_found_error(patch_id);
-    }
-
-#ifndef MAXMCP_TEST_MODE
-    // Create deferred result for synchronization
-    auto* deferred_result = new DeferredResult();
-
-    // Create defer data
-    auto* data =
-        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
-
-    // Create atom to hold pointer
-    t_atom a;
-    atom_setobj(&a, data);
-
-    // Defer to main thread
-    defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
-
-    // Wait for completion
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("connecting objects");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
-#else
-    return {{"result",
-             {{"status", "mock_success"},
-              {"warning", "Test mode - no actual connection made"},
-              {"patch_id", patch_id},
-              {"src_varname", src_varname},
-              {"outlet", outlet},
-              {"dst_varname", dst_varname},
-              {"inlet", inlet}}}};
-#endif
-}
-
-/**
- * Execute disconnect_max_objects tool.
- * Removes a patchcord between two objects.
- */
-static json execute_disconnect_max_objects(const json& params) {
-    // Parse parameters
-    std::string patch_id = params.value("patch_id", "");
-    std::string src_varname = params.value("src_varname", "");
-    std::string dst_varname = params.value("dst_varname", "");
-    long outlet = params.value("outlet", -1);
-    long inlet = params.value("inlet", -1);
-
-    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
-        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                      "Missing or invalid required parameters");
-    }
-
-    // Find patch
-    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-    if (!patch) {
-        return ToolCommon::patch_not_found_error(patch_id);
-    }
-
-#ifndef MAXMCP_TEST_MODE
-    // Create deferred result for synchronization
-    auto* deferred_result = new DeferredResult();
-
-    // Create defer data
-    auto* data =
-        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
-
-    // Create atom to hold pointer
-    t_atom a;
-    atom_setobj(&a, data);
-
-    // Defer to main thread
-    defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
-
-    // Wait for completion
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("disconnecting objects");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
-#else
-    return {{"result",
-             {{"status", "mock_success"},
-              {"warning", "Test mode - no actual disconnection made"},
-              {"patch_id", patch_id},
-              {"src_varname", src_varname},
-              {"outlet", outlet},
-              {"dst_varname", dst_varname},
-              {"inlet", inlet}}}};
-#endif
+             json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}},
+         {{"name", "get_patchlines"},
+          {"description",
+           "List all patchlines (connections) in a patch with metadata "
+           "including source/destination, coordinates, color, and visibility"},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
+            {"required", json::array({"patch_id"})}}}}});
 }
 
 // ============================================================================
@@ -359,14 +417,22 @@ static json execute_disconnect_max_objects(const json& params) {
 // ============================================================================
 
 json execute(const std::string& tool, const json& params) {
+#ifdef MAXMCP_TEST_MODE
+    if (tool == "connect_max_objects" || tool == "disconnect_max_objects" ||
+        tool == "get_patchlines") {
+        return ToolCommon::test_mode_error();
+    }
+    return nullptr;
+#else
     if (tool == "connect_max_objects") {
         return execute_connect_max_objects(params);
     } else if (tool == "disconnect_max_objects") {
         return execute_disconnect_max_objects(params);
+    } else if (tool == "get_patchlines") {
+        return execute_get_patchlines(params);
     }
-
-    // Tool not handled by this module - return nullptr to signal routing should continue
     return nullptr;
+#endif
 }
 
 }  // namespace ConnectionTools

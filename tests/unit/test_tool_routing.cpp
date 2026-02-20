@@ -64,7 +64,8 @@ TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ConnectionToolsSchemaCount) {
     auto schemas = ConnectionTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 2) << "ConnectionTools should have 2 tools (connect, disconnect)";
+    ASSERT_EQ(schemas.size(), 3)
+        << "ConnectionTools should have 3 tools (connect, disconnect, get_patchlines)";
 }
 
 TEST_F(ToolSchemaTest, StateToolsSchemaCount) {
@@ -92,7 +93,7 @@ TEST_F(ToolSchemaTest, TotalToolCount) {
                    StateTools::get_tool_schemas().size() +
                    HierarchyTools::get_tool_schemas().size() +
                    UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 20) << "Total tool count should be 20";
+    EXPECT_EQ(total, 21) << "Total tool count should be 21";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
@@ -202,7 +203,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 20) << "tools/list should return all 20 tools";
+    EXPECT_EQ(tools.size(), 21) << "tools/list should return all 21 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {
@@ -232,7 +233,7 @@ TEST_F(MCPServerRoutingTest, UnknownMethodError) {
     auto response = send_request(request);
 
     ASSERT_TRUE(response.contains("error"));
-    EXPECT_EQ(response["error"]["code"], -32601);
+    EXPECT_EQ(response["error"]["code"], ToolCommon::ErrorCode::METHOD_NOT_FOUND);
 }
 
 TEST_F(MCPServerRoutingTest, MissingToolNameError) {
@@ -241,13 +242,13 @@ TEST_F(MCPServerRoutingTest, MissingToolNameError) {
     auto response = send_request(request);
 
     ASSERT_TRUE(response.contains("error"));
-    EXPECT_EQ(response["error"]["code"], -32602);
+    EXPECT_EQ(response["error"]["code"], ToolCommon::ErrorCode::INVALID_PARAMS);
 }
 
 TEST_F(MCPServerRoutingTest, UnknownToolError) {
     auto response = call_tool("nonexistent_tool");
 
-    // In test mode, ObjectTools::execute returns -32603 for all tools (including unknown ones),
+    // In test mode, ObjectTools::execute returns ToolCommon::ErrorCode::INTERNAL_ERROR for all tools (including unknown ones),
     // so the routing stops there. The error code depends on test mode behavior.
     ASSERT_TRUE(response.contains("error"));
 }
@@ -276,7 +277,7 @@ class TestModeExecuteTest : public ::testing::Test {};
 TEST_F(TestModeExecuteTest, ObjectToolsReturnTestModeError) {
     auto result = ObjectTools::execute("add_max_object", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32603);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
 }
 
 TEST_F(TestModeExecuteTest, StateToolsReturnTestModeError) {
@@ -286,7 +287,7 @@ TEST_F(TestModeExecuteTest, StateToolsReturnTestModeError) {
         auto result = StateTools::execute(tool, json::object());
         ASSERT_TRUE(result.contains("error"))
             << "StateTools::" << tool << " should return error in test mode";
-        EXPECT_EQ(result["error"]["code"], -32603);
+        EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
     }
 }
 
@@ -296,7 +297,7 @@ TEST_F(TestModeExecuteTest, HierarchyToolsReturnTestModeError) {
         auto result = HierarchyTools::execute(tool, json::object());
         ASSERT_TRUE(result.contains("error"))
             << "HierarchyTools::" << tool << " should return error in test mode";
-        EXPECT_EQ(result["error"]["code"], -32603);
+        EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
     }
 }
 
@@ -318,14 +319,14 @@ class PatchToolsValidationTest : public ::testing::Test {};
 TEST_F(PatchToolsValidationTest, GetPatchInfoMissingPatchId) {
     auto result = PatchTools::execute("get_patch_info", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32602);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INVALID_PARAMS);
 }
 
 TEST_F(PatchToolsValidationTest, GetPatchInfoNotFound) {
     json params = {{"patch_id", "nonexistent_patch_id"}};
     auto result = PatchTools::execute("get_patch_info", params);
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32602);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INVALID_PARAMS);
 }
 
 TEST_F(PatchToolsValidationTest, ListActivePatchesEmpty) {
@@ -336,32 +337,32 @@ TEST_F(PatchToolsValidationTest, ListActivePatchesEmpty) {
 }
 
 // ============================================================================
-// Connection Tools Validation (works in test mode - validates before defer)
+// Connection Tools Test Mode (returns test_mode_error for all known tools)
 // ============================================================================
 
-class ConnectionToolsValidationTest : public ::testing::Test {};
+class ConnectionToolsTestModeTest : public ::testing::Test {};
 
-TEST_F(ConnectionToolsValidationTest, ConnectMissingParams) {
+TEST_F(ConnectionToolsTestModeTest, ConnectReturnsTestModeError) {
     auto result = ConnectionTools::execute("connect_max_objects", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32602);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
 }
 
-TEST_F(ConnectionToolsValidationTest, DisconnectMissingParams) {
+TEST_F(ConnectionToolsTestModeTest, DisconnectReturnsTestModeError) {
     auto result = ConnectionTools::execute("disconnect_max_objects", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32602);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
 }
 
-TEST_F(ConnectionToolsValidationTest, ConnectPatchNotFound) {
-    json params = {{"patch_id", "nonexistent"},
-                   {"src_varname", "obj1"},
-                   {"outlet", 0},
-                   {"dst_varname", "obj2"},
-                   {"inlet", 0}};
-    auto result = ConnectionTools::execute("connect_max_objects", params);
+TEST_F(ConnectionToolsTestModeTest, GetPatchlinesReturnsTestModeError) {
+    auto result = ConnectionTools::execute("get_patchlines", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32602);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
+}
+
+TEST_F(ConnectionToolsTestModeTest, UnknownToolReturnsNull) {
+    auto result = ConnectionTools::execute("unknown_tool", json::object());
+    EXPECT_TRUE(result.is_null());
 }
 
 // ============================================================================
@@ -381,5 +382,5 @@ TEST_F(UtilityToolsTest, GetConsoleLogWorks) {
 TEST_F(UtilityToolsTest, GetAvoidRectReturnsTestModeError) {
     auto result = UtilityTools::execute("get_avoid_rect_position", json::object());
     ASSERT_TRUE(result.contains("error"));
-    EXPECT_EQ(result["error"]["code"], -32603);
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
 }
