@@ -66,6 +66,60 @@ include(GoogleTest)
 gtest_discover_tests(maxmcp_tests)
 
 #############################################################
+# Tool Routing Tests
+#############################################################
+
+# Tool module source files
+set(TOOL_SOURCES
+    ../src/tools/tool_common.cpp
+    ../src/tools/patch_tools.cpp
+    ../src/tools/object_tools.cpp
+    ../src/tools/connection_tools.cpp
+    ../src/tools/state_tools.cpp
+    ../src/tools/hierarchy_tools.cpp
+    ../src/tools/utility_tools.cpp
+    ../src/utils/patch_helpers.cpp
+    ../src/mcp_server.cpp
+)
+
+add_executable(test_tool_routing
+    unit/test_tool_routing.cpp
+    ${TOOL_SOURCES}
+    ../src/utils/console_logger.cpp
+    ../src/utils/patch_registry.cpp
+)
+
+# Override include directories: use test stubs before src (no Max SDK)
+# stubs/maxmcp.h takes priority over src/maxmcp.h
+set_target_properties(test_tool_routing PROPERTIES
+    INCLUDE_DIRECTORIES ""
+)
+target_include_directories(test_tool_routing
+    PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/stubs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/utils"
+)
+
+target_compile_definitions(test_tool_routing
+    PRIVATE
+    MAXMCP_TEST_MODE
+)
+
+target_link_libraries(test_tool_routing
+    PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+    nlohmann_json::nlohmann_json
+)
+
+# Add tool routing tests to CTest
+add_test(NAME tool_routing_tests COMMAND test_tool_routing)
+
+# Enable test discovery for tool routing tests
+gtest_discover_tests(test_tool_routing)
+
+#############################################################
 # WebSocket Server Tests
 #############################################################
 

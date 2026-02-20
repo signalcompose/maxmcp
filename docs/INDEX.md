@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2026-01-30
-**Project Status**: v1.1.1 Released ✅ (Phase 2 Complete + Infrastructure)
+**Last Updated**: 2026-01-22
+**Project Status**: v1.1.2 Released ✅ (20 MCP Tools + Tool Refactoring)
 
 ---
 
@@ -71,6 +71,16 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Testing strategies
 - Success metrics
 
+### 7. [MCP Tools Reference](mcp-tools-reference.md)
+**Purpose**: Complete reference for all MCP tools
+**Audience**: Developers, users
+**Contents**:
+- All 20 MCP tools documentation
+- Parameter specifications
+- Response formats
+- Error codes
+- Usage examples
+
 ---
 
 ## 📖 Phase Completion Reports
@@ -122,12 +132,20 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Known issues and resolutions
 
 ### 11. [Manual Test Guide - Phase 2](manual-test-phase2.md)
-**Purpose**: Manual testing procedures
+**Purpose**: Manual testing procedures for Phase 2 (10 tools)
 **Date**: 2025-11-09
 **Contents**:
 - Step-by-step test procedures
 - Expected behaviors
 - Troubleshooting tips
+
+### 12. [Manual Test Guide - New Tools](manual-test-new-tools.md)
+**Purpose**: Manual testing procedures for all 20 MCP tools
+**Date**: 2026-02-04
+**Contents**:
+- Complete test cases for all MCP tools
+- Claude Code prompts for testing
+- Expected results and error scenarios
 
 ---
 
@@ -243,6 +261,7 @@ Documentation should be updated when:
 | Understand system design | [Architecture](architecture.md) |
 | Start development | [Development Guide](development-guide.md) |
 | See implementation roadmap | [Implementation Plan](implementation-plan.md) |
+| Find MCP tool reference | [MCP Tools Reference](mcp-tools-reference.md) |
 | Check Phase 1 results | [Phase 1 Completion](PHASE1_COMPLETION.md) |
 | Check Phase 2 results | [Phase 2 Completion](PHASE2_COMPLETION.md) |
 | Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |

@@ -67,6 +67,26 @@ set(UTILS_SRC
     src/utils/console_logger.h
     src/utils/patch_registry.cpp
     src/utils/patch_registry.h
+    src/utils/patch_helpers.cpp
+    src/utils/patch_helpers.h
+)
+
+# MCP Tool implementation files (extracted from mcp_server.cpp)
+set(TOOLS_SRC
+    src/tools/tool_common.cpp
+    src/tools/tool_common.h
+    src/tools/patch_tools.cpp
+    src/tools/patch_tools.h
+    src/tools/object_tools.cpp
+    src/tools/object_tools.h
+    src/tools/connection_tools.cpp
+    src/tools/connection_tools.h
+    src/tools/state_tools.cpp
+    src/tools/state_tools.h
+    src/tools/hierarchy_tools.cpp
+    src/tools/hierarchy_tools.h
+    src/tools/utility_tools.cpp
+    src/tools/utility_tools.h
 )
 
 # Source files (unified object with @mode attribute)
@@ -83,6 +103,9 @@ set(PROJECT_SRC
 
     # Shared utilities
     ${UTILS_SRC}
+
+    # MCP Tools
+    ${TOOLS_SRC}
 )
 
 # Single output name

@@ -1,0 +1,35 @@
+{
+  "name": "maxmcp-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MaxMCP - MCP server for Max/MSP control",
+  "scripts": {
+    "prepare": "husky",
+    "lint:cpp": "find src include -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror",
+    "format:cpp": "find src include -name '*.cpp' -o -name '*.h' | xargs clang-format -i",
+    "lint:node": "cd package/MaxMCP/support/bridge && npm run lint",
+    "format:check:node": "cd package/MaxMCP/support/bridge && npm run format:check",
+    "test:cpp": "cd build && ctest --output-on-failure",
+    "test:node": "cd package/MaxMCP/support/bridge && npm test",
+    "build:cpp": "cmake --build build"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "lint-staged": {
+    "src/**/*.{cpp,h}": [
+      "clang-format --dry-run --Werror"
+    ],
+    "include/**/*.{cpp,h}": [
+      "clang-format --dry-run --Werror"
+    ],
+    "package/MaxMCP/support/bridge/**/*.js": [
+      "eslint",
+      "prettier --check"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
