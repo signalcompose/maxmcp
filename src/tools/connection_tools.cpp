@@ -228,7 +228,7 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
         jpatchline_get_startpoint(line, &sx, &sy);
         jpatchline_get_endpoint(line, &ex, &ey);
 
-        t_jrgba color;
+        t_jrgba color = {0.0, 0.0, 0.0, 1.0};
         jpatchline_get_color(line, &color);
 
         json pl = {{"src_varname", get_varname(box1)},
