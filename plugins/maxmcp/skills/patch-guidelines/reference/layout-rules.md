@@ -205,7 +205,7 @@ set_patchline_midpoints({
 })
 ```
 
-**Spacing rule**: Place the horizontal segment ~12px below the source outlet (`source_y + 12`).
+**Spacing rule**: Place the horizontal segment at least 10px below the source outlet. The minimum gap is ~12px (`source_y + 12`), but in practice the Y position varies based on routing context — median ~50px in production patches. Use a closer gap (10-20px) for short hops and a larger gap when routing around obstacles.
 
 #### Pattern 2: U-Shape (4 midpoints)
 
@@ -242,19 +242,32 @@ set_patchline_midpoints({
 ```
 
 **Spacing rules**:
-- Outside lane X: Use negative X (e.g., `-1.5`) for left-side routing, or `rightmost_object_x + 20` for right-side
-- Vertical clearance: Place horizontal segments ~12-17px beyond the source/dest objects
+- Outside lane X: Use negative X (e.g., `-1.5`) for left-side routing, or `rightmost_object_x + 20` for right-side. Typical offset from nearest object: 18-28px
+- Source-side clearance (M0): 10-17px below the source outlet (`source_y + 10~17`)
+- Destination-side clearance (M3): 11-15px above the destination inlet (`dest_y - 11~15`)
+
+### Diagonal Line Tolerance
+
+Not every non-vertical connection requires midpoints. Short diagonal lines are acceptable when the visual impact is minimal:
+
+- **Acceptable**: dx < 30px with dy > 40px (nearly vertical, minor slant)
+- **Consider midpoints**: dx > 50px (clearly diagonal, reduces readability)
+- **Always use midpoints**: dx > 100px (long horizontal distance)
+
+In production patches (365+ objects), ~19% of straight connections are diagonal — most with small dx values that don't warrant midpoint routing.
 
 ### Routing Decision Flowchart
 
 ```
 Is outlet X == inlet X?
   ├─ YES → No midpoints needed (straight vertical line)
-  └─ NO → Can objects be repositioned?
-       ├─ YES → Move objects to align X, then straight line
-       └─ NO → Is it a feedback (upward) connection?
-            ├─ YES → U-Shape (4 midpoints)
-            └─ NO → L-Shape (2 midpoints)
+  └─ NO → Is dx small (< 30px) and dy large (> 40px)?
+       ├─ YES → Acceptable as diagonal (no midpoints needed)
+       └─ NO → Can objects be repositioned?
+            ├─ YES → Move objects to align X, then straight line
+            └─ NO → Is it a feedback (upward) connection?
+                 ├─ YES → U-Shape (4 midpoints)
+                 └─ NO → L-Shape (2 midpoints)
 ```
 
 ### Avoid Crossings
