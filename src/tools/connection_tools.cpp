@@ -463,7 +463,7 @@ static json execute_get_patchlines(const json& params) {
     atom_setobj(&a, data);
     defer(patch, (method)get_patchlines_deferred, gensym("get_patchlines"), 1, &a);
 
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
         delete deferred_result;
         return ToolCommon::timeout_error("getting patchlines");
     }
