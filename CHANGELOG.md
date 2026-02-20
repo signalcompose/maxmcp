@@ -5,6 +5,41 @@ All notable changes to MaxMCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/signalcompose/maxmcp/compare/v1.0.2...v1.1.0) (2026-02-20)
+
+
+### Features
+
+* **max-resources:** add argument support for subcommands ([11933c7](https://github.com/signalcompose/maxmcp/commit/11933c7f5474bdbdc6e453c713a35c1e2468b0ef))
+* **plugin:** add Claude Code plugin marketplace for patch guidelines ([116f0ac](https://github.com/signalcompose/maxmcp/commit/116f0ac64ab22d502d9671c12f0218a72d6859f0))
+* **plugin:** add Claude Code plugin marketplace for patch guidelines ([a4cfbdd](https://github.com/signalcompose/maxmcp/commit/a4cfbdd7542b4372ba2f8b708c7092977acf803d))
+* **plugin:** add Claude Code plugin with patch-guidelines and max-resources skills ([cae5505](https://github.com/signalcompose/maxmcp/commit/cae5505bfbb0cd7f2eca37df1ed1a6d5029aa823))
+* **plugin:** add max-resources skill for Max.app resource access ([bd24736](https://github.com/signalcompose/maxmcp/commit/bd24736b7d9cbac69dba2979f4e69c0868615033))
+* **tools:** add tool_common infrastructure and patch_helpers ([1c44d32](https://github.com/signalcompose/maxmcp/commit/1c44d325a6e1dcd33a8145a5223d386468f0d1f8))
+* **tools:** extract connection operation tools ([4459ec7](https://github.com/signalcompose/maxmcp/commit/4459ec7b2779ae122f8c57fd494c7b69cd1f8979))
+* **tools:** extract hierarchy tools ([6f65af0](https://github.com/signalcompose/maxmcp/commit/6f65af04ca595afbb265eac476f0815f85b2bf7b))
+* **tools:** extract object operation tools ([0e841d4](https://github.com/signalcompose/maxmcp/commit/0e841d44635594ad5ab9452e0879dc8fd812feed))
+* **tools:** extract patch management tools ([8d1365a](https://github.com/signalcompose/maxmcp/commit/8d1365a9aef3d7c60fe107ee0fa8996e8a21b804))
+* **tools:** extract patch state and undo tools ([71779e9](https://github.com/signalcompose/maxmcp/commit/71779e97ef89e41233cb56a9f1f89de12a3e2c46))
+* **tools:** extract utility tools ([e79c59b](https://github.com/signalcompose/maxmcp/commit/e79c59bb203b6a0e4b1fe83613d5a4d09121bab0))
+
+
+### Bug Fixes
+
+* **max-resources:** improve error handling in shell scripts ([4b128f5](https://github.com/signalcompose/maxmcp/commit/4b128f51d2824f01dac6b053657f9b04ac84a9b5))
+* **max-resources:** improve error handling in shell scripts ([84d3965](https://github.com/signalcompose/maxmcp/commit/84d39656bafbeac9949179b843b3ac187d97148e))
+* **plugin:** address PR review issues in shell scripts ([c9eb611](https://github.com/signalcompose/maxmcp/commit/c9eb611d347d9da43291d55e1eabc037f99ebfb5))
+* **release:** sync package-info.json version with Release Please ([5ae4f88](https://github.com/signalcompose/maxmcp/commit/5ae4f88a6c1fa52a365ad945d8803fb4e7d4cb16))
+* **test:** add MAXMCP_TEST_MODE guard to patch_helpers.cpp ([fd3365c](https://github.com/signalcompose/maxmcp/commit/fd3365c1cf745bc6558a87654e85a8c147916e9f)), closes [#42](https://github.com/signalcompose/maxmcp/issues/42)
+* **tools:** add explicit test mode handling for StateTools ([90c1499](https://github.com/signalcompose/maxmcp/commit/90c149988276e5157988d0082208454f55dd3d23))
+* **tools:** address PR review issues ([0d22b1f](https://github.com/signalcompose/maxmcp/commit/0d22b1f58c1cd18d7f41a4b11424b445d8c15128))
+* **tools:** convert fire-and-forget to DeferredResult wait pattern ([eaa9f37](https://github.com/signalcompose/maxmcp/commit/eaa9f37544ef0c0912570108ad43ca3a617fc98f))
+* **tools:** distinguish integer and float types in object argument serialization ([8dbf114](https://github.com/signalcompose/maxmcp/commit/8dbf1146a501644e4273584f97735e09934f1070))
+* **tools:** improve error handling and fix documentation inconsistencies ([334b9ea](https://github.com/signalcompose/maxmcp/commit/334b9ea23225f6801e0701468f74a093dcdc7c9f))
+* **tools:** set dirty flag after MCP patch modifications ([ee378f6](https://github.com/signalcompose/maxmcp/commit/ee378f6d69ef292e883de4172a108973851269f7)), closes [#39](https://github.com/signalcompose/maxmcp/issues/39)
+* **tools:** use correct Max SDK public APIs ([233915a](https://github.com/signalcompose/maxmcp/commit/233915af112e467b46f301c44634ffcfbc200408))
+* **tools:** use newobject_fromboxtext for object creation and detect jpatcher ([1ed93b8](https://github.com/signalcompose/maxmcp/commit/1ed93b8fbc818e98eb335f2a0130074ab2f6ed89)), closes [#38](https://github.com/signalcompose/maxmcp/issues/38) [#40](https://github.com/signalcompose/maxmcp/issues/40)
+
 ## [1.0.2](https://github.com/signalcompose/maxmcp/compare/v1.0.1...v1.0.2) (2026-01-22)
 
 
