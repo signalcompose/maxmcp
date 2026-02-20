@@ -156,6 +156,8 @@ For detailed guidelines, see:
 | `set_object_attribute` | Modify object properties |
 | `connect_max_objects` | Create patchcord |
 | `disconnect_max_objects` | Remove patchcord |
+| `get_patchlines` | List all patchcords with coordinates and midpoints |
+| `set_patchline_midpoints` | Add/remove midpoints to fold patchcords |
 | `remove_max_object` | Delete an object |
 | `get_avoid_rect_position` | Find safe position |
 | `get_console_log` | Retrieve Max console messages |
