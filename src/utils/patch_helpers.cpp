@@ -13,6 +13,27 @@
 
 namespace PatchHelpers {
 
+#ifdef MAXMCP_TEST_MODE
+
+// Test mode stubs - return nullptr/error values
+t_object* find_box_by_varname(t_object* patcher, const std::string& varname) {
+    (void)patcher;
+    (void)varname;
+    return nullptr;
+}
+
+long get_inlet_count(t_object* box) {
+    (void)box;
+    return -1;
+}
+
+long get_outlet_count(t_object* box) {
+    (void)box;
+    return -1;
+}
+
+#else
+
 t_object* find_box_by_varname(t_object* patcher, const std::string& varname) {
     if (!patcher || varname.empty()) {
         return nullptr;
@@ -44,5 +65,7 @@ long get_outlet_count(t_object* box) {
     // Get outlet count via attribute (jbox_get_numouts doesn't exist in current SDK)
     return object_attr_getlong(box, gensym("numoutlets"));
 }
+
+#endif  // MAXMCP_TEST_MODE
 
 }  // namespace PatchHelpers
