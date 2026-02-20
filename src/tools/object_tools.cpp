@@ -145,6 +145,12 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
             }
         }
 
+        // Set text content for textfield-based objects (message, comment, etc.)
+        std::string text_content = PatchHelpers::build_text_from_arguments(data->arguments);
+        if (!text_content.empty()) {
+            PatchHelpers::set_textfield_content(obj, text_content);
+        }
+
         object_method(obj, gensym("bringtofront"));
         object_attr_setlong(obj, gensym("presentation"), 1);
         jpatcher_set_dirty(data->patch->patcher, 1);

@@ -13,6 +13,27 @@
 
 namespace PatchHelpers {
 
+// Max SDK independent - shared between test and production
+std::string build_text_from_arguments(const nlohmann::json& arguments) {
+    if (arguments.is_null() || !arguments.is_array() || arguments.empty()) {
+        return "";
+    }
+
+    std::string text;
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        if (i > 0)
+            text += " ";
+        const auto& arg = arguments[i];
+        if (arg.is_string())
+            text += arg.get<std::string>();
+        else if (arg.is_number_integer())
+            text += std::to_string(arg.get<int>());
+        else if (arg.is_number_float())
+            text += std::to_string(arg.get<double>());
+    }
+    return text;
+}
+
 #ifdef MAXMCP_TEST_MODE
 
 // Test mode stubs - return nullptr/error values
@@ -30,6 +51,12 @@ long get_inlet_count(t_object* box) {
 long get_outlet_count(t_object* box) {
     (void)box;
     return -1;
+}
+
+bool set_textfield_content(t_object* box, const std::string& text) {
+    (void)box;
+    (void)text;
+    return false;
 }
 
 #else
@@ -64,6 +91,20 @@ long get_outlet_count(t_object* box) {
     }
     // Get outlet count via attribute (jbox_get_numouts doesn't exist in current SDK)
     return object_attr_getlong(box, gensym("numoutlets"));
+}
+
+bool set_textfield_content(t_object* box, const std::string& text) {
+    if (!box || text.empty()) {
+        return false;
+    }
+
+    t_object* textfield = jbox_get_textfield(box);
+    if (!textfield) {
+        return false;
+    }
+
+    object_method(textfield, gensym("settext"), text.c_str());
+    return true;
 }
 
 #endif  // MAXMCP_TEST_MODE
