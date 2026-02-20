@@ -231,16 +231,34 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
         t_jrgba color = {0.0, 0.0, 0.0, 1.0};
         jpatchline_get_color(line, &color);
 
+        long num_midpoints = jpatchline_get_nummidpoints(line);
+
         json pl = {{"src_varname", get_varname(box1)},
                    {"outlet", outlet},
                    {"dst_varname", get_varname(box2)},
                    {"inlet", inlet},
                    {"start_point", {{"x", sx}, {"y", sy}}},
                    {"end_point", {{"x", ex}, {"y", ey}}},
-                   {"num_midpoints", jpatchline_get_nummidpoints(line)},
+                   {"num_midpoints", num_midpoints},
                    {"hidden", (bool)jpatchline_get_hidden(line)},
                    {"color",
                     {{"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}}}};
+
+        if (num_midpoints > 0) {
+            // midpoints are stored as [x1, y1, x2, y2, ...] coordinate pairs
+            long num_values = num_midpoints * 2;
+            std::vector<double> coords(num_values, 0.0);
+            long count =
+                object_attr_getdouble_array(line, gensym("midpoints"), num_values, coords.data());
+            if (count > 0) {
+                json midpoints = json::array();
+                for (long i = 0; i + 1 < count; i += 2) {
+                    midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
+                }
+                pl["midpoints"] = midpoints;
+            }
+        }
+
         patchlines.push_back(pl);
     }
 
@@ -404,7 +422,8 @@ json get_tool_schemas() {
          {{"name", "get_patchlines"},
           {"description",
            "List all patchlines (connections) in a patch with metadata "
-           "including source/destination, coordinates, color, and visibility"},
+           "including source/destination, coordinates, color, and visibility. "
+           "Folded patchcords include midpoint coordinates as an array of {x, y} points"},
           {"inputSchema",
            {{"type", "object"},
             {"properties",
