@@ -36,6 +36,23 @@ struct t_connection_data {
     std::string dst_varname;
     long inlet;
     DeferredResult* deferred_result;
+
+    t_connection_data(t_maxmcp* patch, const std::string& src_varname, long outlet,
+                      const std::string& dst_varname, long inlet, DeferredResult* deferred_result)
+        : patch(patch), src_varname(src_varname), outlet(outlet), dst_varname(dst_varname),
+          inlet(inlet), deferred_result(deferred_result) {}
+
+    virtual ~t_connection_data() = default;
+};
+
+struct t_set_midpoints_data : t_connection_data {
+    std::vector<double> coords;  // flat [x1, y1, x2, y2, ...]
+
+    t_set_midpoints_data(t_maxmcp* patch, const std::string& src_varname, long outlet,
+                         const std::string& dst_varname, long inlet,
+                         DeferredResult* deferred_result, std::vector<double> coords)
+        : t_connection_data(patch, src_varname, outlet, dst_varname, inlet, deferred_result),
+          coords(std::move(coords)) {}
 };
 
 struct t_get_patchlines_data {
@@ -267,6 +284,81 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
                                   {"count", patchlines.size()}}));
 }
 
+/**
+ * Deferred callback for setting patchline midpoints.
+ * Executes on the Max main thread via defer().
+ */
+static void set_patchline_midpoints_deferred(t_maxmcp* patch, t_symbol* s, long argc,
+                                             t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("set_patchline_midpoints_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_set_midpoints_data, data, argv);
+
+    t_object* src_box;
+    t_object* dst_box;
+    if (!find_connection_boxes(data, "SetMidpoints", src_box, dst_box))
+        return;
+
+    t_object* patcher = data->patch->patcher;
+    bool found = false;
+
+    for (t_object* line = jpatcher_get_firstline(patcher); line;
+         line = jpatchline_get_nextline(line)) {
+        t_object* line_box1 = (t_object*)jpatchline_get_box1(line);
+        long line_outlet = jpatchline_get_outletnum(line);
+        t_object* line_box2 = (t_object*)jpatchline_get_box2(line);
+        long line_inlet = jpatchline_get_inletnum(line);
+
+        if (line_box1 != src_box || line_outlet != data->outlet || line_box2 != dst_box ||
+            line_inlet != data->inlet) {
+            continue;
+        }
+
+        long count = (long)data->coords.size();
+        double* coords_ptr = count > 0 ? data->coords.data() : nullptr;
+        object_attr_setdouble_array(line, gensym("midpoints"), count, coords_ptr);
+
+        jpatcher_set_dirty(patcher, 1);
+
+        // Read back for confirmation
+        long new_num = jpatchline_get_nummidpoints(line);
+        json midpoints_out = json::array();
+        if (new_num > 0) {
+            long num_values = new_num * 2;
+            std::vector<double> readback(num_values, 0.0);
+            long got =
+                object_attr_getdouble_array(line, gensym("midpoints"), num_values, readback.data());
+            for (long i = 0; i + 1 < got; i += 2) {
+                midpoints_out.push_back({{"x", readback[i]}, {"y", readback[i + 1]}});
+            }
+        }
+
+        std::string msg = "Set midpoints: " + data->src_varname + "[" +
+                          std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
+                          std::to_string(data->inlet) + "] (" + std::to_string(new_num) +
+                          " midpoints)";
+        ConsoleLogger::log(msg.c_str());
+
+        COMPLETE_DEFERRED(data, (json{{"result",
+                                       {{"status", "success"},
+                                        {"src_varname", data->src_varname},
+                                        {"outlet", data->outlet},
+                                        {"dst_varname", data->dst_varname},
+                                        {"inlet", data->inlet},
+                                        {"num_midpoints", new_num},
+                                        {"midpoints", midpoints_out}}}}));
+        found = true;
+        break;
+    }
+
+    if (!found) {
+        std::string msg = "Patchline not found: " + data->src_varname + "[" +
+                          std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
+                          std::to_string(data->inlet) + "]";
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
+    }
+}
+
 // ============================================================================
 // Tool Executors
 // ============================================================================
@@ -294,7 +386,7 @@ static json execute_connect_max_objects(const json& params) {
 
     auto* deferred_result = new DeferredResult();
     auto* data =
-        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
+        new t_connection_data(patch, src_varname, outlet, dst_varname, inlet, deferred_result);
 
     t_atom a;
     atom_setobj(&a, data);
@@ -333,7 +425,7 @@ static json execute_disconnect_max_objects(const json& params) {
 
     auto* deferred_result = new DeferredResult();
     auto* data =
-        new t_connection_data{patch, src_varname, outlet, dst_varname, inlet, deferred_result};
+        new t_connection_data(patch, src_varname, outlet, dst_varname, inlet, deferred_result);
 
     t_atom a;
     atom_setobj(&a, data);
@@ -379,6 +471,67 @@ static json execute_get_patchlines(const json& params) {
     json result = deferred_result->result;
     delete deferred_result;
     return {{"result", result}};
+}
+
+/**
+ * Execute set_patchline_midpoints tool.
+ * Sets midpoint coordinates for a patchcord.
+ */
+static json execute_set_patchline_midpoints(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string src_varname = params.value("src_varname", "");
+    std::string dst_varname = params.value("dst_varname", "");
+    long outlet = params.value("outlet", -1);
+    long inlet = params.value("inlet", -1);
+
+    if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid required parameters");
+    }
+
+    if (!params.contains("midpoints") || !params["midpoints"].is_array()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid 'midpoints' array");
+    }
+
+    std::vector<double> coords;
+    for (const auto& pt : params["midpoints"]) {
+        if (!pt.is_object() || !pt.contains("x") || !pt.contains("y")) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "Each midpoint must be an object with 'x' and 'y'");
+        }
+        try {
+            coords.push_back(pt["x"].get<double>());
+            coords.push_back(pt["y"].get<double>());
+        } catch (const std::exception& e) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          std::string("Midpoint coordinate is not a number: ") +
+                                              e.what());
+        }
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new DeferredResult();
+    auto* data = new t_set_midpoints_data(patch, src_varname, outlet, dst_varname, inlet,
+                                          deferred_result, std::move(coords));
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)set_patchline_midpoints_deferred, gensym("set_patchline_midpoints"), 1,
+          &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("setting patchline midpoints");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
 }
 
 #endif  // MAXMCP_TEST_MODE
@@ -428,7 +581,35 @@ json get_tool_schemas() {
            {{"type", "object"},
             {"properties",
              {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
-            {"required", json::array({"patch_id"})}}}}});
+            {"required", json::array({"patch_id"})}}}},
+         {{"name", "set_patchline_midpoints"},
+          {"description",
+           "Set midpoint coordinates for a patchcord. Pass an array of {x, y} objects "
+           "to add or reposition midpoints (folding the cord). "
+           "Pass an empty array to remove all midpoints and straighten the cord."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id",
+               {{"type", "string"}, {"description", "Patch ID containing the patchcord"}}},
+              {"src_varname", {{"type", "string"}, {"description", "Source object variable name"}}},
+              {"outlet", {{"type", "number"}, {"description", "Source outlet index (0-based)"}}},
+              {"dst_varname",
+               {{"type", "string"}, {"description", "Destination object variable name"}}},
+              {"inlet", {{"type", "number"}, {"description", "Destination inlet index (0-based)"}}},
+              {"midpoints",
+               {{"type", "array"},
+                {"description",
+                 "Array of midpoint coordinates. Each element must have 'x' and 'y'. "
+                 "Pass [] to remove all midpoints."},
+                {"items",
+                 {{"type", "object"},
+                  {"properties",
+                   {{"x", {{"type", "number"}, {"description", "X coordinate"}}},
+                    {"y", {{"type", "number"}, {"description", "Y coordinate"}}}}},
+                  {"required", json::array({"x", "y"})}}}}}}},
+            {"required", json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet",
+                                      "midpoints"})}}}}});
 }
 
 // ============================================================================
@@ -438,7 +619,7 @@ json get_tool_schemas() {
 json execute(const std::string& tool, const json& params) {
 #ifdef MAXMCP_TEST_MODE
     if (tool == "connect_max_objects" || tool == "disconnect_max_objects" ||
-        tool == "get_patchlines") {
+        tool == "get_patchlines" || tool == "set_patchline_midpoints") {
         return ToolCommon::test_mode_error();
     }
     return nullptr;
@@ -449,6 +630,8 @@ json execute(const std::string& tool, const json& params) {
         return execute_disconnect_max_objects(params);
     } else if (tool == "get_patchlines") {
         return execute_get_patchlines(params);
+    } else if (tool == "set_patchline_midpoints") {
+        return execute_set_patchline_midpoints(params);
     }
     return nullptr;
 #endif

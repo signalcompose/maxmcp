@@ -64,8 +64,8 @@ TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ConnectionToolsSchemaCount) {
     auto schemas = ConnectionTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 3)
-        << "ConnectionTools should have 3 tools (connect, disconnect, get_patchlines)";
+    ASSERT_EQ(schemas.size(), 4)
+        << "ConnectionTools should have 4 tools (connect, disconnect, get_patchlines, set_patchline_midpoints)";
 }
 
 TEST_F(ToolSchemaTest, StateToolsSchemaCount) {
@@ -93,7 +93,7 @@ TEST_F(ToolSchemaTest, TotalToolCount) {
                    StateTools::get_tool_schemas().size() +
                    HierarchyTools::get_tool_schemas().size() +
                    UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 21) << "Total tool count should be 21";
+    EXPECT_EQ(total, 22) << "Total tool count should be 22";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
@@ -143,7 +143,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
         "set_object_hidden",   "redraw_object",        "connect_max_objects",
         "disconnect_max_objects", "get_patch_lock_state", "set_patch_lock_state",
         "get_patch_dirty",     "get_parent_patcher",   "get_subpatchers",
-        "get_console_log",     "get_avoid_rect_position"};
+        "get_console_log",     "get_avoid_rect_position",
+        "get_patchlines",      "set_patchline_midpoints"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;
@@ -203,7 +204,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 21) << "tools/list should return all 21 tools";
+    EXPECT_EQ(tools.size(), 22) << "tools/list should return all 22 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {
@@ -356,6 +357,12 @@ TEST_F(ConnectionToolsTestModeTest, DisconnectReturnsTestModeError) {
 
 TEST_F(ConnectionToolsTestModeTest, GetPatchlinesReturnsTestModeError) {
     auto result = ConnectionTools::execute("get_patchlines", json::object());
+    ASSERT_TRUE(result.contains("error"));
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
+}
+
+TEST_F(ConnectionToolsTestModeTest, SetPatchlineMidpointsReturnsTestModeError) {
+    auto result = ConnectionTools::execute("set_patchline_midpoints", json::object());
     ASSERT_TRUE(result.contains("error"));
     EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
 }

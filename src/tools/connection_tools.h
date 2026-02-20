@@ -30,6 +30,7 @@ using json = nlohmann::json;
  * - connect_max_objects: Create a patchcord connection between two objects
  * - disconnect_max_objects: Remove a patchcord connection between two objects
  * - get_patchlines: List all patchlines with metadata (coordinates, color, etc.)
+ * - set_patchline_midpoints: Set midpoint coordinates for a patchcord
  *
  * @return JSON array of tool schema objects
  */
