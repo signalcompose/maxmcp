@@ -3,228 +3,242 @@ name: max-resources
 description: |
   Access Max/MSP built-in resources. Use when:
   - User asks about Max objects ("How do I use cycle~?")
-  - User wants to check/rebuild cache ("check cache", "build index")
-  - Cache status shows VERSION_MISMATCH or NEEDS_BUILD
-  - User searches for examples or snippets
-argument-hint: "[check-cache|build-index|search <query>|<object-name>]"
+  - User wants to find examples or snippets
+  - User needs object reference information (inlets, outlets, methods)
+argument-hint: "[<object-name>|fts <query>]"
 ---
 
 # Max Resources Skill
 
-Access Max/MSP built-in resources: reference pages, snippets, example patches, and user guides.
+Access Max/MSP built-in resources directly from Max.app: reference pages, snippets, example patches, and user guides.
 
-## Subcommands
+## Agentic Search Approach
 
-When invoked with `/maxmcp:max-resources <subcommand>`:
+This skill uses **direct filesystem exploration** with Claude Code's built-in tools. No pre-built indexes required - information is always current.
 
-| Subcommand | Action |
-|------------|--------|
-| `check-cache` | Check cache validity |
-| `build-index` | Rebuild object index |
-| `search <query>` | Search indexed objects |
-| `<object-name>` | Get object reference (e.g., `cycle~`) |
-| (no args) | Show usage or auto-detect from context |
+**Use Claude Code's dedicated tools instead of Bash commands:**
 
-### Argument Handling
+| Purpose | Use This Tool | Not This |
+|---------|---------------|----------|
+| Find files by pattern | **Glob** | ~~find~~ |
+| Search file contents | **Grep** | ~~grep~~ |
+| Read file contents | **Read** | ~~cat~~ |
 
-- `$0` = First argument (subcommand)
-- `$1` = Second argument (query/object name)
+## Resource Locations
 
-### Examples
+All resources are located within Max.app:
 
 ```
-/maxmcp:max-resources check-cache     → Check cache validity
-/maxmcp:max-resources build-index     → Rebuild object index
-/maxmcp:max-resources search filter   → Search for "filter" objects
-/maxmcp:max-resources cycle~          → Get cycle~ reference
+/Applications/Max.app/Contents/Resources/
+├── C74/docs/refpages/           # Object references (XML)
+│   ├── max-ref/                 # Max objects (~300)
+│   ├── msp-ref/                 # MSP/audio objects (~200)
+│   ├── jit-ref/                 # Jitter/video objects (~400)
+│   ├── m4l-ref/                 # Max for Live (~50)
+│   └── gen-ref/                 # Gen objects (~100)
+├── C74/docs/userguide/          # User guides
+│   ├── content/                 # Guide content (JSON)
+│   └── userguide_search.sqlite  # Full-text search database
+├── C74/snippets/                # Code snippets (.maxsnip)
+│   ├── max/
+│   ├── msp/
+│   └── jitter/
+└── Examples/                    # Example patches (.maxpat)
+    ├── effects/
+    ├── synths/
+    ├── sequencing/
+    └── jitter-examples/
 ```
 
-### Script Execution
+## Search Methods Using Claude Code Tools
 
-Based on arguments, execute the appropriate script:
+### 1. Object Reference Lookup
 
-| Condition | Script to Run |
-|-----------|---------------|
-| `$0` = "check-cache" | `./scripts/check-cache.sh` |
-| `$0` = "build-index" | `./scripts/build-index.sh` |
-| `$0` = "search" | `./scripts/search-objects.sh $1` |
-| `$0` = object name (contains `~` or alphanumeric) | `./scripts/get-reference.sh $0` |
+When user asks about a specific object (e.g., "How do I use cycle~?"):
 
-## Automatic Cache Check Workflow
+```
+# Use Glob to find the reference file
+Glob: pattern="**/cycle~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 
-When this skill is invoked and cache operations are needed:
+# Use Read to get the content
+Read: file_path="/Applications/Max.app/.../msp-ref/cycle~.maxref.xml"
+```
 
-1. **First**: Run `./scripts/check-cache.sh`
-2. **If NEEDS_BUILD or VERSION_MISMATCH**:
-   - Inform user: "Cache needs to be rebuilt. Run `/maxmcp:max-resources build-index` or say 'build index'."
-   - Wait for user confirmation before proceeding
-3. **If OK or OK_STALE**: Proceed with resource lookup
+**Reference file naming**: `{object-name}.maxref.xml`
+- Objects with `~` suffix: audio/signal objects (MSP)
+- Objects without `~`: control/message objects (Max)
 
-### Output Status Codes
+### 2. Object Search (Pattern Matching)
 
-| Status | Meaning | Action |
-|--------|---------|--------|
-| `OK` | Cache is valid | Proceed |
-| `OK_STALE` | Cache is old (>30 days) | Proceed, suggest refresh |
-| `NEEDS_BUILD` | No cache exists | Prompt to run `build-index` |
-| `VERSION_MISMATCH` | Max was updated | Prompt to run `build-index` |
-| `ERROR` | Max.app not found | Report error |
+When user searches for objects by keyword:
+
+```
+# Find objects matching a pattern
+Glob: pattern="**/*filter*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
+
+# Search within XML content
+Grep: pattern="frequency"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
+      glob="*.maxref.xml"
+```
+
+### 3. Full-Text Search (SQLite FTS)
+
+For comprehensive documentation search, use Max's built-in FTS database via helper script:
+
+```bash
+./scripts/search-fts.sh "oscillator" 20
+```
+
+This uses Max's pre-built SQLite FTS database (no index building required).
+
+### 4. Example Patches
+
+```
+# List example categories
+Glob: pattern="*"
+      path="/Applications/Max.app/Contents/Resources/Examples"
+
+# Find examples containing specific objects
+Grep: pattern="cycle~"
+      path="/Applications/Max.app/Contents/Resources/Examples"
+      glob="*.maxpat"
+```
+
+### 5. Snippets
+
+```
+# List snippet categories
+Glob: pattern="*"
+      path="/Applications/Max.app/Contents/Resources/C74/snippets"
+
+# Find snippets
+Glob: pattern="**/*.maxsnip"
+      path="/Applications/Max.app/Contents/Resources/C74/snippets"
+```
+
+## XML Reference Format
+
+Reference files use `.maxref.xml` format. Key elements to extract:
+
+```xml
+<c74object name="cycle~" module="msp" category="MSP Synthesis">
+    <digest>Sinusoidal oscillator</digest>
+    <description>Full description...</description>
+
+    <inletlist>
+        <inlet id="0" type="signal/float">
+            <digest>Frequency (Hz)</digest>
+        </inlet>
+    </inletlist>
+
+    <outletlist>
+        <outlet id="0" type="signal">
+            <digest>Output signal</digest>
+        </outlet>
+    </outletlist>
+
+    <objarglist>
+        <objarg name="frequency" optional="1" type="number">
+            <digest>Initial frequency</digest>
+        </objarg>
+    </objarglist>
+
+    <methodlist>
+        <method name="float">...</method>
+    </methodlist>
+
+    <attributelist>
+        <attribute name="interp" type="int">...</attribute>
+    </attributelist>
+
+    <seealsolist>
+        <seealso name="phasor~"/>
+    </seealsolist>
+</c74object>
+```
+
+## Key XML Elements to Extract
+
+| Element | Content | Use For |
+|---------|---------|---------|
+| `<digest>` | One-line summary | Quick overview |
+| `<description>` | Full description | Detailed explanation |
+| `<inletlist>/<inlet>` | Input specs | Understanding inputs |
+| `<outletlist>/<outlet>` | Output specs | Understanding outputs |
+| `<objarglist>/<objarg>` | Creation arguments | Object instantiation |
+| `<methodlist>/<method>` | Available methods | Messages the object accepts |
+| `<attributelist>/<attribute>` | Object attributes | Configurable properties |
+| `<seealsolist>/<seealso>` | Related objects | Finding alternatives |
+
+## Helper Scripts (Optional)
+
+Lightweight helper scripts for operations that require Bash:
+
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `search-fts.sh` | SQLite FTS query | Full-text documentation search |
+| `get-reference.sh` | Get object reference | Convenient summary extraction |
+| `list-examples.sh` | List example patches | Browse examples |
+| `get-snippet.sh` | Get code snippets | Browse snippets |
+
+**Note**: Prefer using Glob/Grep/Read tools directly. Use scripts only when SQLite access is needed.
 
 ## When to Use
 
 Use this skill when users ask about:
 - Max object usage ("How do I use cycle~?")
-- Object parameters, inlets, outlets
+- Object parameters, inlets, outlets, methods
 - Example patches ("Show me FM synthesis examples")
 - Snippets and code patterns
 - Max concepts and tutorials
-- Cache management ("check cache", "build index", "update cache")
 
-**Trigger words**: "Max object", "reference", "how to use", "example", "snippet", "documentation", "check cache", "build index"
+**Trigger words**: "Max object", "reference", "how to use", "example", "snippet", "documentation", "inlet", "outlet", "method"
 
-## Quick Reference
+## Workflow Examples
 
-### Script Locations
+### Example 1: Object Lookup
 
-All scripts are in `plugins/maxmcp/skills/max-resources/scripts/`:
+User: "How do I use metro?"
 
-| Script | Purpose |
-|--------|---------|
-| `build-index.sh` | Build object index cache |
-| `check-cache.sh` | Verify cache validity |
-| `search-objects.sh` | Search indexed objects |
-| `search-fts.sh` | Full-text search (SQLite) |
-| `get-reference.sh` | Get object reference page |
-| `list-examples.sh` | List example patches |
-| `get-snippet.sh` | Get code snippets |
+1. **Glob** to find: `**/metro.maxref.xml`
+2. **Read** the XML file
+3. Extract digest, description, inlets, outlets
+4. Present formatted information
 
-### Resource Paths (Max.app)
+### Example 2: Search for Objects
 
-```
-/Applications/Max.app/Contents/Resources/
-├── C74/docs/refpages/       # Object references (XML)
-│   ├── max-ref/             # Max objects
-│   ├── msp-ref/             # MSP (audio)
-│   ├── jit-ref/             # Jitter (video)
-│   ├── m4l-ref/             # Max for Live
-│   └── gen-ref/             # Gen
-├── C74/docs/userguide/      # User guides (JSON)
-├── C74/snippets/            # Code snippets
-└── Examples/                # Example patches
-```
+User: "What filter objects are available?"
 
-## Usage Patterns
+1. **Glob** to search: `**/*filter*.maxref.xml`
+2. List matching objects
+3. **Read** top results to extract digests
+4. Present categorized list
 
-### 1. Cache Management
+### Example 3: Find Examples
 
-First-time setup or after Max update:
+User: "Show me reverb examples"
+
+1. **Grep** in Examples directory for "reverb"
+2. Or **Glob** for `**/*reverb*.maxpat`
+3. List matching patches with paths
+
+## Max.app Path Detection
+
+If Max.app is not at the default location, use Bash to detect:
 
 ```bash
-# Check cache status
-./scripts/check-cache.sh
-
-# Build/rebuild index
-./scripts/build-index.sh
+mdfind "kMDItemCFBundleIdentifier == 'com.cycling74.Max'" | head -1
 ```
-
-Cache location: `~/.maxmcp/cache/`
-
-### 2. Object Search
-
-```bash
-# Search by name
-./scripts/search-objects.sh cycle
-
-# Search in specific category
-./scripts/search-objects.sh filter msp-ref
-```
-
-### 3. Get Reference
-
-```bash
-# Full reference (XML)
-./scripts/get-reference.sh cycle~
-
-# Summary only
-./scripts/get-reference.sh metro --summary
-```
-
-### 4. Example Patches
-
-```bash
-# List categories
-./scripts/list-examples.sh
-
-# List patches in category
-./scripts/list-examples.sh synths
-
-# Search within category
-./scripts/list-examples.sh effects reverb
-```
-
-### 5. Snippets
-
-```bash
-# List snippet categories
-./scripts/get-snippet.sh
-
-# List snippets in category
-./scripts/get-snippet.sh msp
-
-# Get specific snippet
-./scripts/get-snippet.sh msp filter
-```
-
-### 6. Full-Text Search
-
-```bash
-# Search user guides
-./scripts/search-fts.sh "oscillator"
-./scripts/search-fts.sh "FM synthesis" 10
-```
-
-## Common Objects Quick Reference
-
-### Audio (MSP)
-- `cycle~` - Sine oscillator
-- `phasor~` - Ramp oscillator
-- `noise~` - White noise
-- `*~` `+~` `-~` `/~` - Signal math
-- `dac~` `adc~` - Audio I/O
-- `buffer~` `play~` `groove~` - Sample playback
-- `biquad~` `svf~` `onepole~` - Filters
-
-### Control (Max)
-- `metro` - Timer/clock
-- `counter` - Counting
-- `random` - Random numbers
-- `gate` `switch` `router` - Routing
-- `pack` `unpack` - List operations
-- `coll` `dict` - Data storage
-
-### UI Objects
-- `slider` `dial` `number` - Value input
-- `button` `toggle` - Triggers
-- `multislider` - Multiple values
-- `waveform~` `scope~` - Visualization
-
-## Integration with patch-guidelines
-
-When recreating patches from examples:
-
-1. Use this skill to find and analyze example patches
-2. Extract object list and connections from JSON
-3. Apply `patch-guidelines` rules for layout and naming
-4. Use MCP tools to create the actual patch
-
-See `references/mcp-recreation.md` for detailed workflow.
 
 ## Detailed Documentation
 
-For format specifications and advanced usage:
-- `references/resource-paths.md` - Path discovery, version detection
-- `references/refpage-format.md` - XML reference format
+For format specifications:
+- `references/resource-paths.md` - Full path reference
+- `references/refpage-format.md` - XML format details
 - `references/maxpat-format.md` - Patch JSON format
 - `references/mcp-recreation.md` - Example-to-patch workflow
-- `examples/lookup-object.md` - Search examples
+- `examples/lookup-object.md` - Lookup examples
 - `examples/recreate-patch.md` - Patch recreation examples

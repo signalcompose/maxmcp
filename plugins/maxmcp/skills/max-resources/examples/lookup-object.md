@@ -1,99 +1,92 @@
 # Object Lookup Examples
 
-## Example 1: Basic Object Search
+## Tool Usage
+
+**Always prefer Claude Code's dedicated tools over Bash commands:**
+
+| Task | Tool | Example |
+|------|------|---------|
+| Find files | **Glob** | `pattern="**/cycle~.maxref.xml"` |
+| Search content | **Grep** | `pattern="oscillator" glob="*.maxref.xml"` |
+| Read files | **Read** | `file_path="/path/to/file.xml"` |
+
+## Example 1: Basic Object Lookup
 
 **User request**: "How do I use cycle~?"
 
-### Step 1: Search for the object
+### Step 1: Find the reference file
 
-```bash
-./scripts/search-objects.sh cycle
+```
+Glob: pattern="**/cycle~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
-Output:
+Result:
 ```
-Searching for: cycle
-
-[msp-ref]
-cycle~
+/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/cycle~.maxref.xml
 ```
 
-### Step 2: Get reference
+### Step 2: Read the reference
 
-```bash
-./scripts/get-reference.sh cycle~ --summary
+```
+Read: file_path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref/cycle~.maxref.xml"
 ```
 
-Output:
-```
-Object: cycle~
-Category: msp-ref
-Path: /Applications/Max.app/.../msp-ref/cycle~.maxref.xml
----
+### Step 3: Extract key information
 
-Digest:
-Sinusoidal oscillator
-
-Description:
-Use the cycle~ object to generate a sinusoidal waveform.
-The object uses a 512-sample wavetable which can be
-replaced by loading an audio file.
-```
-
-### Step 3: Full reference (if needed)
-
-```bash
-./scripts/get-reference.sh cycle~
-```
-
-Returns complete XML with inlets, outlets, methods, attributes.
+From the XML, extract:
+- `<digest>` - One-line summary
+- `<description>` - Full description
+- `<inletlist>` - Inputs
+- `<outletlist>` - Outputs
+- `<objarglist>` - Creation arguments
 
 ## Example 2: Finding Filter Objects
 
 **User request**: "What filter objects are available in MSP?"
 
-```bash
-./scripts/search-objects.sh filter msp-ref
+### Using Glob for pattern search
+
+```
+Glob: pattern="**/*filter*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref"
 ```
 
-Output:
+Result:
 ```
-Searching for: filter
-Category: msp-ref
----
-biquad~
-filtercoeff~
-filtergraph~
-lores~
-reson~
-svf~
-onepole~
+filtercoeff~.maxref.xml
+filtergraph~.maxref.xml
 ```
 
-## Example 3: Fuzzy Search
+### Alternative: List all and filter conceptually
 
-**User request**: "Looking for something to generate random numbers"
-
-```bash
-./scripts/search-objects.sh random
+```
+Glob: pattern="*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/msp-ref"
 ```
 
-Output:
-```
-[max-ref]
-random
-drunk
-urn
+Then identify filter-related objects: biquad~, lores~, reson~, svf~, onepole~
 
-[msp-ref]
-rand~
-noise~
-pink~
+## Example 3: Search by Keyword in Content
+
+**User request**: "Looking for objects related to random numbers"
+
+### Search within XML content
+
 ```
+Grep: pattern="random"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
+      glob="*.maxref.xml"
+      output_mode="files_with_matches"
+```
+
+Result includes files mentioning "random" in their documentation.
 
 ## Example 4: Full-Text Search
 
 **User request**: "How do I do FM synthesis?"
+
+Use the helper script for SQLite FTS:
 
 ```bash
 ./scripts/search-fts.sh "FM synthesis"
@@ -105,19 +98,13 @@ Full-text search: FM synthesis
 ---
 title                path                          excerpt
 -----------------    --------------------------    ----------------
-FM Synthesis         /userguide/audio/fm          ...frequency >>>modulation<<< creates...
-Oscillators          /userguide/audio/oscillators ...used for >>>FM synthesis<<<...
+FM Synthesis         /userguide/audio/fm          ...frequency modulation...
 ```
 
 ## Example 5: Finding Related Objects
 
-After getting a reference:
+After reading a reference, look at `<seealsolist>`:
 
-```bash
-./scripts/get-reference.sh cycle~
-```
-
-Look at `<seealsolist>`:
 ```xml
 <seealsolist>
     <seealso name="phasor~"/>
@@ -127,22 +114,24 @@ Look at `<seealsolist>`:
 </seealsolist>
 ```
 
-Then get related references:
+Then look up related objects:
 
-```bash
-./scripts/get-reference.sh phasor~ --summary
-./scripts/get-reference.sh wave~ --summary
+```
+Glob: pattern="**/phasor~.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
 ## Example 6: Understanding Object Parameters
 
 **User request**: "What arguments does metro take?"
 
-```bash
-./scripts/get-reference.sh metro
+```
+Glob: pattern="**/metro.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages"
 ```
 
-Look at `<objarglist>`:
+Then Read the file and extract `<objarglist>`:
+
 ```xml
 <objarglist>
     <objarg name="interval" optional="1" type="number">
@@ -152,6 +141,7 @@ Look at `<objarglist>`:
 ```
 
 And `<methodlist>` for messages:
+
 ```xml
 <methodlist>
     <method name="int">
@@ -170,11 +160,12 @@ And `<methodlist>` for messages:
 
 **User request**: "How many inlets does biquad~ have?"
 
-```bash
-./scripts/get-reference.sh biquad~
+```
+Read: file_path="/Applications/Max.app/.../msp-ref/biquad~.maxref.xml"
 ```
 
-Look at `<inletlist>`:
+Extract `<inletlist>`:
+
 ```xml
 <inletlist>
     <inlet id="0" type="signal">
@@ -187,38 +178,24 @@ Look at `<inletlist>`:
 </inletlist>
 ```
 
-## Example 8: Cache Management
+## Example 8: List All Objects in a Category
 
-### First-time setup
+**User request**: "What Max objects are available?"
 
-```bash
-./scripts/check-cache.sh
-# Output: NEEDS_BUILD
-
-./scripts/build-index.sh
-# Output: Index built successfully!
-#   Total objects: 1175
-#   Max version: 9.0.5
+```
+Glob: pattern="*.maxref.xml"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/refpages/max-ref"
 ```
 
-### After Max update
-
-```bash
-./scripts/check-cache.sh
-# Output: VERSION_MISMATCH
-#   Cached version: 9.0.4
-#   Current version: 9.0.5
-
-./scripts/build-index.sh
-# Rebuilds cache
-```
+Returns all Max control objects (~300 files).
 
 ## Summary
 
-| Task | Script | Example |
-|------|--------|---------|
-| Find object by name | `search-objects.sh` | `./scripts/search-objects.sh delay` |
-| Get object reference | `get-reference.sh` | `./scripts/get-reference.sh delay~` |
-| Search documentation | `search-fts.sh` | `./scripts/search-fts.sh "envelope"` |
-| Check cache | `check-cache.sh` | `./scripts/check-cache.sh` |
-| Build cache | `build-index.sh` | `./scripts/build-index.sh` |
+| Task | Tool | Pattern Example |
+|------|------|-----------------|
+| Find object by name | Glob | `**/delay~.maxref.xml` |
+| Search by pattern | Glob | `**/*filter*.maxref.xml` |
+| Search content | Grep | `pattern="oscillator" glob="*.maxref.xml"` |
+| Read reference | Read | Direct file path |
+| Full-text search | Bash | `./scripts/search-fts.sh "query"` |
+| List category | Glob | `*.maxref.xml` in category dir |

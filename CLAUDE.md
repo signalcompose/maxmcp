@@ -241,20 +241,13 @@ Provides:
 - Code snippets
 - Full-text search of Max documentation
 
-**First-time setup** (required once, or after Max update):
-```bash
-# Build object index cache
-cd plugins/maxmcp/skills/max-resources/scripts
-./build-index.sh
-```
-
-**Cache location**: `~/.maxmcp/cache/`
+**Agentic search approach**: This skill uses direct filesystem exploration instead of pre-built indexes. No setup required - information is always current.
 
 **Workflow example**:
 1. User asks "How do I use cycle~?"
-2. Skill searches object index
-3. Returns reference information (digest, inlets, outlets, methods)
-4. Can also show related examples and snippets
+2. AI searches Max.app refpages directly: `find ... -name "cycle~.maxref.xml"`
+3. Reads XML and extracts reference information (digest, inlets, outlets, methods)
+4. Can also find related examples and snippets via filesystem search
 
 ### Plugin Structure
 
