@@ -58,7 +58,7 @@ static bool find_connection_boxes(t_connection_data* data, const std::string& op
             msg += "destination '" + data->dst_varname + "' not found";
         }
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
         return false;
     }
     return true;
@@ -116,7 +116,7 @@ static void connect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
                           std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
                           std::to_string(data->inlet) + "]";
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32603, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INTERNAL_ERROR, msg));
         return;
     }
 
@@ -180,7 +180,7 @@ static void disconnect_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc,
                           std::to_string(data->outlet) + "] -> " + data->dst_varname + "[" +
                           std::to_string(data->inlet) + "]";
         ConsoleLogger::log(msg.c_str());
-        COMPLETE_DEFERRED(data, ToolCommon::make_error(-32602, msg));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
         return;
     }
 
@@ -249,7 +249,8 @@ static json execute_connect_max_objects(const json& params) {
     long inlet = params.value("inlet", -1);
 
     if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
-        return ToolCommon::make_error(-32602, "Missing or invalid required parameters");
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid required parameters");
     }
 
     // Find patch
@@ -307,7 +308,8 @@ static json execute_disconnect_max_objects(const json& params) {
     long inlet = params.value("inlet", -1);
 
     if (patch_id.empty() || src_varname.empty() || dst_varname.empty() || outlet < 0 || inlet < 0) {
-        return ToolCommon::make_error(-32602, "Missing or invalid required parameters");
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing or invalid required parameters");
     }
 
     // Find patch

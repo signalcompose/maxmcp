@@ -244,7 +244,7 @@ json execute(const std::string& tool, const json& params) {
     // In test mode, return explicit error for known tools (consistent with other modules)
     if (tool == "get_patch_lock_state" || tool == "set_patch_lock_state" ||
         tool == "get_patch_dirty") {
-        return ToolCommon::make_error(-32603, "Not available in test mode");
+        return ToolCommon::test_mode_error();
     }
 #else
     if (tool == "get_patch_lock_state") {

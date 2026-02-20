@@ -13,6 +13,7 @@
 #include "maxmcp.h"
 
 #include "mcp_server.h"
+#include "tools/tool_common.h"
 #include "utils/console_logger.h"
 #include "utils/patch_registry.h"
 #include "utils/uuid_generator.h"
@@ -217,7 +218,7 @@ void* maxmcp_new(t_symbol* s, long argc, t_atom* argv) {
                         json error_response = {
                             {"jsonrpc", "2.0"},
                             {"error",
-                             {{"code", -32603},
+                             {{"code", ToolCommon::ErrorCode::INTERNAL_ERROR},
                               {"message", std::string("Internal error: ") + e.what()}}},
                             {"id", nullptr}};
 
