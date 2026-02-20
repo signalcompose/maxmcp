@@ -107,47 +107,16 @@ static void add_object_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom*
         }
     }
 
-    // Escape special characters
-    std::string escaped = obj_string;
-    size_t pos = 0;
-
-    // Escape backslash first
-    while ((pos = escaped.find('\\', pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "\\\\");
-        pos += 2;
-    }
-
-    // Escape quotes
-    pos = 0;
-    while ((pos = escaped.find('"', pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "\\\"");
-        pos += 2;
-    }
-
-    // Escape percent signs
-    pos = 0;
-    while ((pos = escaped.find('%', pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "%%");
-        pos += 2;
-    }
-
-    // Replace newlines with space
-    pos = 0;
-    while ((pos = escaped.find('\n', pos)) != std::string::npos) {
-        escaped.replace(pos, 1, " ");
-        pos += 1;
-    }
-    pos = 0;
-    while ((pos = escaped.find('\r', pos)) != std::string::npos) {
-        escaped.erase(pos, 1);
-    }
-
-    // Create object
-    t_object* obj = (t_object*)newobject_sprintf(
-        data->patch->patcher, "@maxclass newobj @text \"%s\" @patching_position %.2f %.2f",
-        escaped.c_str(), data->x, data->y);
+    // Create object using newobject_fromboxtext (same as typing in object box)
+    t_object* obj =
+        (t_object*)newobject_fromboxtext(data->patch->patcher, obj_string.c_str());
 
     if (obj) {
+        // Set position
+        t_atom pos[2];
+        atom_setfloat(&pos[0], data->x);
+        atom_setfloat(&pos[1], data->y);
+        object_attr_setvalueof(obj, gensym("patching_position"), 2, pos);
         // Set varname if provided
         if (!data->varname.empty()) {
             object_attr_setsym(obj, gensym("varname"), gensym(data->varname.c_str()));
