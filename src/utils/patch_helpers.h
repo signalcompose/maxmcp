@@ -253,6 +253,19 @@ long restore_box_connections(t_object* patcher, t_object* new_box,
                              const std::vector<SavedConnection>& connections);
 
 /**
+ * @brief Find a patchline matching the given source/destination
+ *
+ * @param patcher The patcher to search in
+ * @param src_box Source box
+ * @param outlet Source outlet index
+ * @param dst_box Destination box
+ * @param inlet Destination inlet index
+ * @return The matching patchline object, or nullptr
+ */
+t_object* find_patchline(t_object* patcher, t_object* src_box, long outlet, t_object* dst_box,
+                         long inlet);
+
+/**
  * @brief Convert a single Max atom to a JSON value
  *
  * @param a The atom to convert

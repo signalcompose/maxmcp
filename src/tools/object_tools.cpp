@@ -464,9 +464,8 @@ static void assign_varnames_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
     // Validate patch has objects
     if (boxes.empty()) {
-        COMPLETE_DEFERRED(
-            data,
-            ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, "Patch has no objects"));
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                                       "Patch has no objects"));
         return;
     }
 

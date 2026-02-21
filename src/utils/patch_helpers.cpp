@@ -310,6 +310,17 @@ void restore_box_attributes(t_object* new_box, const std::vector<SavedAttribute>
     }
 }
 
+t_object* find_patchline(t_object* patcher, t_object* src_box, long outlet, t_object* dst_box,
+                         long inlet) {
+    for (t_object* line = jpatcher_get_firstline(patcher); line;
+         line = jpatchline_get_nextline(line)) {
+        if (jpatchline_get_box1(line) == src_box && jpatchline_get_outletnum(line) == outlet &&
+            jpatchline_get_box2(line) == dst_box && jpatchline_get_inletnum(line) == inlet)
+            return line;
+    }
+    return nullptr;
+}
+
 long restore_box_connections(t_object* patcher, t_object* new_box,
                              const std::vector<SavedConnection>& connections) {
     if (!patcher || !new_box)
@@ -326,17 +337,18 @@ long restore_box_connections(t_object* patcher, t_object* new_box,
         atom_setobj(&connect_args[2], dst_box);
         atom_setlong(&connect_args[3], conn.inlet);
 
-        t_atom result;
-        t_object* new_line =
-            (t_object*)object_method_typed(patcher, gensym("connect"), 4, connect_args, &result);
+        t_atom rv;
+        object_method_typed(patcher, gensym("connect"), 4, connect_args, &rv);
 
-        if (new_line) {
-            jpatchline_set_hidden(new_line, conn.hidden);
+        // Verify by scanning patchlines (connect return value is unreliable)
+        t_object* line = find_patchline(patcher, src_box, conn.outlet, dst_box, conn.inlet);
+        if (line) {
+            jpatchline_set_hidden(line, conn.hidden);
             t_jrgba color_copy = conn.color;
-            jpatchline_set_color(new_line, &color_copy);
+            jpatchline_set_color(line, &color_copy);
             if (!conn.midpoints.empty()) {
                 std::vector<double> midpts_copy(conn.midpoints);
-                object_attr_setdouble_array(new_line, gensym("midpoints"), (long)midpts_copy.size(),
+                object_attr_setdouble_array(line, gensym("midpoints"), (long)midpts_copy.size(),
                                             midpts_copy.data());
             }
             reconnected++;
