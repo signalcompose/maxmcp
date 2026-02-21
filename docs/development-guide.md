@@ -616,37 +616,41 @@ MaxMCP/
 
 ### 9.3 Testing Package (Build → Deploy → Test)
 
-Complete workflow for deploying and testing changes in Max:
+Two scripts handle the complete workflow:
+
+#### Phase 1: Build (`build.sh`)
+
+Configure, build, test, and install to `package/MaxMCP`:
 
 ```bash
-# 1. Build
-cmake --build build
-
-# 2. Run unit tests
-cd build && ctest --output-on-failure && cd ..
-
-# 3. Install to package directory
-cmake --install build --prefix package/MaxMCP
-
-# 4. Deploy to Max 9 Packages (remove old, copy new)
-rm -rf ~/Documents/Max\ 9/Packages/MaxMCP
-cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/MaxMCP
-
-# 5. Restart Max to load updated external
-# 6. Open test patch and verify functionality
+./build.sh              # Debug build (no tests)
+./build.sh --test       # Debug build with tests
+./build.sh Release      # Release build
+./build.sh --clean      # Clean build directory first
+./build.sh --test --clean  # Full clean rebuild with tests
 ```
 
-**One-liner** (build + install + deploy, without tests):
+#### Phase 2: Deploy (`deploy.sh`)
+
+Remove old package and deploy to Max 9 Packages:
 
 ```bash
-cmake --build build && \
-cmake --install build --prefix package/MaxMCP && \
-rm -rf ~/Documents/Max\ 9/Packages/MaxMCP && \
-cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/MaxMCP
+./deploy.sh
 ```
 
-> **Note**: Max must be restarted after deploying for changes to take effect.
-> If using Claude Code with MCP, Claude Code may also need to be restarted to reconnect.
+This script automatically:
+1. Removes the old `~/Documents/Max 9/Packages/MaxMCP`
+2. Copies the new package from `package/MaxMCP`
+
+#### Typical workflow
+
+```bash
+./build.sh --test && ./deploy.sh
+```
+
+After deploy:
+1. Restart Max to load the updated external
+2. If using Claude Code with MCP, restart Claude Code to reconnect
 
 ---
 

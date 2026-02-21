@@ -8,48 +8,34 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 **Architecture**: Claude Code ↔ stdio ↔ Node.js Bridge ↔ WebSocket ↔ maxmcp.mxo ↔ Max/MSP Patches
 
-## Build Commands
+## Build & Deploy
 
 ```bash
-# Configure (Debug)
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+# Build (configure + build + install to package/MaxMCP)
+./build.sh              # Debug build
+./build.sh --test       # Debug build with tests
+./build.sh Release      # Release build
+./build.sh --clean      # Clean build first
 
-# Configure with tests
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+# Deploy to Max 9 Packages (removes old package automatically)
+./deploy.sh
 
-# Build
-cmake --build build
-
-# Install to package directory
-cmake --install build --prefix package/MaxMCP
+# Typical workflow
+./build.sh --test && ./deploy.sh
 ```
 
-## Testing
+### Manual commands (for reference)
 
 ```bash
-# Run all tests
-cd build && ctest --output-on-failure
-
-# Run specific test suite
-ctest -R UUIDGenerator --verbose
-
-# Run with verbose output
-ctest -V
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+cmake --build build
+cd build && ctest --output-on-failure && cd ..
+cmake --install build --prefix package/MaxMCP
 ```
 
 **Test framework**: Google Test 1.17.0
 **Test files**: `tests/unit/test_*.cpp`
 **Test mode macro**: `MAXMCP_TEST_MODE` (enables compilation without Max SDK)
-
-## Installing Package Files to Max
-
-```bash
-# Install complete package (externals, examples, support files)
-cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/
-
-# Or install only the built external
-cp -R build/maxmcp.mxo ~/Documents/Max\ 9/Packages/MaxMCP/externals/
-```
 
 ## Code Quality
 
