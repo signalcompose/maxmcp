@@ -36,6 +36,7 @@ git branch --show-current  # Should output: develop
 # macOS
 brew install cmake
 brew install nlohmann-json
+brew install libwebsockets
 brew install googletest
 
 # Download Max SDK (if not already installed)
@@ -58,26 +59,22 @@ Read these documents in order:
 ### 4. Build the Project
 
 ```bash
-# Configure
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+# Build with tests
+./build.sh --test
 
-# Build
-cmake --build build
-
-# Run tests
-cd build
-ctest --output-on-failure
+# Or just build
+./build.sh
 ```
 
-### 5. Verify Installation
+### 5. Deploy and Verify
 
 ```bash
-# Copy to Max Library
-cp build/maxmcp.mxo ~/Documents/Max\ 9/Library/
+# Deploy to Max 9 Packages
+./deploy.sh
 
 # Open Max, create new patch
-# Add object: [maxmcp]
-# Check Max console for "MaxMCP initialized!"
+# Add object: [maxmcp @mode patch]
+# Check Max console for registration message
 ```
 
 ### 6. (Optional) Install Claude Code Plugin
@@ -90,14 +87,12 @@ If you're using Claude Code:
 
 # Install plugin
 /plugin install maxmcp@maxmcp
-
-# Build max-resources index (first-time setup)
-cd plugins/maxmcp/skills/max-resources/scripts
-./build-index.sh
 ```
 
 **Available Skills**:
 - `/maxmcp:patch-guidelines` - Guidelines for creating Max patches
+- `/maxmcp:max-techniques` - Max/MSP implementation techniques (poly~, pattr, etc.)
+- `/maxmcp:m4l-techniques` - Max for Live development techniques
 - `/maxmcp:max-resources` - Access Max.app built-in documentation
 
 ---
@@ -108,29 +103,43 @@ cd plugins/maxmcp/skills/max-resources/scripts
 MaxMCP/
 ├── docs/                    # Documentation (START HERE)
 │   ├── INDEX.md            # Documentation index
-│   ├── specifications.md   # Complete technical spec
-│   ├── requirements.md     # Functional requirements
+│   ├── mcp-tools-reference.md # Complete MCP tools reference
 │   ├── architecture.md     # System design
+│   ├── specifications.md   # Technical spec
 │   ├── development-guide.md # Development best practices
 │   └── research/           # Research findings
-├── src/                    # Source code
-│   ├── maxmcp.cpp         # Main external object
-│   ├── mcp_server.cpp     # MCP server implementation
-│   ├── tools/             # MCP tool implementations
+├── src/                    # C++ source code
+│   ├── maxmcp.cpp         # Unified external (agent + patch modes)
+│   ├── mcp_server.cpp     # MCP protocol handler (JSON-RPC)
+│   ├── websocket_server.cpp # libwebsockets-based WebSocket server
+│   ├── tools/             # MCP tool implementations (26 tools)
+│   │   ├── patch_tools.cpp
+│   │   ├── object_tools.cpp
+│   │   ├── connection_tools.cpp
+│   │   ├── state_tools.cpp
+│   │   ├── hierarchy_tools.cpp
+│   │   ├── utility_tools.cpp
+│   │   └── tool_common.cpp
 │   └── utils/             # Helper utilities
-├── tests/                  # Unit/integration tests
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
+│       ├── patch_helpers.cpp
+│       ├── patch_registry.cpp
+│       ├── console_logger.cpp
+│       └── uuid_generator.cpp
+├── tests/                  # Unit tests (Google Test)
+│   └── unit/
+├── package/                # Distributable Max package
+│   └── MaxMCP/
+│       ├── externals/     # maxmcp.mxo
+│       └── support/bridge/ # Node.js stdio-to-WebSocket bridge
 ├── plugins/                # Claude Code plugin
 │   └── maxmcp/
-│       ├── skills/patch-guidelines/   # Patch creation guidelines
-│       └── skills/max-resources/      # Max.app resource access
-├── examples/               # Example Max patches
-├── .claude/                # Claude Code configuration
-│   └── settings.json      # Security permissions
-├── .github/                # GitHub configuration
-│   └── pull_request_template.md
+│       └── skills/
+│           ├── patch-guidelines/   # Patch creation guidelines
+│           ├── max-techniques/     # Max/MSP techniques
+│           ├── m4l-techniques/     # Max for Live techniques
+│           └── max-resources/      # Max.app resource access
+├── build.sh                # Build script
+├── deploy.sh               # Deploy to Max 9 Packages
 ├── CMakeLists.txt          # Build configuration
 └── README.md               # Project overview
 ```
@@ -312,7 +321,7 @@ lldb /Applications/Max.app/Contents/MacOS/Max
 | Issue | Solution |
 |-------|----------|
 | Max crashes | Check if Max API called from wrong thread (use `defer_low()`) |
-| Object not found | Copy .mxo to `~/Documents/Max 9/Library/` |
+| Object not found | Run `./deploy.sh` to copy package to `~/Documents/Max 9/Packages/MaxMCP` |
 | Build fails | Ensure Max SDK path is correct in CMakeLists.txt |
 | Tests fail | Check if you're in `build/` directory |
 
