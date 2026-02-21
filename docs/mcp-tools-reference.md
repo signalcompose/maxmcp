@@ -1,7 +1,6 @@
 # MaxMCP MCP Tools Reference
 
-**Version**: 1.1.0
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-22
 
 This document provides a complete reference for all MCP tools available in MaxMCP.
 
@@ -9,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 24 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -18,7 +17,7 @@ MaxMCP provides 24 MCP tools for controlling Max/MSP patches through natural lan
 | Category | Count | Description |
 |----------|-------|-------------|
 | Patch Management | 3 | List, query, and manage patches |
-| Object Operations | 10 | Create, modify, replace, assign varnames, and query objects |
+| Object Operations | 12 | Create, modify, replace, assign varnames, and query objects |
 | Connection Operations | 4 | Create, remove, and manage patchcords |
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
@@ -192,6 +191,35 @@ Set an attribute of a Max object.
 }
 ```
 
+### `get_object_attribute`
+
+Get the value of an attribute of a Max object. Returns the current value of the specified attribute.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "varname": {"type": "string", "required": true},
+  "attribute": {"type": "string", "required": true, "description": "Attribute name (e.g., patching_rect, bgcolor, fontsize)"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "varname": "osc1",
+    "attribute": "patching_rect",
+    "value": [100, 200, 80, 22]
+  }
+}
+```
+
+**Notes**:
+- Returns scalar value for single-value attributes, array for multi-value attributes
+- Uses `object_attr_getvalueof()` internally
+- Returns an error if the attribute does not exist or has no value
+
 ### `get_object_io_info`
 
 Get inlet and outlet count for an object.
@@ -362,6 +390,32 @@ Assign varnames to objects identified by index. Use `get_objects_in_patch` first
 2. Identify objects without varnames
 3. Call `assign_varnames` with meaningful names based on object type/context
 4. Subsequent tools can now reference these objects by varname
+
+### `get_object_value`
+
+Get the current value of a Max object. Uses `object_getvalueof()` internally. Works with objects that implement the getvalueof interface (e.g., number boxes, flonum, sliders, dials).
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "varname": {"type": "string", "required": true}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "varname": "freq_num",
+    "value": 440
+  }
+}
+```
+
+**Notes**:
+- Returns a number or array depending on the object type
+- Returns an error if the object does not support `getvalueof` or has no value
 
 ---
 

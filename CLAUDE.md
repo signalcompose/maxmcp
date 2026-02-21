@@ -62,43 +62,16 @@ npm run format:check
 
 ### MCP Tools (26 total)
 
-#### Patch Management (3)
-1. `list_active_patches` - List registered patches
-2. `get_patch_info` - Get patch metadata
-3. `get_frontmost_patch` - Get currently focused patch
+Full tool reference with parameters and response formats: [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md)
 
-#### Object Operations (12)
-4. `add_max_object` - Create Max objects
-5. `remove_max_object` - Delete objects
-6. `get_objects_in_patch` - List objects in patch (with index, text, position, varname)
-7. `set_object_attribute` - Modify object attributes
-8. `get_object_attribute` - Read object attribute values
-9. `get_object_value` - Get current value via object_getvalueof()
-10. `get_object_io_info` - Get inlet/outlet counts
-11. `get_object_hidden` - Check visibility
-12. `set_object_hidden` - Set visibility
-13. `redraw_object` - Force redraw
-14. `replace_object_text` - Replace box text (recreates object, preserves connections)
-15. `assign_varnames` - Assign varnames to objects by index
-
-#### Connection Operations (4)
-16. `connect_max_objects` - Create patchcords
-17. `disconnect_max_objects` - Remove patchcords
-18. `get_patchlines` - Get patchcord information
-19. `set_patchline_midpoints` - Set patchcord routing points
-
-#### Patch State (3)
-20. `get_patch_lock_state` - Get lock state
-21. `set_patch_lock_state` - Set lock state
-22. `get_patch_dirty` - Check unsaved changes
-
-#### Hierarchy (2)
-23. `get_parent_patcher` - Get parent patcher
-24. `get_subpatchers` - List subpatchers
-
-#### Utilities (2)
-25. `get_console_log` - Retrieve Max Console messages
-26. `get_avoid_rect_position` - Find safe placement positions
+| Category | Count | Tools |
+|----------|-------|-------|
+| Patch Management | 3 | `list_active_patches`, `get_patch_info`, `get_frontmost_patch` |
+| Object Operations | 12 | `add_max_object`, `remove_max_object`, `get_objects_in_patch`, `set_object_attribute`, `get_object_attribute`, `get_object_value`, `get_object_io_info`, `get_object_hidden`, `set_object_hidden`, `redraw_object`, `replace_object_text`, `assign_varnames` |
+| Connection Operations | 4 | `connect_max_objects`, `disconnect_max_objects`, `get_patchlines`, `set_patchline_midpoints` |
+| Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
+| Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
+| Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
 
 ### Threading Model
 
