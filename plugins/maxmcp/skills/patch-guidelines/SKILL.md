@@ -143,6 +143,7 @@ For detailed guidelines, see:
 - [Layout Rules](reference/layout-rules.md) - Detailed positioning and spacing rules
 - [Architecture Patterns](reference/architecture-patterns.md) - Common subpatcher and signal flow patterns
 - [Naming Conventions](reference/naming-conventions.md) - Varname and object naming standards
+- [Object Internals](reference/object-internals.md) - Internal specifications (maxclass vs display differences)
 - [JavaScript Guide](reference/javascript-guide.md) - v8/v8ui scripting recommendations
 
 ## MCP Tools Quick Reference
