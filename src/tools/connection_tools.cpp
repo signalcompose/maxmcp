@@ -343,9 +343,9 @@ static void set_patchline_midpoints_deferred(t_maxmcp* patch, t_symbol* s, long 
         jpatcher_set_dirty(patcher, 1);
 
         // Read back for confirmation
-        long new_num = jpatchline_get_nummidpoints(line);
+        long new_num = line ? jpatchline_get_nummidpoints(line) : 0;
         json midpoints_out = json::array();
-        if (new_num > 0) {
+        if (line && new_num > 0) {
             long num_values = new_num * 2;
             std::vector<double> readback(num_values, 0.0);
             long got =

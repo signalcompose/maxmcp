@@ -525,6 +525,7 @@ static void get_value_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* 
 
     if (err != MAX_ERR_NONE || ac == 0) {
         if (av)
+            // SDK specifies freebytes for object_getvalueof output (not sysmem_freeptr)
             freebytes(av, ac * sizeof(t_atom));
         std::string msg = "Object does not support getvalueof or has no value: " + data->varname;
         ConsoleLogger::log(msg.c_str());
@@ -533,6 +534,7 @@ static void get_value_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* 
     }
 
     json value = PatchHelpers::atoms_to_json(ac, av);
+    // SDK specifies freebytes for object_getvalueof output (not sysmem_freeptr)
     freebytes(av, ac * sizeof(t_atom));
 
     ConsoleLogger::log(("Value read: " + data->varname).c_str());

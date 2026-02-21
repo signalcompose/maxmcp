@@ -26,6 +26,8 @@ std::string build_text_from_arguments(const nlohmann::json& arguments) {
         return "";
     }
 
+    // Index-based separator intentionally preserves positional spacing even for
+    // unsupported types, ensuring consistent argument mapping.
     std::string text;
     for (size_t i = 0; i < arguments.size(); ++i) {
         if (i > 0)
@@ -147,6 +149,8 @@ static void json_value_to_atom(t_atom& atom, const nlohmann::json& value) {
         atom_setfloat(&atom, value.get<double>());
     else if (value.is_string())
         atom_setsym(&atom, gensym(value.get<std::string>().c_str()));
+    else
+        atom_setlong(&atom, 0);
 }
 
 std::vector<t_atom> json_to_atoms(const nlohmann::json& value) {
