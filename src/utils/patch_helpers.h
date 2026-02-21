@@ -55,6 +55,31 @@ inline const std::unordered_set<std::string> kTextfieldContentTypes = {
 };
 
 /**
+ * @brief Attributes to always save during box replacement.
+ *
+ * These common box attributes may not have the save=1 meta-attribute
+ * set (especially when modified via API), so they are explicitly whitelisted
+ * to ensure properties are preserved across replace_object_text operations.
+ *
+ * Includes geometry (patching_rect, presentation_rect) and visual appearance.
+ */
+inline const std::unordered_set<std::string> kBoxAttributeWhitelist = {
+    // Geometry
+    "patching_rect",
+    "presentation_rect",
+    // Visual appearance
+    "bgcolor",
+    "textcolor",
+    "textcolor_inverse",
+    "fontname",
+    "fontsize",
+    "fontface",
+    "color",
+    "elementcolor",
+    "accentcolor",
+};
+
+/**
  * @brief Find a box in a patcher by its varname
  *
  * Iterates through all boxes in the patcher and returns the first
@@ -182,10 +207,10 @@ struct SavedConnection {
 std::string get_box_text(t_object* box);
 
 /**
- * @brief Save all saveable (save-flagged, writable) attributes of a box
+ * @brief Save all saveable attributes of a box
  *
- * Enumerates all attributes, checks the "save" meta-attribute and writability,
- * then collects their values as atom vectors.
+ * Enumerates all attributes and saves those that are writable AND either have
+ * the "save" meta-attribute set to 1 or are in kBoxAttributeWhitelist.
  *
  * @param box The box object to save attributes from
  * @return Vector of saved attributes

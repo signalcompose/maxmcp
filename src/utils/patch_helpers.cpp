@@ -222,12 +222,15 @@ std::vector<SavedAttribute> save_box_attributes(t_object* box) {
         if (!attr_obj)
             continue;
 
-        // Only save attributes with the "save" meta-attribute set to 1
-        if (object_attr_getlong(attr_obj, gensym("save")) != 1)
-            continue;
-
         // Only save writable attributes
         if (!object_attr_usercanset(box, attr_names[i]))
+            continue;
+
+        // Save if: has save=1 meta OR is in visual whitelist
+        bool has_save_meta = (object_attr_getlong(attr_obj, gensym("save")) == 1);
+        std::string attr_name = attr_names[i]->s_name ? attr_names[i]->s_name : "";
+        bool is_whitelisted = kBoxAttributeWhitelist.count(attr_name) > 0;
+        if (!has_save_meta && !is_whitelisted)
             continue;
 
         long ac = 0;
