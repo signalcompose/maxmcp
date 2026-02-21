@@ -2,7 +2,7 @@
 
 **Version**: 1.2.0
 **Last Updated**: 2026-02-21
-**Total Tools**: 25 MCP Tools
+**Total Tools**: 26 MCP Tools
 
 This document provides test cases for all MaxMCP MCP tools. Use these prompts with Claude Code to verify tool functionality.
 
@@ -33,7 +33,7 @@ Expected: A list containing your test patch with its patch_id.
 | Category | Tools | Section |
 |----------|-------|---------|
 | Patch Management | 3 | [Section 1](#1-patch-management) |
-| Object Operations | 11 | [Section 2](#2-object-operations) |
+| Object Operations | 12 | [Section 2](#2-object-operations) |
 | Connection Operations | 4 | [Section 3](#3-connection-operations) |
 | Patch State | 3 | [Section 4](#4-patch-state) |
 | Hierarchy | 2 | [Section 5](#5-hierarchy) |
@@ -318,6 +318,34 @@ Get the "bgcolor" of object "mybutton" in patch <patch_id>
 
 ---
 
+### 2.12 get_object_value
+
+**Purpose**: Get the current value of a Max object via `object_getvalueof()`.
+
+**Setup**: Create a number box and set its value.
+
+**Test Prompt**:
+```
+Get the current value of object "freq_num" in patch <patch_id>
+```
+
+**Expected Result**:
+- `varname`: the object's varname
+- `value`: current numeric value (scalar or array depending on object type)
+
+**Test Variations**:
+```
+Get the value of a flonum object in patch <patch_id>
+```
+
+**Error Test**:
+```
+Get the value of a button object (which doesn't support getvalueof)
+```
+Expected: Error about object not supporting getvalueof.
+
+---
+
 ## 3. Connection Operations
 
 ### 3.1 connect_max_objects
@@ -593,6 +621,7 @@ In patch <patch_id>:
 | redraw_object | ⬜ | |
 | replace_object_text | ⬜ | |
 | assign_varnames | ⬜ | |
+| get_object_value | ⬜ | |
 | connect_max_objects | ⬜ | |
 | disconnect_max_objects | ⬜ | |
 | get_patchlines | ⬜ | |
