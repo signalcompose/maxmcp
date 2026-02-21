@@ -3,11 +3,13 @@
  * Unit tests for ConsoleLogger
  */
 
-#include <gtest/gtest.h>
 #include "console_logger.h"
-#include <nlohmann/json.hpp>
+
 #include <thread>
 #include <vector>
+
+#include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -15,7 +17,7 @@ using json = nlohmann::json;
  * Test Fixture for ConsoleLogger
  */
 class ConsoleLoggerTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Clear log before each test
         ConsoleLogger::clear();
@@ -154,7 +156,8 @@ TEST_F(ConsoleLoggerTest, ThreadSafety) {
     for (int i = 0; i < 10; i++) {
         threads.push_back(std::thread([i]() {
             for (int j = 0; j < 100; j++) {
-                ConsoleLogger::log(("Thread " + std::to_string(i) + " Message " + std::to_string(j)).c_str());
+                ConsoleLogger::log(
+                    ("Thread " + std::to_string(i) + " Message " + std::to_string(j)).c_str());
             }
         }));
     }
