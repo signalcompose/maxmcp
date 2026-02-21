@@ -38,3 +38,37 @@ get_object_attribute: attribute = "format"
 ### Implications for Patch Analysis
 
 When analyzing a patch, do not assume `maxclass: "number"` means integer-only. Always check the `format` attribute to determine the actual number type.
+
+## get_object_value Compatibility
+
+`get_object_value` uses Max SDK's `object_getvalueof()` internally. Not all objects implement this interface.
+
+### Supported Objects
+
+| Object | Return Type | Notes |
+|--------|-------------|-------|
+| `number` (integer) | number | Current integer value |
+| `number` (flonum, format=6) | number | Current float value |
+| `toggle` | number | 0 (off) or 1 (on) |
+| `led` | number | 0 (off) or 1 (on) |
+| `textbutton` | number | 0 (off) or 1 (on) |
+| `tab` | number | Selected tab index (integer) |
+| `slider` | number | Current slider position (integer) |
+| `dial` | number | Current dial value |
+| `gain~` | number | Current gain value (integer) |
+| `live.gain~` | number | Current gain in dB (float) |
+| `multislider` | array | Array of slider values (float) |
+| `live.text` | number | 0.0 (off) or 1.0 (on), float |
+| `live.tab` | number | Selected tab index (float) |
+| `live.step` | array | Sequencer data (steps, notes, velocity, etc.) |
+| `live.grid` | array | Grid state (size, cell values, etc.) |
+| `textedit` | string | Text content |
+
+### Unsupported Objects
+
+| Object | Behavior |
+|--------|----------|
+| `message` | Returns object type info, not text content |
+| `comment` | Returns object type info, not text content |
+
+For message/comment text content, use `get_objects_in_patch` (which includes box text) or `replace_object_text` for modification. The `binbuf_totext()` API could support direct text retrieval in a future tool.

@@ -104,6 +104,12 @@ struct t_assign_varnames_data {
     ToolCommon::DeferredResult* deferred_result;
 };
 
+struct t_get_value_data {
+    t_maxmcp* patch;
+    std::string varname;
+    ToolCommon::DeferredResult* deferred_result;
+};
+
 // ============================================================================
 // Deferred Callbacks (run on main thread)
 // ============================================================================
@@ -493,166 +499,281 @@ static void assign_varnames_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
                                     {"assignments", assigned}}}}));
 }
 
+static void get_value_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("get_value_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_value_data, data, argv);
+
+    t_object* box = PatchHelpers::find_box_by_varname(data->patch->patcher, data->varname);
+
+    if (!box) {
+        std::string msg = "Object not found: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
+        return;
+    }
+
+    long ac = 0;
+    t_atom* av = nullptr;
+    t_max_err err = object_getvalueof(box, &ac, &av);
+
+    if (err != MAX_ERR_NONE || ac == 0) {
+        if (av)
+            freebytes(av, ac * sizeof(t_atom));
+        std::string msg = "Object does not support getvalueof or has no value: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
+        return;
+    }
+
+    json value = PatchHelpers::atoms_to_json(ac, av);
+    freebytes(av, ac * sizeof(t_atom));
+
+    ConsoleLogger::log(("Value read: " + data->varname).c_str());
+    COMPLETE_DEFERRED(data, (json{{"result", {{"varname", data->varname}, {"value", value}}}}));
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
 // Tool Schemas
 // ============================================================================
 
+// clang-format off
 json get_tool_schemas() {
-    return json::array(
-        {{{"name", "add_max_object"},
-          {"description", "Add a Max object to a patch"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to add object to"}}},
-              {"obj_type",
-               {{"type", "string"},
-                {"description", "Max object type (e.g., 'number', 'button', 'dac~')"}}},
-              {"position",
-               {{"type", "array"},
-                {"items", {{"type", "number"}}},
-                {"description", "Position [x, y] in patch"}}},
-              {"varname",
-               {{"type", "string"}, {"description", "Variable name for the object (optional)"}}},
-              {"arguments",
-               {{"type", "array"}, {"description", "Object arguments (e.g., [440] for 'cycle~')"}}},
-              {"attributes",
-               {{"type", "object"},
-                {"description",
-                 "Object attributes (e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]})"}}}}},
-            {"required", json::array({"patch_id", "obj_type", "position"})}}}},
-
-         {{"name", "remove_max_object"},
-          {"description", "Remove a Max object from a patch by varname"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
-              {"varname",
-               {{"type", "string"}, {"description", "Variable name of the object to remove"}}}}},
-            {"required", json::array({"patch_id", "varname"})}}}},
-
-         {{"name", "get_objects_in_patch"},
-          {"description", "List all objects in a patch with metadata"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
-            {"required", json::array({"patch_id"})}}}},
-
-         {{"name", "set_object_attribute"},
-          {"description", "Set an attribute of a Max object. "
-                          "Supports scalar (number, string) and array values. "
-                          "Array examples: patching_rect [x, y, width, height], "
-                          "patching_position [x, y], bgcolor [r, g, b, a]"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
-              {"attribute", {{"type", "string"}, {"description", "Attribute name to set"}}},
-              {"value",
-               {{"description", "Attribute value (number, string, or array). "
-                                "e.g. 440, \"hello\", [100, 200, 300, 50]"}}}}},
-            {"required", json::array({"patch_id", "varname", "attribute", "value"})}}}},
-
-         {{"name", "get_object_attribute"},
-          {"description", "Get the value of an attribute of a Max object. "
-                          "Returns the current value of the specified attribute."},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
-              {"attribute",
-               {{"type", "string"},
-                {"description",
-                 "Attribute name to get (e.g., patching_rect, bgcolor, fontsize)"}}}}},
-            {"required", json::array({"patch_id", "varname", "attribute"})}}}},
-
-         {{"name", "get_object_io_info"},
-          {"description", "Get inlet and outlet count for an object"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}}},
-            {"required", json::array({"patch_id", "varname"})}}}},
-
-         {{"name", "get_object_hidden"},
-          {"description", "Check if an object is hidden"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}}},
-            {"required", json::array({"patch_id", "varname"})}}}},
-
-         {{"name", "set_object_hidden"},
-          {"description", "Set the visibility of an object in a patch"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
-              {"hidden", {{"type", "boolean"}, {"description", "true=hide, false=show"}}}}},
-            {"required", json::array({"patch_id", "varname", "hidden"})}}}},
-
-         {{"name", "redraw_object"},
-          {"description", "Force redraw of a specific object"},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
-              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}}},
-            {"required", json::array({"patch_id", "varname"})}}}},
-
-         {{"name", "replace_object_text"},
-          {"description",
-           "Replace the box text of an existing Max object by deleting and recreating it. "
-           "All patchcord connections are automatically saved and restored. "
-           "For regular objects, new_text is the full box text (e.g., 'cycle~ 880'). "
-           "For message/comment/textedit, new_text is the displayed text content."},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
-              {"varname",
-               {{"type", "string"},
-                {"description", "Variable name of the object to replace text for"}}},
-              {"new_text",
-               {{"type", "string"},
-                {"description", "New box text. For regular objects: full text including class "
-                                "(e.g., 'cycle~ 880'). For message/comment/textedit: the displayed "
-                                "text content."}}}}},
-            {"required", json::array({"patch_id", "varname", "new_text"})}}}},
-
-         {{"name", "assign_varnames"},
-          {"description",
-           "Assign varnames to objects identified by index. Use get_objects_in_patch first "
-           "to get object indices, then assign meaningful varnames based on object type and "
-           "context. Existing varnames can be overwritten."},
-          {"inputSchema",
-           {{"type", "object"},
-            {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
-              {"assignments",
-               {{"type", "array"},
-                {"items",
-                 {{"type", "object"},
-                  {"properties",
-                   {{"index",
-                     {{"type", "integer"},
-                      {"description", "Object index from get_objects_in_patch"}}},
-                    {"varname",
-                     {{"type", "string"},
-                      {"description", "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}}}}},
-                  {"required", json::array({"index", "varname"})}}},
-                {"description", "Array of index-varname pairs to assign"}}}}},
-            {"required", json::array({"patch_id", "assignments"})}}}}});
+    return json::array({
+        // ---- add_max_object ----
+        {
+            {"name", "add_max_object"},
+            {"description", "Add a Max object to a patch"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID to add object to"}}},
+                    {"obj_type", {
+                        {"type", "string"},
+                        {"description", "Max object type (e.g., 'number', 'button', 'dac~')"}
+                    }},
+                    {"position", {
+                        {"type", "array"},
+                        {"items", {{"type", "number"}}},
+                        {"description", "Position [x, y] in patch"}
+                    }},
+                    {"varname", {
+                        {"type", "string"},
+                        {"description", "Variable name for the object (optional)"}
+                    }},
+                    {"arguments", {
+                        {"type", "array"},
+                        {"description", "Object arguments (e.g., [440] for 'cycle~')"}
+                    }},
+                    {"attributes", {
+                        {"type", "object"},
+                        {"description", "Object attributes (e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]})"}
+                    }}
+                }},
+                {"required", json::array({"patch_id", "obj_type", "position"})}
+            }}
+        },
+        // ---- remove_max_object ----
+        {
+            {"name", "remove_max_object"},
+            {"description", "Remove a Max object from a patch by varname"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object to remove"}}}
+                }},
+                {"required", json::array({"patch_id", "varname"})}
+            }}
+        },
+        // ---- get_objects_in_patch ----
+        {
+            {"name", "get_objects_in_patch"},
+            {"description", "List all objects in a patch with metadata"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}
+                }},
+                {"required", json::array({"patch_id"})}
+            }}
+        },
+        // ---- set_object_attribute ----
+        {
+            {"name", "set_object_attribute"},
+            {"description",
+                "Set an attribute of a Max object. "
+                "Supports scalar (number, string) and array values. "
+                "Array examples: patching_rect [x, y, width, height], "
+                "patching_position [x, y], bgcolor [r, g, b, a]"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
+                    {"attribute", {{"type", "string"}, {"description", "Attribute name to set"}}},
+                    {"value", {
+                        {"description",
+                            "Attribute value (number, string, or array). "
+                            "e.g. 440, \"hello\", [100, 200, 300, 50]"}
+                    }}
+                }},
+                {"required", json::array({"patch_id", "varname", "attribute", "value"})}
+            }}
+        },
+        // ---- get_object_attribute ----
+        {
+            {"name", "get_object_attribute"},
+            {"description",
+                "Get the value of an attribute of a Max object. "
+                "Returns the current value of the specified attribute."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
+                    {"attribute", {
+                        {"type", "string"},
+                        {"description", "Attribute name to get (e.g., patching_rect, bgcolor, fontsize)"}
+                    }}
+                }},
+                {"required", json::array({"patch_id", "varname", "attribute"})}
+            }}
+        },
+        // ---- get_object_io_info ----
+        {
+            {"name", "get_object_io_info"},
+            {"description", "Get inlet and outlet count for an object"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}
+                }},
+                {"required", json::array({"patch_id", "varname"})}
+            }}
+        },
+        // ---- get_object_hidden ----
+        {
+            {"name", "get_object_hidden"},
+            {"description", "Check if an object is hidden"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}
+                }},
+                {"required", json::array({"patch_id", "varname"})}
+            }}
+        },
+        // ---- set_object_hidden ----
+        {
+            {"name", "set_object_hidden"},
+            {"description", "Set the visibility of an object in a patch"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
+                    {"hidden", {{"type", "boolean"}, {"description", "true=hide, false=show"}}}
+                }},
+                {"required", json::array({"patch_id", "varname", "hidden"})}
+            }}
+        },
+        // ---- redraw_object ----
+        {
+            {"name", "redraw_object"},
+            {"description", "Force redraw of a specific object"},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}
+                }},
+                {"required", json::array({"patch_id", "varname"})}
+            }}
+        },
+        // ---- replace_object_text ----
+        {
+            {"name", "replace_object_text"},
+            {"description",
+                "Replace the box text of an existing Max object by deleting and recreating it. "
+                "All patchcord connections are automatically saved and restored. "
+                "For regular objects, new_text is the full box text (e.g., 'cycle~ 880'). "
+                "For message/comment/textedit, new_text is the displayed text content."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {
+                        {"type", "string"},
+                        {"description", "Variable name of the object to replace text for"}
+                    }},
+                    {"new_text", {
+                        {"type", "string"},
+                        {"description",
+                            "New box text. For regular objects: full text including class "
+                            "(e.g., 'cycle~ 880'). For message/comment/textedit: the displayed "
+                            "text content."}
+                    }}
+                }},
+                {"required", json::array({"patch_id", "varname", "new_text"})}
+            }}
+        },
+        // ---- assign_varnames ----
+        {
+            {"name", "assign_varnames"},
+            {"description",
+                "Assign varnames to objects identified by index. Use get_objects_in_patch first "
+                "to get object indices, then assign meaningful varnames based on object type and "
+                "context. Existing varnames can be overwritten."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+                    {"assignments", {
+                        {"type", "array"},
+                        {"items", {
+                            {"type", "object"},
+                            {"properties", {
+                                {"index", {
+                                    {"type", "integer"},
+                                    {"description", "Object index from get_objects_in_patch"}
+                                }},
+                                {"varname", {
+                                    {"type", "string"},
+                                    {"description", "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}
+                                }}
+                            }},
+                            {"required", json::array({"index", "varname"})}
+                        }},
+                        {"description", "Array of index-varname pairs to assign"}
+                    }}
+                }},
+                {"required", json::array({"patch_id", "assignments"})}
+            }}
+        },
+        // ---- get_object_value ----
+        {
+            {"name", "get_object_value"},
+            {"description",
+                "Get the current value of a Max object. Uses object_getvalueof() internally. "
+                "Works with objects that implement the getvalueof interface "
+                "(e.g., number boxes, flonum, sliders, dials). "
+                "Returns the value as a number or array depending on the object type."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+                    {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}
+                }},
+                {"required", json::array({"patch_id", "varname"})}
+            }}
+        }
+    });
 }
+// clang-format on
 
 // ============================================================================
 // Tool Execution
@@ -1088,6 +1209,37 @@ json execute_assign_varnames(const json& params) {
     return result;
 }
 
+json execute_get_object_value(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_get_value_data{patch, varname, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_value_deferred, gensym("get_value"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting object value");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 json execute(const std::string& tool, const json& params) {
@@ -1096,7 +1248,7 @@ json execute(const std::string& tool, const json& params) {
         tool == "set_object_attribute" || tool == "get_object_attribute" ||
         tool == "get_object_io_info" || tool == "get_object_hidden" ||
         tool == "set_object_hidden" || tool == "redraw_object" || tool == "replace_object_text" ||
-        tool == "assign_varnames") {
+        tool == "assign_varnames" || tool == "get_object_value") {
         return ToolCommon::test_mode_error();
     }
     return nullptr;
@@ -1123,6 +1275,8 @@ json execute(const std::string& tool, const json& params) {
         return execute_replace_object_text(params);
     } else if (tool == "assign_varnames") {
         return execute_assign_varnames(params);
+    } else if (tool == "get_object_value") {
+        return execute_get_object_value(params);
     }
 
     return nullptr;

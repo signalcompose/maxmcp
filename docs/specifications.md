@@ -278,6 +278,7 @@ class MaxMCP {
    - `remove_max_object(patch_id, varname)`
    - `set_object_attribute(patch_id, varname, attr_name, value)`
    - `get_object_attribute(patch_id, varname, attr_name)` - Get attribute value
+   - `get_object_value(patch_id, varname)` - Get current value via object_getvalueof()
 
 6. **Connection Management**
    - `connect_max_objects(patch_id, src, outlet, dst, inlet)`

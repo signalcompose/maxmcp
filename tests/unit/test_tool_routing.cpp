@@ -57,9 +57,9 @@ TEST_F(ToolSchemaTest, PatchToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
     auto schemas = ObjectTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 11)
-        << "ObjectTools should have 11 tools (add, remove, get_objects, set_attr, get_attr, "
-           "get_io, get_hidden, set_hidden, redraw, replace_text, assign_varnames)";
+    ASSERT_EQ(schemas.size(), 12)
+        << "ObjectTools should have 12 tools (add, remove, get_objects, set_attr, get_attr, "
+           "get_value, get_io, get_hidden, set_hidden, redraw, replace_text, assign_varnames)";
 }
 
 TEST_F(ToolSchemaTest, ConnectionToolsSchemaCount) {
@@ -91,7 +91,7 @@ TEST_F(ToolSchemaTest, TotalToolCount) {
         PatchTools::get_tool_schemas().size() + ObjectTools::get_tool_schemas().size() +
         ConnectionTools::get_tool_schemas().size() + StateTools::get_tool_schemas().size() +
         HierarchyTools::get_tool_schemas().size() + UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 25) << "Total tool count should be 25";
+    EXPECT_EQ(total, 26) << "Total tool count should be 26";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
@@ -238,7 +238,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 25) << "tools/list should return all 25 tools";
+    EXPECT_EQ(tools.size(), 26) << "tools/list should return all 26 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {

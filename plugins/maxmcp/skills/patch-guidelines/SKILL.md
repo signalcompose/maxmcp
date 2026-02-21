@@ -156,6 +156,7 @@ For detailed guidelines, see:
 | `get_patch_info` | Get patch metadata |
 | `add_max_object` | Create a new object |
 | `set_object_attribute` | Modify object properties |
+| `get_object_value` | Get current value (number, slider, etc.) |
 | `connect_max_objects` | Create patchcord |
 | `disconnect_max_objects` | Remove patchcord |
 | `get_patchlines` | List all patchcords with coordinates and midpoints |
