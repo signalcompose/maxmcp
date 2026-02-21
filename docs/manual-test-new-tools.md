@@ -1,8 +1,8 @@
 # MaxMCP Manual Testing Guide
 
-**Version**: 1.1.0
-**Last Updated**: 2026-02-04
-**Total Tools**: 20 MCP Tools
+**Version**: 1.2.0
+**Last Updated**: 2026-02-21
+**Total Tools**: 25 MCP Tools
 
 This document provides test cases for all MaxMCP MCP tools. Use these prompts with Claude Code to verify tool functionality.
 
@@ -33,8 +33,8 @@ Expected: A list containing your test patch with its patch_id.
 | Category | Tools | Section |
 |----------|-------|---------|
 | Patch Management | 3 | [Section 1](#1-patch-management) |
-| Object Operations | 8 | [Section 2](#2-object-operations) |
-| Connection Operations | 2 | [Section 3](#3-connection-operations) |
+| Object Operations | 11 | [Section 2](#2-object-operations) |
+| Connection Operations | 4 | [Section 3](#3-connection-operations) |
 | Patch State | 3 | [Section 4](#4-patch-state) |
 | Hierarchy | 2 | [Section 5](#5-hierarchy) |
 | Utilities | 2 | [Section 6](#6-utilities) |
@@ -252,6 +252,72 @@ Redraw object "myobject" in patch <patch_id>
 
 ---
 
+### 2.9 replace_object_text
+
+**Purpose**: Replace the box text of an existing Max object by deleting and recreating it. All patchcord connections are automatically saved and restored.
+
+**Test Prompt**:
+```
+Replace the text of object "osc1" with "cycle~ 880" in patch <patch_id>
+```
+
+**Expected Result**:
+- Object recreated with new text
+- `old_text`: previous box text
+- `reconnected`: number of restored connections
+- All previous connections preserved
+
+**Test Variations**:
+```
+Change message object "msg1" text to "hello world"
+```
+
+---
+
+### 2.10 assign_varnames
+
+**Purpose**: Assign varnames to objects identified by index. Use `get_objects_in_patch` first to get object indices.
+
+**Setup**: Create objects without varnames (e.g., via Max GUI).
+
+**Test Prompt**:
+```
+List objects in patch <patch_id>, then assign varname "my_osc" to the cycle~ object
+```
+
+**Expected Result**:
+- `assigned`: number of successful assignments
+- `assignments`: array with index, maxclass, and varname for each
+- Objects now accessible by varname
+
+**Error Test**:
+```
+Assign duplicate varname "osc1" to two different objects
+```
+Expected: Error about duplicate varname.
+
+---
+
+### 2.11 get_object_attribute
+
+**Purpose**: Read the current value of an attribute from a Max object.
+
+**Test Prompt**:
+```
+Get the "patching_rect" attribute of object "osc1" in patch <patch_id>
+```
+
+**Expected Result**:
+- `attribute`: name of the attribute
+- `value`: current value (array for rect, number for scalar, etc.)
+
+**Test Variations**:
+```
+Get the "bgcolor" of object "mybutton" in patch <patch_id>
+```
+
+---
+
 ## 3. Connection Operations
 
 ### 3.1 connect_max_objects
@@ -285,6 +351,45 @@ Disconnect outlet 0 of "osc1" from inlet 0 of "output" in patch <patch_id>
 **Expected Result**:
 - Patchcord removed
 - Success status returned
+
+---
+
+### 3.3 get_patchlines
+
+**Purpose**: List all patchlines (connections) in a patch with metadata including source/destination, coordinates, color, and visibility.
+
+**Setup**: Create a patch with several connected objects.
+
+**Test Prompt**:
+```
+List all connections in patch <patch_id>
+```
+
+**Expected Result**:
+- Array of patchlines with `src_varname`, `src_outlet`, `dst_varname`, `dst_inlet`
+- Optional `midpoints` array with `{x, y}` coordinates for folded patchcords
+- `color`, `hidden` metadata
+
+---
+
+### 3.4 set_patchline_midpoints
+
+**Purpose**: Set midpoint coordinates for a patchcord. Pass an array of `{x, y}` objects to fold the cord, or an empty array to straighten it.
+
+**Test Prompt**:
+```
+Set midpoints for the connection from "osc1" outlet 0 to "gain1" inlet 0 to [{x: 150, y: 200}, {x: 150, y: 250}]
+```
+
+**Expected Result**:
+- Patchcord routed through specified midpoints
+- Success status
+
+**Straighten Test**:
+```
+Remove all midpoints from the connection between "osc1" and "gain1"
+```
+Expected: Patchcord becomes straight line.
 
 ---
 
@@ -481,12 +586,17 @@ In patch <patch_id>:
 | remove_max_object | ⬜ | |
 | get_objects_in_patch | ⬜ | |
 | set_object_attribute | ⬜ | |
+| get_object_attribute | ⬜ | |
 | get_object_io_info | ⬜ | |
 | get_object_hidden | ⬜ | |
 | set_object_hidden | ⬜ | |
 | redraw_object | ⬜ | |
+| replace_object_text | ⬜ | |
+| assign_varnames | ⬜ | |
 | connect_max_objects | ⬜ | |
 | disconnect_max_objects | ⬜ | |
+| get_patchlines | ⬜ | |
+| set_patchline_midpoints | ⬜ | |
 | get_patch_lock_state | ⬜ | |
 | set_patch_lock_state | ⬜ | |
 | get_patch_dirty | ⬜ | |
@@ -515,6 +625,108 @@ In patch <patch_id>:
 - Patch may be locked - unlock first
 - Position may be outside visible area
 - Check z-order (object may be behind others)
+
+---
+
+## MCP Direct Call Test
+
+Claude Code の MCP ツールを直接呼び出して動作確認するテスト手順。リファクタリングや新ツール追加後の回帰テストに使用する。
+
+### Prerequisites
+
+1. `./build.sh --test && ./deploy.sh` でビルド・デプロイ済み
+2. Max 9 を再起動して新しい external をロード
+3. `maxmcp @mode patch` を含むパッチが開いている
+4. Claude Code (VSCode) を再起動して MCP サーバー接続をリフレッシュ
+
+### Test Sequence
+
+以下の順序で MCP ツールを直接呼び出す。各ツールの戻り値で `status: "success"` またはエラーなしの結果を確認する。
+
+#### Step 1: Connection Verification
+
+```
+list_active_patches → パッチ一覧と patch_id を取得
+```
+
+#### Step 2: Object Creation
+
+```
+add_max_object(patch_id, obj_type="cycle~", position=[100,100], arguments=[440], varname="osc_test")
+add_max_object(patch_id, obj_type="message", position=[100,50], arguments=["hello world"], varname="msg_test")
+add_max_object(patch_id, obj_type="number", position=[300,100])  // varname なし
+```
+
+#### Step 3: Object Query
+
+```
+get_objects_in_patch(patch_id)
+→ 確認: index, text, varname フィールドが存在すること
+```
+
+#### Step 4: Attribute Operations
+
+```
+set_object_attribute(patch_id, varname="osc_test", attribute="patching_rect", value=[200,200,120,22])
+get_object_attribute(patch_id, varname="osc_test", attribute="patching_rect")
+→ 確認: 設定した値 [200,200,120,22] が返ること
+```
+
+#### Step 5: I/O Info
+
+```
+get_object_io_info(patch_id, varname="osc_test")
+→ 確認: inlet_count=2, outlet_count=1 (cycle~ の場合)
+```
+
+#### Step 6: Visibility
+
+```
+get_object_hidden(patch_id, varname="osc_test") → hidden=false
+set_object_hidden(patch_id, varname="osc_test", hidden=true) → success
+set_object_hidden(patch_id, varname="osc_test", hidden=false) → success
+redraw_object(patch_id, varname="osc_test") → success
+```
+
+#### Step 7: Replace Text
+
+```
+replace_object_text(patch_id, varname="osc_test", new_text="cycle~ 880")
+→ 確認: status=success, old_text が返ること
+```
+
+#### Step 8: Assign Varnames
+
+```
+get_objects_in_patch(patch_id) → varname なしオブジェクトの index を確認
+assign_varnames(patch_id, assignments=[{index: <N>, varname: "num_test"}])
+→ 確認: assigned=1
+```
+
+#### Step 9: Cleanup
+
+```
+remove_max_object(patch_id, varname="num_test") → success
+remove_max_object(patch_id, varname="osc_test") → success
+remove_max_object(patch_id, varname="msg_test") → success
+```
+
+### Expected Results (All Pass)
+
+| Tool | Expected |
+|------|----------|
+| list_active_patches | count >= 1, patch_id 取得 |
+| add_max_object | status: success, varname 返却 |
+| get_objects_in_patch | count, objects with index/text/varname |
+| set_object_attribute | status: success |
+| get_object_attribute | 設定した値が返る |
+| get_object_io_info | inlet_count, outlet_count |
+| get_object_hidden | hidden: false |
+| set_object_hidden | success, hidden 値変更 |
+| redraw_object | success |
+| replace_object_text | status: success, old_text |
+| assign_varnames | assigned: 1 |
+| remove_max_object | status: success |
 
 ---
 

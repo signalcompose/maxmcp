@@ -658,431 +658,473 @@ json get_tool_schemas() {
 // Tool Execution
 // ============================================================================
 
-json execute(const std::string& tool, const json& params) {
-#ifdef MAXMCP_TEST_MODE
-    return ToolCommon::test_mode_error();
-#else
-    if (tool == "add_max_object") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string obj_type = params.value("obj_type", "");
-        std::string varname = params.value("varname", "");
-        json arguments = params.value("arguments", json::array());
-
-        json attributes = json::object();
-        if (params.contains("attributes")) {
-            if (params["attributes"].is_string()) {
-                try {
-                    attributes = json::parse(params["attributes"].get<std::string>());
-                } catch (const json::exception& e) {
-                    return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                                  "Invalid attributes JSON: " +
-                                                      std::string(e.what()));
-                }
-            } else if (params["attributes"].is_object()) {
-                attributes = params["attributes"];
-            }
-        }
-
-        if (patch_id.empty() || obj_type.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and obj_type");
-        }
-
-        if (!params.contains("position") || !params["position"].is_array() ||
-            params["position"].size() < 2) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Invalid position parameter: must be array [x, y]");
-        }
-
-        double x = params["position"][0].get<double>();
-        double y = params["position"][1].get<double>();
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_add_object_data{patch,   obj_type,  x,          y,
-                                           varname, arguments, attributes, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)add_object_deferred, gensym("add_object"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("creating object");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
-
-    } else if (tool == "remove_max_object") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-
-        if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and varname");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_remove_object_data{patch, varname, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("removing object");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
-
-    } else if (tool == "get_objects_in_patch") {
-        std::string patch_id = params.value("patch_id", "");
-
-        if (patch_id.empty()) {
-            return ToolCommon::missing_param_error("patch_id");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        t_get_objects_data* data = new t_get_objects_data{patch, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("waiting for patch object list");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return {{"result", result}};
-
-    } else if (tool == "set_object_attribute") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-        std::string attribute = params.value("attribute", "");
-
-        if (patch_id.empty() || varname.empty() || attribute.empty()) {
-            return ToolCommon::make_error(
-                ToolCommon::ErrorCode::INVALID_PARAMS,
-                "Missing required parameters: patch_id, varname, and attribute");
-        }
-
-        if (!params.contains("value")) {
-            return ToolCommon::missing_param_error("value");
-        }
-
-        json value = params["value"];
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_set_attribute_data{patch, varname, attribute, value, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("setting attribute");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
-
-    } else if (tool == "get_object_attribute") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-        std::string attribute = params.value("attribute", "");
-
-        if (patch_id.empty() || varname.empty() || attribute.empty()) {
-            return ToolCommon::make_error(
-                ToolCommon::ErrorCode::INVALID_PARAMS,
-                "Missing required parameters: patch_id, varname, and attribute");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_get_attribute_data{patch, varname, attribute, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_attribute_deferred, gensym("get_attribute"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("getting attribute");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
-
-    } else if (tool == "get_object_io_info") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-
-        if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and varname");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        t_get_io_info_data* data = new t_get_io_info_data{patch, varname, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_io_info_deferred, gensym("get_io_info"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("getting I/O info");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-
-        if (result.contains("error")) {
-            return result;
-        }
-        return {{"result", result}};
-
-    } else if (tool == "get_object_hidden") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-
-        if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and varname");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        t_get_hidden_data* data = new t_get_hidden_data{patch, varname, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_hidden_deferred, gensym("get_hidden"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("getting hidden state");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-
-        if (result.contains("error")) {
-            return result;
-        }
-        return {{"result", result}};
-
-    } else if (tool == "set_object_hidden") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-
-        if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and varname");
-        }
-
-        if (!params.contains("hidden") || !params["hidden"].is_boolean()) {
-            return ToolCommon::missing_param_error("hidden");
-        }
-
-        bool hidden = params["hidden"].get<bool>();
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        t_set_hidden_data* data = new t_set_hidden_data{patch, varname, hidden, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)set_hidden_deferred, gensym("set_hidden"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("setting hidden state");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-
-        if (result.contains("error")) {
-            return result;
-        }
-        return {{"result", result}};
-
-    } else if (tool == "redraw_object") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-
-        if (patch_id.empty() || varname.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "Missing required parameters: patch_id and varname");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        t_redraw_data* data = new t_redraw_data{patch, varname, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)redraw_deferred, gensym("redraw"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("redrawing object");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-
-        if (result.contains("error")) {
-            return result;
-        }
-        return {{"result", result}};
-
-    } else if (tool == "replace_object_text") {
-        std::string patch_id = params.value("patch_id", "");
-        std::string varname = params.value("varname", "");
-        std::string new_text = params.value("new_text", "");
-
-        if (patch_id.empty() || varname.empty() || new_text.empty()) {
-            return ToolCommon::make_error(
-                ToolCommon::ErrorCode::INVALID_PARAMS,
-                "Missing required parameters: patch_id, varname, and new_text");
-        }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_replace_text_data{patch, varname, new_text, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)replace_object_text_deferred, gensym("replace_object_text"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("replacing object text");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
-
-    } else if (tool == "assign_varnames") {
-        std::string patch_id = params.value("patch_id", "");
-
-        if (patch_id.empty()) {
-            return ToolCommon::missing_param_error("patch_id");
-        }
-
-        if (!params.contains("assignments") || !params["assignments"].is_array()) {
-            return ToolCommon::missing_param_error("assignments");
-        }
-
-        json assignments = params["assignments"];
-
-        if (assignments.empty()) {
-            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                          "assignments array must not be empty");
-        }
-
-        // Validate each assignment and check for duplicate varnames
-        std::set<std::string> seen_varnames;
-        for (const auto& a : assignments) {
-            if (!a.contains("index") || !a["index"].is_number_integer()) {
+#ifndef MAXMCP_TEST_MODE
+
+json execute_add_max_object(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string obj_type = params.value("obj_type", "");
+    std::string varname = params.value("varname", "");
+    json arguments = params.value("arguments", json::array());
+
+    json attributes = json::object();
+    if (params.contains("attributes")) {
+        if (params["attributes"].is_string()) {
+            try {
+                attributes = json::parse(params["attributes"].get<std::string>());
+            } catch (const json::exception& e) {
                 return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                              "Each assignment must have an integer 'index'");
+                                              "Invalid attributes JSON: " + std::string(e.what()));
             }
-            if (!a.contains("varname") || !a["varname"].is_string() ||
-                a["varname"].get<std::string>().empty()) {
-                return ToolCommon::make_error(
-                    ToolCommon::ErrorCode::INVALID_PARAMS,
-                    "Each assignment must have a non-empty string 'varname'");
-            }
-            std::string vn = a["varname"].get<std::string>();
-            if (seen_varnames.count(vn)) {
-                return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
-                                              "Duplicate varname: " + vn);
-            }
-            seen_varnames.insert(vn);
+        } else if (params["attributes"].is_object()) {
+            attributes = params["attributes"];
         }
-
-        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
-        if (!patch) {
-            return ToolCommon::patch_not_found_error(patch_id);
-        }
-
-        auto* deferred_result = new ToolCommon::DeferredResult();
-        auto* data = new t_assign_varnames_data{patch, assignments, deferred_result};
-
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)assign_varnames_deferred, gensym("assign_varnames"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("assigning varnames");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return result;
     }
 
-    // Tool not handled by this module - return nullptr to signal routing should continue
+    if (patch_id.empty() || obj_type.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and obj_type");
+    }
+
+    if (!params.contains("position") || !params["position"].is_array() ||
+        params["position"].size() < 2) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Invalid position parameter: must be array [x, y]");
+    }
+
+    double x = params["position"][0].get<double>();
+    double y = params["position"][1].get<double>();
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_add_object_data{patch,   obj_type,  x,          y,
+                                       varname, arguments, attributes, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)add_object_deferred, gensym("add_object"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("creating object");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+json execute_remove_max_object(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_remove_object_data{patch, varname, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("removing object");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+json execute_get_objects_in_patch(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+
+    if (patch_id.empty()) {
+        return ToolCommon::missing_param_error("patch_id");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    t_get_objects_data* data = new t_get_objects_data{patch, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("waiting for patch object list");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return {{"result", result}};
+}
+
+json execute_set_object_attribute(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+    std::string attribute = params.value("attribute", "");
+
+    if (patch_id.empty() || varname.empty() || attribute.empty()) {
+        return ToolCommon::make_error(
+            ToolCommon::ErrorCode::INVALID_PARAMS,
+            "Missing required parameters: patch_id, varname, and attribute");
+    }
+
+    if (!params.contains("value")) {
+        return ToolCommon::missing_param_error("value");
+    }
+
+    json value = params["value"];
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_set_attribute_data{patch, varname, attribute, value, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("setting attribute");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+json execute_get_object_attribute(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+    std::string attribute = params.value("attribute", "");
+
+    if (patch_id.empty() || varname.empty() || attribute.empty()) {
+        return ToolCommon::make_error(
+            ToolCommon::ErrorCode::INVALID_PARAMS,
+            "Missing required parameters: patch_id, varname, and attribute");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_get_attribute_data{patch, varname, attribute, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_attribute_deferred, gensym("get_attribute"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting attribute");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+json execute_get_object_io_info(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    t_get_io_info_data* data = new t_get_io_info_data{patch, varname, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_io_info_deferred, gensym("get_io_info"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting I/O info");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
+json execute_get_object_hidden(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    t_get_hidden_data* data = new t_get_hidden_data{patch, varname, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_hidden_deferred, gensym("get_hidden"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting hidden state");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
+json execute_set_object_hidden(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    if (!params.contains("hidden") || !params["hidden"].is_boolean()) {
+        return ToolCommon::missing_param_error("hidden");
+    }
+
+    bool hidden = params["hidden"].get<bool>();
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    t_set_hidden_data* data = new t_set_hidden_data{patch, varname, hidden, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)set_hidden_deferred, gensym("set_hidden"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("setting hidden state");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
+json execute_redraw_object(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+
+    if (patch_id.empty() || varname.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and varname");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    t_redraw_data* data = new t_redraw_data{patch, varname, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)redraw_deferred, gensym("redraw"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("redrawing object");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
+json execute_replace_object_text(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+    std::string new_text = params.value("new_text", "");
+
+    if (patch_id.empty() || varname.empty() || new_text.empty()) {
+        return ToolCommon::make_error(
+            ToolCommon::ErrorCode::INVALID_PARAMS,
+            "Missing required parameters: patch_id, varname, and new_text");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_replace_text_data{patch, varname, new_text, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)replace_object_text_deferred, gensym("replace_object_text"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("replacing object text");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+json execute_assign_varnames(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+
+    if (patch_id.empty()) {
+        return ToolCommon::missing_param_error("patch_id");
+    }
+
+    if (!params.contains("assignments") || !params["assignments"].is_array()) {
+        return ToolCommon::missing_param_error("assignments");
+    }
+
+    json assignments = params["assignments"];
+
+    if (assignments.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "assignments array must not be empty");
+    }
+
+    // Validate each assignment and check for duplicate varnames
+    std::set<std::string> seen_varnames;
+    for (const auto& a : assignments) {
+        if (!a.contains("index") || !a["index"].is_number_integer()) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "Each assignment must have an integer 'index'");
+        }
+        if (!a.contains("varname") || !a["varname"].is_string() ||
+            a["varname"].get<std::string>().empty()) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "Each assignment must have a non-empty string 'varname'");
+        }
+        std::string vn = a["varname"].get<std::string>();
+        if (seen_varnames.count(vn)) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "Duplicate varname: " + vn);
+        }
+        seen_varnames.insert(vn);
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new ToolCommon::DeferredResult();
+    auto* data = new t_assign_varnames_data{patch, assignments, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)assign_varnames_deferred, gensym("assign_varnames"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("assigning varnames");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+    return result;
+}
+
+#endif  // MAXMCP_TEST_MODE
+
+json execute(const std::string& tool, const json& params) {
+#ifdef MAXMCP_TEST_MODE
+    if (tool == "add_max_object" || tool == "remove_max_object" || tool == "get_objects_in_patch" ||
+        tool == "set_object_attribute" || tool == "get_object_attribute" ||
+        tool == "get_object_io_info" || tool == "get_object_hidden" ||
+        tool == "set_object_hidden" || tool == "redraw_object" || tool == "replace_object_text" ||
+        tool == "assign_varnames") {
+        return ToolCommon::test_mode_error();
+    }
+    return nullptr;
+#else
+    if (tool == "add_max_object") {
+        return execute_add_max_object(params);
+    } else if (tool == "remove_max_object") {
+        return execute_remove_max_object(params);
+    } else if (tool == "get_objects_in_patch") {
+        return execute_get_objects_in_patch(params);
+    } else if (tool == "set_object_attribute") {
+        return execute_set_object_attribute(params);
+    } else if (tool == "get_object_attribute") {
+        return execute_get_object_attribute(params);
+    } else if (tool == "get_object_io_info") {
+        return execute_get_object_io_info(params);
+    } else if (tool == "get_object_hidden") {
+        return execute_get_object_hidden(params);
+    } else if (tool == "set_object_hidden") {
+        return execute_set_object_hidden(params);
+    } else if (tool == "redraw_object") {
+        return execute_redraw_object(params);
+    } else if (tool == "replace_object_text") {
+        return execute_replace_object_text(params);
+    } else if (tool == "assign_varnames") {
+        return execute_assign_varnames(params);
+    }
+
     return nullptr;
 #endif
 }
