@@ -1,7 +1,7 @@
 # MaxMCP Architecture
 
-**Last Updated**: 2026-01-22
-**Status**: Phase 2 Complete + Tool Refactoring (20 MCP Tools)
+**Last Updated**: 2026-02-22
+**Status**: 26 MCP Tools Implemented
 
 ---
 
@@ -13,7 +13,7 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 ## 2. System Overview
 
-### 2.1 High-Level Architecture (2-Object Design)
+### 2.1 High-Level Architecture (Unified External + Bridge)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -24,150 +24,151 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 └────────────────────┬────────────────────────────────────┘
                      │
                      │ stdio (JSON-RPC)
-                     │ - Line-based protocol
-                     │ - Bidirectional communication
                      │
-                ┌────▼─────────┐
-                │[maxmcp.server]│ ← Singleton MCP Server
-                │  (1 instance) │
-                └────┬──────────┘
+            ┌────────▼─────────┐
+            │  Node.js Bridge  │ ← websocket-mcp-bridge.js
+            │  (stdio ↔ WS)   │
+            └────────┬─────────┘
+                     │
+                     │ WebSocket (JSON-RPC)
+                     │
+         ┌───────────▼─────────────┐
+         │ [maxmcp @mode agent]    │ ← Singleton MCP Server
+         │  - WebSocket server     │
+         │  - MCP protocol handler │
+         │  - Patch registry       │
+         │  - Console logger       │
+         └───────────┬─────────────┘
                      │
         ┌────────────┼────────────┐
         │            │            │
-   ┌────▼────┐  ┌───▼────┐  ┌───▼────┐
-   │[maxmcp] │  │[maxmcp]│  │[maxmcp]│ ← Client objects
-   │ synth   │  │  fx    │  │ master │   (multiple instances)
-   └────┬────┘  └───┬────┘  └───┬────┘
+   ┌────▼─────┐ ┌───▼─────┐ ┌───▼─────┐
+   │[maxmcp   │ │[maxmcp  │ │[maxmcp  │ ← Client objects
+   │@mode     │ │@mode    │ │@mode    │   (multiple instances)
+   │ patch]   │ │ patch]  │ │ patch]  │
+   │ synth    │ │  fx     │ │ master  │
+   └────┬─────┘ └───┬─────┘ └───┬─────┘
         │           │           │
         │ Max API   │           │ Max API
-        │           │           │
         ▼           ▼           ▼
    this.patcher  this.patcher  this.patcher
 ```
 
 **Key Design Decisions**:
-- **Two-object architecture**: Separation of server and client responsibilities
-- **Singleton server**: Only one `[maxmcp.server]` per Max instance
-- **Multiple clients**: Each `[maxmcp]` represents a controllable patch
-- **Centralized logging**: All Max Console output captured by server
-- **Clear dependency**: Clients cannot exist without server
+- **Unified external**: Single `maxmcp.mxo` with `@mode` attribute selects role
+- **Agent singleton**: Only one `[maxmcp @mode agent]` per Max instance
+- **Multiple clients**: Each `[maxmcp @mode patch]` represents a controllable patch
+- **WebSocket + Bridge**: Node.js bridge translates MCP stdio to WebSocket for Max communication
+- **Centralized logging**: All Max Console output captured by agent
 
 ### 2.2 Component Interaction Flow
 
 ```
-┌─────────┐       ┌──────────┐       ┌───────────┐       ┌─────────┐
-│ Claude  │──1──▶│   stdio  │──2──▶│  maxmcp   │──3──▶│   Max   │
-│  Code   │◀──6──│          │◀──5──│  Object   │◀──4──│ Patcher │
-└─────────┘       └──────────┘       └───────────┘       └─────────┘
+┌─────────┐       ┌──────────┐       ┌──────────┐       ┌───────────┐       ┌─────────┐
+│ Claude  │──1──▶│  Bridge  │──2──▶│  Agent   │──3──▶│   Patch   │──4──▶│   Max   │
+│  Code   │◀──7──│  (Node)  │◀──6──│  Mode    │◀──5──│   Mode    │◀─────│ Patcher │
+└─────────┘       └──────────┘       └──────────┘       └───────────┘       └─────────┘
 
-1. Send MCP request (JSON-RPC)
-2. Parse request, identify tool
-3. Execute Max API call (defer to main thread)
-4. Get result from Max
-5. Build JSON-RPC response
-6. Return response to Claude Code
+1. Send MCP request (JSON-RPC over stdio)
+2. Forward to WebSocket
+3. Parse request, route to tool
+4. Execute Max API call (defer to main thread)
+5. Get result from Max
+6. Build JSON-RPC response
+7. Return response to Claude Code
 ```
 
 ---
 
 ## 3. Component Details
 
-### 3.1 Server Object: `[maxmcp.server]`
+### 3.1 Agent Mode: `[maxmcp @mode agent]`
 
-**Responsibility**: Singleton MCP server, console logging, global patch registry
+**Responsibility**: WebSocket MCP server, console logging, global patch registry
 
-**Data Structure**:
-```cpp
-struct t_maxmcp_server {
-    t_object ob;                        // Max object header
-    void* outlet_log;                   // Outlet for log messages (optional)
-
-    std::unique_ptr<MCPServer> mcp_server;     // MCP protocol handler
-    std::unique_ptr<ConsoleLogger> logger;     // Console log capture
-};
-```
-
-**Singleton Pattern**:
-```cpp
-static t_maxmcp_server* g_server_instance = nullptr;
-
-void* maxmcp_server_new(...) {
-    if (g_server_instance != nullptr) {
-        object_error(nullptr, "maxmcp.server already exists!");
-        return nullptr;
-    }
-    // ... create instance
-    g_server_instance = x;
-    return x;
-}
-```
-
-**Responsibilities**:
-- Start/stop MCP server (stdio communication)
-- Capture all Max Console messages
-- Maintain global patch registry
-- Provide `get_console_log()` MCP tool
-- Coordinate tool execution across all patches
-
-**Thread Model**:
-```
-IO Thread (stdin/stdout)
-    ↓
-JSON-RPC Request
-    ↓
-defer_low()
-    ↓
-Max Main Thread
-    ↓
-Tool Execution
-    ↓
-ConsoleLogger::log()
-```
-
----
-
-### 3.2 Client Object: `[maxmcp]`
-
-**Responsibility**: Patch identification and registration
+**Key Attributes**:
+- `@port` (default: 7400) — WebSocket server port
+- `@mode agent` — Activates server mode
 
 **Data Structure**:
 ```cpp
 struct t_maxmcp {
     t_object ob;                        // Max object header
 
-    std::string patch_id;               // Auto-generated (e.g., "synth_a7f2")
-    std::string display_name;           // User-facing name
+    // Agent mode
+    std::unique_ptr<MCPServer> mcp_server;           // MCP protocol handler
+    std::unique_ptr<WebSocketServer> ws_server;      // WebSocket server
+    std::unique_ptr<ConsoleLogger> logger;           // Console log capture
+
+    // Patch mode
+    std::string patch_id;               // Auto-generated patch ID
     t_object* patcher;                  // Pointer to owning patcher
 
-    // Attributes
-    t_symbol* alias;                    // Custom patch ID override
-    t_symbol* group;                    // Patch group name
+    // Common
+    t_symbol* mode;                     // "agent" or "patch"
+    long port;                          // WebSocket port (agent only)
 };
 ```
 
-**Server Dependency Check**:
+**Singleton Pattern**:
 ```cpp
+static t_maxmcp* g_agent_instance = nullptr;
+
 void* maxmcp_new(...) {
-    if (g_server_instance == nullptr) {
-        object_error(nullptr,
-            "maxmcp.server not found! Create [maxmcp.server] first");
-        return nullptr;
+    // ...
+    if (mode == gensym("agent")) {
+        if (g_agent_instance != nullptr) {
+            object_error(nullptr, "maxmcp agent already exists!");
+            return nullptr;
+        }
+        g_agent_instance = x;
     }
-    // ... register with server
+    // ...
 }
 ```
+
+**Responsibilities**:
+- Start/stop WebSocket MCP server
+- Capture all Max Console messages
+- Maintain global patch registry
+- Provide `get_console_log()` MCP tool
+- Coordinate tool execution across all registered patches
+
+**Thread Model**:
+```
+WebSocket Thread (libwebsockets)
+    ↓
+JSON-RPC Request
+    ↓
+defer()
+    ↓
+Max Main Thread
+    ↓
+Tool Execution
+    ↓
+WebSocket Response
+```
+
+---
+
+### 3.2 Patch Mode: `[maxmcp @mode patch]`
+
+**Responsibility**: Patch identification and registration
+
+**Key Attributes**:
+- `@mode patch` — Activates client mode
+- `@alias` (optional) — Custom patch name override
+- `@group` (optional) — Patch group for filtering
 
 **Lifecycle**:
 ```
 [New]
   ↓
-maxmcp_new()
+maxmcp_new(@mode patch)
   ↓
-Generate patch_id
+Generate patch_id from patcher filename + UUID
   ↓
-Start MCP server
-  ↓
-Setup lifecycle monitoring
+Register with agent's patch registry
   ↓
 [Registered]
   ↓
@@ -175,7 +176,7 @@ Setup lifecycle monitoring
   ↓
 on_patcher_close()
   ↓
-Unregister from MCP client
+Unregister from patch registry
   ↓
 maxmcp_free()
   ↓
@@ -185,8 +186,8 @@ maxmcp_free()
 **Design Decisions**:
 - **Auto-generated patch IDs**: `{patchname}_{uuid_short}` format
 - **No user input required**: Zero configuration
-- **Automatic cleanup**: Subscribe to close event
-- **Single instance per patch**: One `[maxmcp]` object per patcher
+- **Automatic cleanup**: Subscribe to patcher close event
+- **No server dependency at instantiation**: Patch objects register when agent is available
 
 ---
 
@@ -215,102 +216,35 @@ public:
 - Thread-safe access with mutex
 - Available via `get_console_log()` MCP tool
 
-**Logging Wrapper Macro**:
-```cpp
-#define MAXMCP_POST(obj, ...) \
-    do { \
-        char buf[512]; \
-        snprintf(buf, sizeof(buf), __VA_ARGS__); \
-        ConsoleLogger::log(buf); \
-        object_post(obj, "%s", buf); \
-    } while(0)
-```
-
-**Use Cases**:
-- Claude monitors patch operation results
-- Debugging tool execution
-- Error detection and recovery
-- User feedback loop
-
-**Example MCP Tool Response**:
-```json
-{
-  "logs": [
-    "MaxMCP: Created cycle~ at [100, 100]",
-    "MaxMCP: Set varname to osc1",
-    "MaxMCP: Connected osc1[0] -> dac~[0]",
-    "dsp: audio on"
-  ],
-  "count": 4
-}
-```
-
 ---
 
 ### 3.4 MCP Tools
 
-**Responsibility**: Implement MCP tool endpoints
+**Responsibility**: Implement 26 MCP tool endpoints across 6 categories
 
 **Organization**:
 ```
 src/tools/
-├── patch_management.cpp     # list_active_patches, get_patch_info
-├── object_operations.cpp    # add/remove/modify objects
-├── connection_management.cpp  # connect/disconnect
-└── documentation.cpp         # list_all_objects, get_object_doc
+├── patch_tools.cpp      # list_active_patches, get_patch_info, get_frontmost_patch
+├── object_tools.cpp     # add/remove/modify/query objects (12 tools)
+├── connection_tools.cpp # connect/disconnect/get_patchlines/set_midpoints
+├── state_tools.cpp      # lock state, dirty state
+├── hierarchy_tools.cpp  # parent patcher, subpatchers
+├── utility_tools.cpp    # console log, avoid rect position
+└── tool_common.cpp      # Shared helpers (find object by varname, etc.)
 ```
 
-**Example Tool Implementation**:
-```cpp
-// tools/object_operations.cpp
-json MaxMCP::tool_add_max_object(const json& params) {
-    std::string patch_id = params["patch_id"];
-
-    // Validate patch_id
-    if (patch_id != patch_id_) {
-        return error_response("Patch not managed by this instance");
-    }
-
-    // Extract parameters
-    auto pos = params["position"];
-    auto obj_type = params["obj_type"].get<std::string>();
-    auto varname = params["varname"].get<std::string>();
-
-    // Defer to main thread (CRITICAL)
-    defer_low(this, [pos, obj_type, varname](MaxMCP* x) {
-        // Create object
-        t_object* obj = (t_object*)object_new_typed(
-            CLASS_BOX,
-            gensym(obj_type.c_str()),
-            0, nullptr
-        );
-
-        // Set position
-        t_rect rect;
-        rect.x = pos[0].get<double>();
-        rect.y = pos[1].get<double>();
-        object_attr_setrect(obj, gensym("patching_rect"), &rect);
-
-        // Set varname
-        object_attr_setsym(obj, gensym("varname"), gensym(varname.c_str()));
-
-        // Add to patcher
-        jpatcher_add_object(x->patcher_, obj);
-    }, 0, nullptr);
-
-    return {{"status", "success"}, {"varname", varname}};
-}
-```
+For the complete tool reference with parameters and response formats, see [mcp-tools-reference.md](mcp-tools-reference.md).
 
 **Design Decisions**:
 - **Defer all Max API calls**: Max API is **not** thread-safe
-- **Validate patch_id**: Each `[maxmcp]` only manages its patcher
+- **Validate patch_id**: Each tool validates the target patch exists
 - **Error responses**: JSON-RPC error codes
 - **Idempotent operations**: Safe to retry
 
 ---
 
-### 3.4 Patch ID Generation
+### 3.5 Patch ID Generation
 
 **Responsibility**: Create unique, human-readable patch identifiers
 
@@ -331,12 +265,6 @@ std::string generate_patch_id(t_object* patcher) {
 }
 ```
 
-**Design Decisions**:
-- **Human-readable prefix**: Helps with debugging
-- **UUID suffix**: Guarantees uniqueness
-- **Short UUID**: Balance between uniqueness and readability
-- **No manual input**: Automatic on instantiation
-
 **Example IDs**:
 ```
 synth.maxpat      → synth_a7f2b3c9
@@ -346,42 +274,16 @@ Untitled.maxpat   → Untitled_c9d4e6f8
 
 ---
 
-### 3.5 Fuzzy Matching (Claude Code Side)
+### 3.6 Fuzzy Matching (Claude Code Side)
 
 **Responsibility**: Resolve natural language to patch_id
 
-**Algorithm**:
-```python
-def resolve_patch_id(user_input: str) -> str:
-    # 1. Get all active patches
-    patches = list_active_patches()
-    # [
-    #   {"patch_id": "synth_a7f2", "display_name": "synth"},
-    #   {"patch_id": "fx_b3e1", "display_name": "fx"}
-    # ]
+Claude Code handles fuzzy matching on the client side:
+1. Get all active patches via `list_active_patches()`
+2. Match user input against `display_name` fields
+3. Auto-select if unambiguous, ask user if ambiguous
 
-    # 2. Fuzzy match against display_name
-    candidates = []
-    for patch in patches:
-        score = fuzz.ratio(user_input, patch["display_name"])
-        if score > 70:  # Threshold
-            candidates.append((patch, score))
-
-    # 3. Auto-select if unambiguous
-    if len(candidates) == 1:
-        return candidates[0][0]["patch_id"]
-    elif len(candidates) > 1:
-        # Ask user to choose
-        return ask_user_choice(candidates)
-    else:
-        raise ValueError(f"No patch matching '{user_input}'")
-```
-
-**Design Decisions**:
-- **Client-side logic**: Keep external object simple
-- **Fuzzy scoring**: Handles typos, abbreviations
-- **Threshold**: 70% prevents false positives
-- **User confirmation**: Ambiguity handled gracefully
+**Design Decision**: Client-side logic keeps the external object simple.
 
 ---
 
@@ -415,17 +317,13 @@ Claude Code:
 ```
 User opens synth.maxpat
     ↓
-[maxmcp] object created
+[maxmcp @mode patch] object created
     ↓
 maxmcp_new() called
     ↓
 patch_id = "synth_a7f2"
     ↓
-MCP server started
-    ↓
-Notification sent: patch_registered
-    ↓
-Claude Code adds to active_patches
+Register with agent's patch registry
     ↓
 ---
 User closes synth.maxpat
@@ -434,115 +332,63 @@ Patcher close event
     ↓
 on_patcher_close() called
     ↓
-Notification sent: patch_unregistered
-    ↓
-Claude Code removes from active_patches
+Unregister from patch registry
     ↓
 maxmcp_free() called
-    ↓
-MCP server stopped
 ```
 
-### 4.3 stdio Communication Flow
-
-**maxmcp.server.mxo** implements MCP JSON-RPC protocol over stdio for Claude Code integration.
+### 4.3 Communication Flow (stdio ↔ WebSocket ↔ Max)
 
 ```
-┌─────────────────┐
-│  Claude Code    │
-│  (MCP Client)   │
-└────────┬────────┘
-         │
-         │ stdin (write)
-         ├──────────────────────────────────────┐
-         │ {"jsonrpc":"2.0",                    │
-         │  "method":"tools/call",              │
-         │  "params":{                          │
-         │    "name":"add_max_object",          │
-         │    "arguments":{...}                 │
-         │  },                                  │
-         │  "id":1}                             │
-         └──────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────┐
-│  maxmcp.server.mxo                              │
-│                                                 │
-│  ┌──────────────────────────────────────────┐  │
-│  │ stdin reader thread (background)         │  │
-│  │ - Non-blocking std::getline()            │  │
-│  │ - Accumulate lines in input_buffer       │  │
-│  │ - Trigger qelem on complete line         │  │
-│  └──────────────┬───────────────────────────┘  │
-│                 │                               │
-│                 ▼ qelem_set()                   │
-│  ┌──────────────────────────────────────────┐  │
-│  │ maxmcp_server_stdin_qelem_fn()           │  │
-│  │ (runs on Max main thread)                │  │
-│  │ - Process buffered input                 │  │
-│  │ - Call maxmcp_server_handle_request()    │  │
-│  └──────────────┬───────────────────────────┘  │
-│                 │                               │
-│                 ▼                               │
-│  ┌──────────────────────────────────────────┐  │
-│  │ maxmcp_server_handle_request()           │  │
-│  │ - Parse JSON-RPC                         │  │
-│  │ - Route to MCPServer::handle_request_str │  │
-│  └──────────────┬───────────────────────────┘  │
-│                 │                               │
-│                 ▼                               │
-│  ┌──────────────────────────────────────────┐  │
-│  │ MCPServer::handle_request_string()       │  │
-│  │ - json::parse()                          │  │
-│  │ - Call internal handle_request(json)     │  │
-│  │ - Route to tool: add_max_object()        │  │
-│  │ - Return json.dump()                     │  │
-│  └──────────────┬───────────────────────────┘  │
-│                 │                               │
-│                 ▼                               │
-│  ┌──────────────────────────────────────────┐  │
-│  │ maxmcp_server_send_response()            │  │
-│  │ - std::cout << response << std::endl     │  │
-│  │ - std::cout.flush()                      │  │
-│  └──────────────┬───────────────────────────┘  │
-└─────────────────┼───────────────────────────────┘
-                  │
-                  │ stdout (read)
-                  ├──────────────────────────────────────┐
-                  │ {"jsonrpc":"2.0",                    │
-                  │  "result":{                          │
-                  │    "status":"success",               │
-                  │    "patch_id":"synth_a7f2",          │
-                  │    "varname":"osc1"                  │
-                  │  },                                  │
-                  │  "id":1}                             │
-                  └──────────────────────────────────────┘
-                  │
-                  ▼
-         ┌────────────────┐
-         │  Claude Code   │
-         │  (MCP Client)  │
-         └────────────────┘
+┌────────────┐
+│ Claude Code│
+│(MCP Client)│
+└─────┬──────┘
+      │ stdin/stdout (JSON-RPC, line-delimited)
+      │
+┌─────▼──────────────────────────────────┐
+│ websocket-mcp-bridge.js (Node.js)     │
+│ - Reads stdin line by line             │
+│ - Forwards JSON-RPC to WebSocket      │
+│ - Receives WebSocket response          │
+│ - Writes to stdout                     │
+└─────┬──────────────────────────────────┘
+      │ WebSocket (ws://localhost:7400)
+      │
+┌─────▼──────────────────────────────────┐
+│ maxmcp.mxo @mode agent                │
+│                                        │
+│ ┌────────────────────────────────────┐ │
+│ │ WebSocketServer (libwebsockets)   │ │
+│ │ - Accept WS connections           │ │
+│ │ - Parse JSON-RPC                  │ │
+│ │ - defer() to Max main thread      │ │
+│ └──────────────┬─────────────────────┘ │
+│                │                       │
+│                ▼                       │
+│ ┌────────────────────────────────────┐ │
+│ │ MCPServer (main thread)           │ │
+│ │ - Route to tool handler           │ │
+│ │ - Execute Max API calls           │ │
+│ │ - Build JSON-RPC response         │ │
+│ └──────────────┬─────────────────────┘ │
+│                │                       │
+│                ▼ send via WebSocket     │
+└────────────────────────────────────────┘
 ```
 
 **Key Design Points**:
 
 1. **Thread Safety**:
-   - stdin reader thread reads input asynchronously
-   - qelem defers processing to Max main thread
-   - All Max API calls occur on main thread only
+   - WebSocket thread receives messages asynchronously
+   - `defer()` ensures Max API calls run on main thread
+   - Response sent back via WebSocket from main thread
 
 2. **Line-Based Protocol**:
-   - Each JSON-RPC message is a single line
-   - `std::getline()` reads complete messages
-   - Newline-delimited for stream parsing
+   - Each JSON-RPC message is a single line (stdio side)
+   - WebSocket messages contain one JSON-RPC request/response
 
-3. **Non-Blocking I/O**:
-   - stdin thread doesn't block Max audio thread
-   - qelem provides asynchronous main thread execution
-   - Response flushed immediately after write
-
-4. **Error Handling**:
+3. **Error Handling**:
    - JSON parse errors return JSON-RPC error response
    - Tool execution errors caught and returned as JSON
    - Server continues running on individual request failures
@@ -553,11 +399,11 @@ MCP server stopped
 
 ### 5.1 Why C++ over JavaScript?
 
-| Aspect | JavaScript (Old) | C++ (New) |
+| Aspect | JavaScript (Old) | C++ (Current) |
 |--------|------------------|-----------|
 | Stability | V8 engine quirks, autowatch issues | Direct Max API, no runtime |
 | Performance | Interpreter overhead | Native code |
-| Distribution | 6 files + npm dependencies | Single .mxo/.mxe64 |
+| Distribution | Multiple files + npm dependencies | Single .mxo/.mxe64 |
 | Debugging | Hard to attach debugger | Standard C++ tools |
 | Max API | Through JS wrapper | Direct access |
 
@@ -565,43 +411,24 @@ MCP server stopped
 
 ---
 
-### 5.2 Why stdio over Socket.IO?
+### 5.2 Why WebSocket + stdio Bridge?
 
-| Aspect | Socket.IO (Old) | stdio (New) |
+| Aspect | Socket.IO (Old) | stdio + WebSocket (Current) |
 |--------|-----------------|-------------|
-| Setup | Port management, firewall | None |
-| Dependencies | socket.io npm package | None |
-| Protocol | Custom events | Standard JSON-RPC |
-| Reliability | Network stack | Pipe (OS-level) |
-| Debugging | Wireshark, packet capture | Simple logging |
+| MCP compatibility | Custom events | Native MCP stdio protocol |
+| Max communication | N/A | WebSocket (persistent, bidirectional) |
+| Dependencies | socket.io npm | ws (lightweight) |
+| Setup | Port + Socket.IO config | Bridge auto-connects |
 
-**Decision**: stdio for simplicity, reliability.
+**Decision**: stdio for MCP compatibility, WebSocket for reliable Max communication via bridge.
 
 ---
 
 ### 5.3 Why Auto-Generated patch_id?
 
-**Alternative 1: Manual input**
-```
-❌ [maxmcp my_synth_patch_v2]  # User must type this
-```
+**Alternative 1: Manual input** — Error-prone, doesn't support multiple instances.
 
-**Problems**:
-- Error-prone (typos)
-- Doesn't support multiple instances (same name collision)
-- Requires user to think about naming
-
-**Alternative 2: Auto-generated (chosen)**
-```
-✅ [maxmcp]  # No arguments
-   → patch_id = "synth_a7f2"
-```
-
-**Benefits**:
-- Zero configuration
-- Supports multiple instances
-- Human-readable prefix
-- Unique suffix
+**Alternative 2: Auto-generated (chosen)** — Zero configuration, supports multiple instances, human-readable prefix + unique suffix.
 
 **Decision**: Auto-generated for UX, reliability.
 
@@ -614,16 +441,16 @@ MCP server stopped
 | Threat | Mitigation |
 |--------|-----------|
 | Malicious MCP commands | Validate all inputs, no shell execution |
-| Patch corruption | Validate operations, atomic transactions |
-| Memory exhaustion | Limit object count, monitor memory |
-| Infinite loops | Timeout on operations |
+| Patch corruption | Validate operations before execution |
+| Memory exhaustion | Limit log buffer, monitor memory |
+| Unauthorized access | Local-only WebSocket (localhost) |
 
 ### 6.2 Input Validation
 
 All MCP tool calls validate:
-- `patch_id` matches this instance
-- Object names are alphanumeric
-- Positions are within bounds
+- `patch_id` exists in registry
+- Object varnames exist in target patch
+- Positions are within reasonable bounds
 - Connection endpoints exist
 
 ---
@@ -643,8 +470,8 @@ All MCP tool calls validate:
 
 ### 7.2 Memory Footprint
 
-- **Base**: ~5MB (MCP server, JSON library)
-- **Per patch**: ~2MB (object metadata cache)
+- **Base**: ~5MB (MCP server, WebSocket server, JSON library)
+- **Per patch**: ~2MB (object metadata)
 - **Total (10 patches)**: ~25MB (acceptable)
 
 ---
@@ -654,30 +481,10 @@ All MCP tool calls validate:
 ### 8.1 Known Limitations
 
 1. **Max API threading**: All calls must be on main thread
-2. **stdio buffering**: Large responses may be chunked
-3. **Patcher references**: Weak pointers, check before use
+2. **WebSocket connection**: Bridge must be running for Claude Code communication
+3. **Patcher references**: Must check validity before use
 
 ### 8.2 Error Handling Strategy
-
-```cpp
-json execute_tool(const std::string& tool, const json& params) {
-    try {
-        // Validate input
-        if (!validate_params(params)) {
-            return error_response("Invalid parameters");
-        }
-
-        // Execute tool
-        return dispatch_tool(tool, params);
-    }
-    catch (const std::exception& e) {
-        return error_response(e.what());
-    }
-    catch (...) {
-        return error_response("Unknown error");
-    }
-}
-```
 
 **Principles**:
 - Never throw across thread boundaries
@@ -689,13 +496,12 @@ json execute_tool(const std::string& tool, const json& params) {
 
 ## 9. Future Architecture Considerations
 
-### 9.1 Potential Extensions (Post-v2.0)
+### 9.1 Potential Extensions
 
-1. **Network MCP**: WebSocket server for remote control
-2. **Multi-client**: Multiple Claude Code instances
-3. **Distributed patches**: Patches across multiple Max instances
-4. **Preset management**: Save/load patch states
-5. **Undo/Redo**: MCP-aware undo stack
+1. **Multi-client**: Multiple Claude Code instances via WebSocket
+2. **Distributed patches**: Patches across multiple Max instances
+3. **Preset management**: Save/load patch states
+4. **Undo/Redo**: MCP-aware undo stack
 
 ### 9.2 Scalability
 
@@ -712,8 +518,9 @@ Current architecture supports:
 - [Max SDK Documentation](https://github.com/Cycling74/max-sdk)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
 - [nlohmann/json](https://github.com/nlohmann/json)
-- [Old Implementation](../MaxMSP-MCP-Server-multipatch/)
+- [libwebsockets](https://libwebsockets.org/)
+- [MCP Tools Reference](mcp-tools-reference.md)
 
 ---
 
-**This architecture follows DDD (Documentation Driven Development) and serves as the blueprint for MaxMCP v2.0 implementation.**
+**This architecture follows DDD (Documentation Driven Development) and serves as the blueprint for MaxMCP implementation.**
