@@ -89,6 +89,39 @@ For objects with arguments, estimate width:
 └─────────────────────────────────────────┘
 ```
 
+## Main Flow Alignment
+
+### Identifying the Main Flow
+
+Every patch has a **primary processing chain** — the path with the most processing steps from input to output. This chain should be the vertical backbone of the patch layout.
+
+**Selection criteria**: Choose the path that passes through the most objects as the main flow. Secondary inputs (shorter paths) are allowed to connect diagonally.
+
+**Example — Float addition patch**:
+```
+input_left (x=272)    input_right (x=325)
+                           │
+                      trig_right (x=325)    ← trigger splits into bang + float
+                        │       │
+                        ↓       ↓
+          input_left ─→ + 0. (x=325)        ← input_left connects diagonally
+                           │
+                        result (x=325)
+```
+
+- **Main flow**: `input_right` → `trig_right` → `+ 0.` → `result` (3 connections, 4 objects)
+- **Secondary input**: `input_left` → `+ 0.` (1 connection, diagonal — acceptable)
+
+### Aligning the Primary Chain
+
+Once the main flow is identified, align all objects in the chain to the **same X coordinate** so that patchcords flow as vertical straight lines:
+
+1. Choose the X position of the topmost object in the chain as the reference
+2. Move all downstream objects in the chain to the same X
+3. Adjust object widths so that multi-outlet/inlet connections within the chain also align vertically (see [Width Adjustment](#width-adjustment-for-straight-lines) below)
+
+**Result**: The main flow forms a clear vertical column. Secondary inputs approach diagonally, which is acceptable under the [Diagonal Line Tolerance](#diagonal-line-tolerance) rules.
+
 ## Patchcord Management
 
 ### Principle: Vertical Straight Lines First
@@ -117,6 +150,22 @@ filtercoeff~  (width adjusted to align rightmost outlet with biquad~'s rightmost
   ↓  ↓  ↓  ↓  ↓   ← all vertical straight lines
 biquad~
 ```
+
+#### Matching Widths in the Main Flow
+
+When objects in the main flow chain have different default widths, adjust their widths to match. This ensures that **all outlets and inlets at the same index** align vertically throughout the chain.
+
+**Example**: `t b f` (default width ~30) connected to `+ 0.` (default width ~30):
+```
+Before (default widths):          After (matched widths):
+
+  t b f (w=30)                      t b f (w=56)
+   │  ╲                              │    │
+   ↓    ╲  ← diagonal               ↓    ↓  ← both vertical
+  + 0. (w=30)                       + 0. (w=56)
+```
+
+**Rule**: Set connected objects in the main flow to the **same width** so that corresponding outlet/inlet pairs share the same X coordinate.
 
 ### Multi-Connection Alignment Rules
 
