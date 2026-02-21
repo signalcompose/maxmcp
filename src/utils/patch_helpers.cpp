@@ -200,13 +200,29 @@ std::string get_box_text(t_object* box) {
     if (!box)
         return "";
 
+    // textfield objects (message, comment, textedit)
     t_object* textfield = jbox_get_textfield(box);
-    if (!textfield)
-        return "";
+    if (textfield) {
+        const char* text = nullptr;
+        object_method(textfield, gensym("gettext"), &text);
+        if (text)
+            return std::string(text);
+    }
 
-    const char* text = nullptr;
-    object_method(textfield, gensym("gettext"), &text);
-    return text ? std::string(text) : "";
+    // Fallback: serialize box to dictionary and read "text" key
+    t_dictionary* d = dictionary_new();
+    if (d) {
+        object_method(box, gensym("appendtodictionary"), d);
+        const char* text = nullptr;
+        if (dictionary_getstring(d, gensym("text"), &text) == MAX_ERR_NONE && text) {
+            std::string result(text);
+            object_free((t_object*)d);
+            return result;
+        }
+        object_free((t_object*)d);
+    }
+
+    return "";
 }
 
 std::vector<SavedAttribute> save_box_attributes(t_object* box) {

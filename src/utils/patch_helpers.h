@@ -199,10 +199,14 @@ struct SavedConnection {
 };
 
 /**
- * @brief Get the textfield text content of a box
+ * @brief Get the text content of a box
+ *
+ * For textfield objects (message, comment, textedit), retrieves content
+ * via jbox_get_textfield(). For newobj boxes (trigger, +, cycle~, etc.),
+ * falls back to the "text" attribute via object_attr_getvalueof().
  *
  * @param box The box object
- * @return The text string, or empty if no textfield
+ * @return The text string, or empty if unavailable
  */
 std::string get_box_text(t_object* box);
 
