@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2026-01-22
-**Project Status**: v1.1.2 Released ✅ (20 MCP Tools + Tool Refactoring)
+**Last Updated**: 2026-02-22
+**Project Status**: 26 MCP Tools
 
 ---
 
@@ -60,54 +60,61 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Testing strategy
 - Build and deployment
 
-### 6. [Implementation Plan](implementation-plan.md)
-**Purpose**: Detailed 4-phase implementation roadmap
+### 6. [Implementation Plan](implementation-plan.md) *(Historical)*
+**Purpose**: Original 4-phase implementation roadmap (archived)
 **Audience**: Developers, project managers
 **Contents**:
 - Phase-by-phase task breakdown
 - Timeline estimates and dependencies
 - Risk analysis and mitigation
 - Definition of Done for each phase
-- Testing strategies
-- Success metrics
 
 ### 7. [MCP Tools Reference](mcp-tools-reference.md)
 **Purpose**: Complete reference for all MCP tools
 **Audience**: Developers, users
 **Contents**:
-- All 20 MCP tools documentation
+- All 26 MCP tools documentation
 - Parameter specifications
 - Response formats
 - Error codes
 - Usage examples
 
+### 8. [Onboarding Guide](onboarding.md)
+**Purpose**: Get new developers started quickly
+**Audience**: New contributors
+**Contents**:
+- Prerequisites and setup checklist
+- Quick start steps
+- Development principles overview
+- Debugging tips
+
 ---
 
 ## 📖 Phase Completion Reports
 
-### 7. [Phase 1 Completion](PHASE1_COMPLETION.md)
+### [Phase 1 Completion](PHASE1_COMPLETION.md)
 **Date**: 2025-10-23
 **Status**: Complete ✅
 **Achievements**:
 - Max SDK setup and build system
-- Basic external objects (maxmcp client + maxmcp.server)
+- Unified external object (`maxmcp` with `@mode agent` / `@mode patch`)
 - WebSocket communication (JSON-RPC over WebSocket)
-- WebSocketServer implementation (libwebsockets 4.4.1)
+- WebSocketServer implementation (libwebsockets)
 - 3 core MCP tools
 - Unit testing framework (Google Test)
 
-### 8. [Phase 2 Completion](PHASE2_COMPLETION.md)
+### [Phase 2 Completion](PHASE2_COMPLETION.md)
 **Date**: 2025-11-10
 **Status**: Complete ✅
 **Achievements**:
-- Complete MCP toolset (10 tools)
+- MCP toolset expanded to 10 tools
 - stdio-to-WebSocket bridge implementation
 - E2E testing and verification
 - Max Package integration
 - Inspector attribute descriptions
 - Help patch system integration
 
-### 9. [Phase 1 Infrastructure Completion](PHASE1_INFRASTRUCTURE.md)
+### [Phase 1 Infrastructure Completion](PHASE1_INFRASTRUCTURE.md)
 **Date**: 2025-11-11
 **Version**: v1.1.0
 **Status**: Complete ✅
@@ -122,7 +129,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 ## 📖 Testing Documentation
 
-### 10. [E2E Test Results - Phase 2](e2e-test-results-phase2.md)
+### [E2E Test Results - Phase 2](e2e-test-results-phase2.md)
 **Purpose**: Comprehensive E2E test results
 **Date**: 2025-11-09
 **Contents**:
@@ -131,7 +138,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Bridge communication verification
 - Known issues and resolutions
 
-### 11. [Manual Test Guide - Phase 2](manual-test-phase2.md)
+### [Manual Test Guide - Phase 2](manual-test-phase2.md)
 **Purpose**: Manual testing procedures for Phase 2 (10 tools)
 **Date**: 2025-11-09
 **Contents**:
@@ -139,9 +146,9 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Expected behaviors
 - Troubleshooting tips
 
-### 12. [Manual Test Guide - New Tools](manual-test-new-tools.md)
-**Purpose**: Manual testing procedures for all 20 MCP tools
-**Date**: 2026-02-04
+### [Manual Test Guide - All Tools](manual-test-new-tools.md)
+**Purpose**: Manual testing procedures for all 26 MCP tools
+**Date**: 2026-02-22
 **Contents**:
 - Complete test cases for all MCP tools
 - Claude Code prompts for testing
@@ -150,6 +157,15 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 ---
 
 ## 📖 Additional Resources
+
+### [Onboarding Guide](onboarding.md)
+- **Purpose**: New developer quick start and checklist
+
+### [Release Workflow](RELEASE_WORKFLOW.md)
+- **Purpose**: Release Please automated versioning and release process
+
+### [Package Manager Submission](PACKAGE_MANAGER_SUBMISSION.md)
+- **Purpose**: Guide for submitting to Max Package Manager (Phase 3)
 
 ### Research Documentation
 - **Directory**: [`research/`](research/)
@@ -169,13 +185,9 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 | Skill | Command | Purpose |
 |-------|---------|---------|
 | patch-guidelines | `/maxmcp:patch-guidelines` | Layout rules, naming conventions, JavaScript guide |
+| max-techniques | `/maxmcp:max-techniques` | poly~, bpatcher, pattr, signal processing patterns |
+| m4l-techniques | `/maxmcp:m4l-techniques` | Live Object Model, device namespaces, M4L patterns |
 | max-resources | `/maxmcp:max-resources` | Access Max.app built-in resources (references, examples, snippets) |
-
-**max-resources First-time Setup**:
-```bash
-cd plugins/maxmcp/skills/max-resources/scripts
-./build-index.sh
-```
 
 ---
 
@@ -185,35 +197,35 @@ MaxMCP development follows a structured 4-phase approach:
 
 1. **Phase 1: MVP** ✅ **COMPLETE** (2025-10-23)
    - ✅ Max SDK setup
-   - ✅ Basic external object (maxmcp client + maxmcp.server)
+   - ✅ Unified external object (`maxmcp` with `@mode agent` / `@mode patch`)
    - ✅ WebSocket communication (JSON-RPC over WebSocket + stdio-to-WebSocket bridge)
-   - ✅ WebSocketServer implementation (libwebsockets 4.4.1)
-   - ✅ 3 core tools: `get_console_log()`, `list_active_patches()`, `add_max_object()`
+   - ✅ WebSocketServer implementation (libwebsockets)
+   - ✅ 3 core tools: `get_console_log`, `list_active_patches`, `add_max_object`
    - ✅ Unit testing framework (Google Test)
-   - ✅ Build system (CMake with BUILD_MODE parameter)
-   - ✅ WebSocket tests (14 tests, 10 enabled passing)
+   - ✅ Build system (CMake)
 
 2. **Phase 2: Complete MCP Toolset** ✅ **COMPLETE** (2025-11-10)
-   - ✅ All 10 MCP tools implemented
+   - ✅ 10 MCP tools implemented
    - ✅ stdio-to-WebSocket bridge (websocket-mcp-bridge.js)
    - ✅ Auto-generated patch IDs
    - ✅ Lifecycle monitoring
    - ✅ E2E testing with Claude Code
    - ✅ Max Package structure
-   - ✅ Help patch integration
-   - ✅ Inspector attribute descriptions
 
-3. **Phase 3: Package Distribution** (Planned)
+3. **Post-Phase 2: Tool Expansion** ✅ **COMPLETE** (2026-02)
+   - ✅ 26 MCP tools (patchline management, object attribute read/write, replace, assign varnames, etc.)
+   - ✅ Tool refactoring (`ObjectTools::execute` split into per-tool functions)
+   - ✅ Claude Code plugin with 4 skills
+   - ✅ Build/deploy scripts (`build.sh`, `deploy.sh`)
+
+4. **Phase 3: Package Distribution** (Planned)
    - Max Package Manager submission
    - GitHub releases
    - Documentation website
-   - Video tutorials
 
-4. **Phase 4: Cross-Platform** (Planned)
+5. **Phase 4: Cross-Platform** (Planned)
    - Windows build (x64)
    - Intel Mac build (x86_64)
-   - Performance optimization
-   - Advanced features
 
 ---
 
@@ -267,6 +279,9 @@ Documentation should be updated when:
 | Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |
 | See version history | [CHANGELOG](../CHANGELOG.md) |
 | Find E2E test results | [E2E Test Results](e2e-test-results-phase2.md) |
+| Get started as new developer | [Onboarding Guide](onboarding.md) |
+| Set up and run MaxMCP | [Server Usage Guide](server-usage.md) |
+| Understand release process | [Release Workflow](RELEASE_WORKFLOW.md) |
 | Find research notes | [Research Directory](research/) |
 | Use Claude Code plugin | [Plugin README](../plugins/maxmcp/README.md) |
 

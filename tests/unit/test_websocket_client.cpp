@@ -4,67 +4,68 @@
  */
 
 #include "test_websocket_client.h"
+
 #include <cstring>
 #include <iostream>
 
 // Callback implementation
-int TestWebSocketClient::callback(struct lws* wsi, enum lws_callback_reasons reason,
-                                  void* user, void* in, size_t len) {
-    TestWebSocketClient* client = static_cast<TestWebSocketClient*>(
-        lws_context_user(lws_get_context(wsi))
-    );
+int TestWebSocketClient::callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
+                                  void* in, size_t len) {
+    TestWebSocketClient* client =
+        static_cast<TestWebSocketClient*>(lws_context_user(lws_get_context(wsi)));
 
-    if (!client) return 0;
+    if (!client)
+        return 0;
 
     switch (reason) {
-        case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
-            // Add Authorization header if set
-            if (!client->auth_header_.empty()) {
-                unsigned char **p = (unsigned char **)in;
-                unsigned char *end = (*p) + len;
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
+        // Add Authorization header if set
+        if (!client->auth_header_.empty()) {
+            unsigned char** p = (unsigned char**)in;
+            unsigned char* end = (*p) + len;
 
-                std::string header = "Authorization: " + client->auth_header_ + "\r\n";
+            std::string header = "Authorization: " + client->auth_header_ + "\r\n";
 
-                if (end - (*p) < (int)header.length()) {
-                    std::cerr << "[TestClient] Not enough space for auth header\n";
-                    return 1;
-                }
-
-                memcpy(*p, header.c_str(), header.length());
-                *p += header.length();
+            if (end - (*p) < (int)header.length()) {
+                std::cerr << "[TestClient] Not enough space for auth header\n";
+                return 1;
             }
-            break;
+
+            memcpy(*p, header.c_str(), header.length());
+            *p += header.length();
         }
+        break;
+    }
 
-        case LWS_CALLBACK_CLIENT_ESTABLISHED:
-            client->connected_ = true;
-            std::cerr << "[TestClient] Connected\n";
-            break;
+    case LWS_CALLBACK_CLIENT_ESTABLISHED:
+        client->connected_ = true;
+        std::cerr << "[TestClient] Connected\n";
+        break;
 
-        case LWS_CALLBACK_CLIENT_RECEIVE:
-            if (in && len > 0) {
-                std::string message(static_cast<const char*>(in), len);
-                client->on_message_received(message);
-            }
-            break;
+    case LWS_CALLBACK_CLIENT_RECEIVE:
+        if (in && len > 0) {
+            std::string message(static_cast<const char*>(in), len);
+            client->on_message_received(message);
+        }
+        break;
 
-        case LWS_CALLBACK_CLIENT_CLOSED:
-            client->connected_ = false;
-            std::cerr << "[TestClient] Connection closed\n";
-            break;
+    case LWS_CALLBACK_CLIENT_CLOSED:
+        client->connected_ = false;
+        std::cerr << "[TestClient] Connection closed\n";
+        break;
 
-        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-            client->connected_ = false;
-            client->wsi_ = nullptr;  // Mark wsi as null so connect() loop exits
-            if (in) {
-                std::cerr << "[TestClient] Connection error: " << (const char*)in << "\n";
-            } else {
-                std::cerr << "[TestClient] Connection error\n";
-            }
-            break;
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+        client->connected_ = false;
+        client->wsi_ = nullptr;  // Mark wsi as null so connect() loop exits
+        if (in) {
+            std::cerr << "[TestClient] Connection error: " << (const char*)in << "\n";
+        } else {
+            std::cerr << "[TestClient] Connection error\n";
+        }
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     return 0;
@@ -72,15 +73,13 @@ int TestWebSocketClient::callback(struct lws* wsi, enum lws_callback_reasons rea
 
 bool TestWebSocketClient::connect(const std::string& url) {
     // Set up protocols (must be static)
-    static const struct lws_protocols protocols[] = {
-        {
-            "mcp",
-            TestWebSocketClient::callback,
-            0,
-            4096,
-        },
-        { nullptr, nullptr, 0, 0 }
-    };
+    static const struct lws_protocols protocols[] = {{
+                                                         "mcp",
+                                                         TestWebSocketClient::callback,
+                                                         0,
+                                                         4096,
+                                                     },
+                                                     {nullptr, nullptr, 0, 0}};
 
     // Create context
     struct lws_context_creation_info info = {0};

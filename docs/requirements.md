@@ -1,7 +1,7 @@
 # MaxMCP Requirements Specification
 
-**Last Updated**: 2025-10-19
-**Status**: Draft
+**Last Updated**: 2026-02-22
+**Status**: Active
 
 ---
 
@@ -61,10 +61,59 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 
 #### FR-6: Set Object Attribute
 - **Priority**: P1
-- **Description**: Modify object attributes dynamically
+- **Description**: Modify object attributes dynamically (supports scalar and array values)
 - **Input**: `patch_id`, `varname`, `attr_name`, `value`
 - **Output**: Success status
 - **Success Criteria**: Attribute changed, patch state updated
+
+#### FR-6a: Get Object Attribute
+- **Priority**: P1
+- **Description**: Read current value of an object attribute
+- **Input**: `patch_id`, `varname`, `attr_name`
+- **Output**: Attribute value (scalar or array)
+- **Success Criteria**: Correct attribute value returned
+
+#### FR-6b: Get Object Value
+- **Priority**: P1
+- **Description**: Read current value via `object_getvalueof()`
+- **Input**: `patch_id`, `varname`
+- **Output**: Current value (number or array)
+- **Success Criteria**: Value returned for objects supporting getvalueof interface
+
+#### FR-6c: Get Object I/O Info
+- **Priority**: P1
+- **Description**: Get inlet and outlet count for an object
+- **Input**: `patch_id`, `varname`
+- **Output**: `inlet_count`, `outlet_count`
+- **Success Criteria**: Correct counts returned
+
+#### FR-6d: Get/Set Object Hidden
+- **Priority**: P2
+- **Description**: Check or set visibility of an object
+- **Input**: `patch_id`, `varname`, optional `hidden` flag
+- **Output**: Hidden state
+- **Success Criteria**: Visibility toggled correctly
+
+#### FR-6e: Redraw Object
+- **Priority**: P2
+- **Description**: Force visual redraw of a specific object
+- **Input**: `patch_id`, `varname`
+- **Output**: Success status
+- **Success Criteria**: Object redrawn without side effects
+
+#### FR-6f: Replace Object Text
+- **Priority**: P1
+- **Description**: Replace box text by deleting and recreating object, preserving all connections
+- **Input**: `patch_id`, `varname`, `new_text`
+- **Output**: Old text, new text, reconnected count
+- **Success Criteria**: Object recreated with correct text, all connections restored
+
+#### FR-6g: Assign Varnames
+- **Priority**: P1
+- **Description**: Assign varnames to objects identified by index
+- **Input**: `patch_id`, array of `{index, varname}` pairs
+- **Output**: Assignment results
+- **Success Criteria**: All varnames assigned, duplicates rejected
 
 ### 2.3 Connection Management
 
@@ -82,6 +131,20 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 - **Output**: Success status
 - **Success Criteria**: Connection removed
 
+#### FR-8a: Get Patchlines
+- **Priority**: P1
+- **Description**: List all patchcord connections with metadata (coordinates, color, midpoints)
+- **Input**: `patch_id`
+- **Output**: Array of patchline objects
+- **Success Criteria**: Complete connection list with visual properties
+
+#### FR-8b: Set Patchline Midpoints
+- **Priority**: P2
+- **Description**: Set routing midpoints for a patchcord, or clear them
+- **Input**: `patch_id`, `src_varname`, `outlet`, `dst_varname`, `inlet`, `midpoints`
+- **Output**: Updated midpoint count
+- **Success Criteria**: Midpoints applied or cleared correctly
+
 ### 2.4 Patch Information
 
 #### FR-9: Get Objects in Patch
@@ -98,32 +161,55 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 - **Output**: `[x, y]` coordinates
 - **Success Criteria**: Position avoids existing objects
 
-### 2.5 Documentation
+### 2.5 Patch State
 
-#### FR-11: List All Objects
-- **Priority**: P1
-- **Description**: Return list of all Max/MSP objects from docs.json
-- **Input**: Optional filter
-- **Output**: Array of object names with categories
-- **Success Criteria**: 2000+ objects returned
+#### FR-11: Get/Set Patch Lock State
+- **Priority**: P2
+- **Description**: Read or change patch lock state (edit vs presentation mode)
+- **Input**: `patch_id`, optional `locked` flag
+- **Output**: Lock state
+- **Success Criteria**: Patch mode toggled correctly
 
-#### FR-12: Get Object Documentation
-- **Priority**: P1
-- **Description**: Retrieve full documentation for specific object
-- **Input**: `object_name`
-- **Output**: Documentation object (digest, description, inlets, outlets)
-- **Success Criteria**: Complete docs returned for known objects
+#### FR-12: Get Patch Dirty State
+- **Priority**: P2
+- **Description**: Check if a patch has unsaved changes
+- **Input**: `patch_id`
+- **Output**: Dirty flag
+- **Success Criteria**: Correct dirty state returned
 
-### 2.6 Lifecycle Management
+### 2.6 Hierarchy
 
-#### FR-13: Auto-Registration
+#### FR-13a: Get Parent Patcher
+- **Priority**: P2
+- **Description**: Get the parent patcher of a subpatcher
+- **Input**: `patch_id`
+- **Output**: Parent patcher info or error if top-level
+- **Success Criteria**: Correct parent identified
+
+#### FR-13b: Get Subpatchers
+- **Priority**: P2
+- **Description**: List all subpatchers in a patch
+- **Input**: `patch_id`
+- **Output**: Array of subpatchers with varname, type, name
+- **Success Criteria**: Complete subpatcher list returned
+
+### 2.7 Documentation *(Deferred)*
+
+> The following documentation tools were originally planned but deferred in favor of the `max-resources` Claude Code plugin skill, which provides Max.app built-in resource access via direct filesystem exploration.
+
+#### ~~FR-15: List All Objects~~ *(Deferred)*
+#### ~~FR-16: Get Object Documentation~~ *(Deferred)*
+
+### 2.8 Lifecycle Management
+
+#### FR-17: Auto-Registration
 - **Priority**: P0
 - **Description**: Automatically register patch when `[maxmcp]` is created
 - **Trigger**: Object instantiation, loadbang
 - **Output**: Notification sent to MCP client
 - **Success Criteria**: Patch appears in active patches list
 
-#### FR-14: Auto-Unregistration
+#### FR-18: Auto-Unregistration
 - **Priority**: P0
 - **Description**: Automatically unregister patch when closed
 - **Trigger**: Patcher close event
@@ -310,8 +396,7 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 
 The following features are **not** included in v2.0:
 
-1. **Remote control**: Network-based MCP (only stdio)
-2. **Multi-user**: Collaborative patch editing
+1. **Multi-user**: Collaborative patch editing
 3. **Undo/Redo**: Max has native undo
 4. **Visual programming**: Generating UI objects
 5. **Audio analysis**: DSP operations (Max has native tools)
@@ -354,11 +439,14 @@ These may be considered for future versions based on user feedback.
 ### 9.1 External Dependencies
 - Max SDK 8.6+
 - CMake 3.19+
-- nlohmann/json
+- nlohmann/json 3.11.0+
+- libwebsockets
 - C++17 compiler
+- Google Test (tests only)
 
 ### 9.2 Runtime Dependencies
 - Max/MSP 9.0+
+- Node.js (for stdio-to-WebSocket bridge)
 - Claude Code with MCP support
 
 ---

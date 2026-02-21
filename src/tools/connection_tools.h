@@ -2,7 +2,7 @@
     @file connection_tools.h
     MaxMCP - Connection Operation MCP Tools
 
-    Tools for creating and removing patchcord connections between Max objects.
+    Tools for creating, removing, and querying patchcord connections between Max objects.
 
     @ingroup maxmcp
 */
@@ -29,6 +29,8 @@ using json = nlohmann::json;
  * Tools included:
  * - connect_max_objects: Create a patchcord connection between two objects
  * - disconnect_max_objects: Remove a patchcord connection between two objects
+ * - get_patchlines: List all patchlines with metadata (coordinates, color, etc.)
+ * - set_patchline_midpoints: Set midpoint coordinates for a patchcord
  *
  * @return JSON array of tool schema objects
  */
