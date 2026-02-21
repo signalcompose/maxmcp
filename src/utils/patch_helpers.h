@@ -12,6 +12,7 @@
 
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -21,6 +22,14 @@ struct _object;
 typedef struct _object t_object;
 struct _atom;
 typedef struct _atom t_atom;
+struct _symbol;
+typedef struct _symbol t_symbol;
+typedef struct _jrgba {
+    double red;
+    double green;
+    double blue;
+    double alpha;
+} t_jrgba;
 #else
 // Include Max SDK for full type definitions
 #include "ext.h"
@@ -138,6 +147,81 @@ bool is_textfield_content_type(const std::string& obj_type);
  * @note This function must be called on the main thread (or via defer)
  */
 bool set_textfield_content(t_object* box, const std::string& text);
+
+// ============================================================================
+// Box State Save/Restore (for replace_object_text and similar operations)
+// ============================================================================
+
+/**
+ * @brief A single saved attribute: name + atom values
+ */
+struct SavedAttribute {
+    t_symbol* name;
+    std::vector<t_atom> values;
+};
+
+/**
+ * @brief A single saved patchline connection with visual properties
+ */
+struct SavedConnection {
+    t_object* other_box;
+    long outlet;
+    long inlet;
+    bool target_is_src;  ///< true: target→other, false: other→target
+    char hidden;
+    t_jrgba color;
+    std::vector<double> midpoints;  ///< flat [x1, y1, x2, y2, ...]
+};
+
+/**
+ * @brief Get the textfield text content of a box
+ *
+ * @param box The box object
+ * @return The text string, or empty if no textfield
+ */
+std::string get_box_text(t_object* box);
+
+/**
+ * @brief Save all saveable (save-flagged, writable) attributes of a box
+ *
+ * Enumerates all attributes, checks the "save" meta-attribute and writability,
+ * then collects their values as atom vectors.
+ *
+ * @param box The box object to save attributes from
+ * @return Vector of saved attributes
+ */
+std::vector<SavedAttribute> save_box_attributes(t_object* box);
+
+/**
+ * @brief Save all patchline connections involving a box
+ *
+ * Iterates all patchlines in the patcher and collects those connected
+ * to the specified box, including visual properties (hidden, color, midpoints).
+ *
+ * @param patcher The patcher containing the box
+ * @param box The box whose connections to save
+ * @return Vector of saved connections
+ */
+std::vector<SavedConnection> save_box_connections(t_object* patcher, t_object* box);
+
+/**
+ * @brief Restore saved attributes onto a new box
+ *
+ * @param new_box The new box to restore attributes to
+ * @param attrs The saved attributes to restore
+ */
+void restore_box_attributes(t_object* new_box, const std::vector<SavedAttribute>& attrs);
+
+/**
+ * @brief Reconnect saved patchlines to a new box and restore visual properties
+ *
+ * @param patcher The patcher to create connections in
+ * @param new_box The new box to reconnect to
+ * @param connections The saved connections to restore
+ * @return Number of connections restored
+ */
+long restore_box_connections(t_object* patcher, t_object* new_box,
+                             const std::vector<SavedConnection>& connections);
 
 }  // namespace PatchHelpers
 

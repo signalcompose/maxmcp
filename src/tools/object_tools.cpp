@@ -81,6 +81,13 @@ struct t_redraw_data {
     ToolCommon::DeferredResult* deferred_result;
 };
 
+struct t_replace_text_data {
+    t_maxmcp* patch;
+    std::string varname;
+    std::string new_text;
+    ToolCommon::DeferredResult* deferred_result;
+};
+
 // ============================================================================
 // Deferred Callbacks (run on main thread)
 // ============================================================================
@@ -309,6 +316,76 @@ static void redraw_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* arg
     COMPLETE_DEFERRED(data, (json{{"success", true}, {"varname", data->varname}}));
 }
 
+/**
+ * Deferred callback for replacing object box text.
+ * Saves connections, deletes object, recreates with new text, restores connections.
+ * Executes on the Max main thread via defer().
+ */
+static void replace_object_text_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("replace_object_text_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_replace_text_data, data, argv);
+
+    t_object* patcher = data->patch->patcher;
+    t_object* box = PatchHelpers::find_box_by_varname(patcher, data->varname);
+
+    if (!box) {
+        std::string msg = "Object not found: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
+        return;
+    }
+
+    // --- 1. Save current box state ---
+    t_symbol* maxclass = jbox_get_maxclass(box);
+    std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "";
+    std::string old_text = PatchHelpers::get_box_text(box);
+    auto saved_attrs = PatchHelpers::save_box_attributes(box);
+    auto saved_connections = PatchHelpers::save_box_connections(patcher, box);
+
+    // --- 2. Delete the old box ---
+    object_free(box);
+    box = nullptr;
+
+    // --- 3. Create new box ---
+    t_object* new_box = nullptr;
+    bool is_textfield_type = PatchHelpers::is_textfield_content_type(maxclass_str);
+
+    if (is_textfield_type) {
+        new_box = (t_object*)newobject_fromboxtext(patcher, maxclass_str.c_str());
+    } else {
+        new_box = (t_object*)newobject_fromboxtext(patcher, data->new_text.c_str());
+    }
+
+    if (!new_box) {
+        std::string msg = "Failed to recreate object with text: " + data->new_text;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INTERNAL_ERROR, msg));
+        return;
+    }
+
+    // --- 4. Restore state ---
+    PatchHelpers::restore_box_attributes(new_box, saved_attrs);
+    object_attr_setsym(new_box, gensym("varname"), gensym(data->varname.c_str()));
+
+    if (is_textfield_type) {
+        PatchHelpers::set_textfield_content(new_box, data->new_text);
+    }
+
+    long reconnected = PatchHelpers::restore_box_connections(patcher, new_box, saved_connections);
+    jpatcher_set_dirty(patcher, 1);
+
+    ConsoleLogger::log(("Object text replaced: " + data->varname + " (" +
+                        std::to_string(reconnected) + " connections restored)")
+                           .c_str());
+
+    COMPLETE_DEFERRED(data, (json{{"result",
+                                   {{"status", "success"},
+                                    {"varname", data->varname},
+                                    {"old_text", old_text},
+                                    {"new_text", data->new_text},
+                                    {"reconnected", reconnected}}}}));
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -409,7 +486,27 @@ json get_tool_schemas() {
             {"properties",
              {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
               {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}}}},
-            {"required", json::array({"patch_id", "varname"})}}}}});
+            {"required", json::array({"patch_id", "varname"})}}}},
+
+         {{"name", "replace_object_text"},
+          {"description",
+           "Replace the box text of an existing Max object by deleting and recreating it. "
+           "All patchcord connections are automatically saved and restored. "
+           "For regular objects, new_text is the full box text (e.g., 'cycle~ 880'). "
+           "For message/comment/textedit, new_text is the displayed text content."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+              {"varname",
+               {{"type", "string"},
+                {"description", "Variable name of the object to replace text for"}}},
+              {"new_text",
+               {{"type", "string"},
+                {"description", "New box text. For regular objects: full text including class "
+                                "(e.g., 'cycle~ 880'). For message/comment/textedit: the displayed "
+                                "text content."}}}}},
+            {"required", json::array({"patch_id", "varname", "new_text"})}}}}});
 }
 
 // ============================================================================
@@ -714,6 +811,38 @@ json execute(const std::string& tool, const json& params) {
             return result;
         }
         return {{"result", result}};
+
+    } else if (tool == "replace_object_text") {
+        std::string patch_id = params.value("patch_id", "");
+        std::string varname = params.value("varname", "");
+        std::string new_text = params.value("new_text", "");
+
+        if (patch_id.empty() || varname.empty() || new_text.empty()) {
+            return ToolCommon::make_error(
+                ToolCommon::ErrorCode::INVALID_PARAMS,
+                "Missing required parameters: patch_id, varname, and new_text");
+        }
+
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return ToolCommon::patch_not_found_error(patch_id);
+        }
+
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_replace_text_data{patch, varname, new_text, deferred_result};
+
+        t_atom a;
+        atom_setobj(&a, data);
+        defer(patch, (method)replace_object_text_deferred, gensym("replace_object_text"), 1, &a);
+
+        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("replacing object text");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
     }
 
     // Tool not handled by this module - return nullptr to signal routing should continue

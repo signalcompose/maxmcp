@@ -3,14 +3,11 @@
  * Unit tests for MCP tool schema definitions and routing logic.
  *
  * Tests the actual tool module code (not mocks) under MAXMCP_TEST_MODE:
- * - Schema completeness: all 20 tools registered with valid JSON Schema
+ * - Schema completeness: all 23 tools registered with valid JSON Schema
  * - Routing: MCPServer dispatches to correct module
  * - Test mode consistency: all modules return proper errors in test mode
  * - Parameter validation: missing required params produce error responses
  */
-
-#include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
 
 #include "mcp_server.h"
 #include "tools/connection_tools.h"
@@ -20,6 +17,9 @@
 #include "tools/state_tools.h"
 #include "tools/tool_common.h"
 #include "tools/utility_tools.h"
+
+#include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -35,12 +35,12 @@ class ToolSchemaTest : public ::testing::Test {
         ASSERT_TRUE(schema["name"].is_string());
         ASSERT_FALSE(schema["name"].get<std::string>().empty());
 
-        ASSERT_TRUE(schema.contains("description")) << "Schema missing 'description' for tool: "
-                                                     << schema["name"];
+        ASSERT_TRUE(schema.contains("description"))
+            << "Schema missing 'description' for tool: " << schema["name"];
         ASSERT_TRUE(schema["description"].is_string());
 
-        ASSERT_TRUE(schema.contains("inputSchema")) << "Schema missing 'inputSchema' for tool: "
-                                                     << schema["name"];
+        ASSERT_TRUE(schema.contains("inputSchema"))
+            << "Schema missing 'inputSchema' for tool: " << schema["name"];
         auto& input = schema["inputSchema"];
         ASSERT_TRUE(input.is_object());
         EXPECT_EQ(input.value("type", ""), "object")
@@ -57,15 +57,15 @@ TEST_F(ToolSchemaTest, PatchToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
     auto schemas = ObjectTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 8)
-        << "ObjectTools should have 8 tools (add, remove, get_objects, set_attr, "
-           "get_io, get_hidden, set_hidden, redraw)";
+    ASSERT_EQ(schemas.size(), 9)
+        << "ObjectTools should have 9 tools (add, remove, get_objects, set_attr, "
+           "get_io, get_hidden, set_hidden, redraw, replace_text)";
 }
 
 TEST_F(ToolSchemaTest, ConnectionToolsSchemaCount) {
     auto schemas = ConnectionTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 4)
-        << "ConnectionTools should have 4 tools (connect, disconnect, get_patchlines, set_patchline_midpoints)";
+    ASSERT_EQ(schemas.size(), 4) << "ConnectionTools should have 4 tools (connect, disconnect, "
+                                    "get_patchlines, set_patchline_midpoints)";
 }
 
 TEST_F(ToolSchemaTest, StateToolsSchemaCount) {
@@ -87,19 +87,17 @@ TEST_F(ToolSchemaTest, UtilityToolsSchemaCount) {
 }
 
 TEST_F(ToolSchemaTest, TotalToolCount) {
-    size_t total = PatchTools::get_tool_schemas().size() +
-                   ObjectTools::get_tool_schemas().size() +
-                   ConnectionTools::get_tool_schemas().size() +
-                   StateTools::get_tool_schemas().size() +
-                   HierarchyTools::get_tool_schemas().size() +
-                   UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 22) << "Total tool count should be 22";
+    size_t total =
+        PatchTools::get_tool_schemas().size() + ObjectTools::get_tool_schemas().size() +
+        ConnectionTools::get_tool_schemas().size() + StateTools::get_tool_schemas().size() +
+        HierarchyTools::get_tool_schemas().size() + UtilityTools::get_tool_schemas().size();
+    EXPECT_EQ(total, 23) << "Total tool count should be 23";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
-                    ConnectionTools::get_tool_schemas(),  StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),   UtilityTools::get_tool_schemas()};
+                    ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -111,8 +109,8 @@ TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
 TEST_F(ToolSchemaTest, AllToolNamesAreUnique) {
     std::set<std::string> names;
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
-                    ConnectionTools::get_tool_schemas(),  StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),   UtilityTools::get_tool_schemas()};
+                    ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -126,8 +124,8 @@ TEST_F(ToolSchemaTest, AllToolNamesAreUnique) {
 TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
     std::set<std::string> names;
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
-                    ConnectionTools::get_tool_schemas(),  StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),   UtilityTools::get_tool_schemas()};
+                    ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -137,14 +135,14 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
 
     // Verify all expected tool names
     std::vector<std::string> expected = {
-        "list_active_patches", "get_patch_info",       "get_frontmost_patch",
-        "add_max_object",      "remove_max_object",    "get_objects_in_patch",
-        "set_object_attribute", "get_object_io_info",   "get_object_hidden",
-        "set_object_hidden",   "redraw_object",        "connect_max_objects",
-        "disconnect_max_objects", "get_patch_lock_state", "set_patch_lock_state",
-        "get_patch_dirty",     "get_parent_patcher",   "get_subpatchers",
-        "get_console_log",     "get_avoid_rect_position",
-        "get_patchlines",      "set_patchline_midpoints"};
+        "list_active_patches",     "get_patch_info",          "get_frontmost_patch",
+        "add_max_object",          "remove_max_object",       "get_objects_in_patch",
+        "set_object_attribute",    "get_object_io_info",      "get_object_hidden",
+        "set_object_hidden",       "redraw_object",           "connect_max_objects",
+        "disconnect_max_objects",  "get_patch_lock_state",    "set_patch_lock_state",
+        "get_patch_dirty",         "get_parent_patcher",      "get_subpatchers",
+        "get_console_log",         "get_avoid_rect_position", "get_patchlines",
+        "set_patchline_midpoints", "replace_object_text"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;
@@ -153,8 +151,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
 
 TEST_F(ToolSchemaTest, InputSchemaHasPropertiesField) {
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
-                    ConnectionTools::get_tool_schemas(),  StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),   UtilityTools::get_tool_schemas()};
+                    ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -178,7 +176,9 @@ class MCPServerRoutingTest : public ::testing::Test {
         server->start();
     }
 
-    void TearDown() override { MCPServer::destroy_instance(); }
+    void TearDown() override {
+        MCPServer::destroy_instance();
+    }
 
     json call_tool(const std::string& name, const json& arguments = json::object()) {
         json request = {{"jsonrpc", "2.0"},
@@ -204,7 +204,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 22) << "tools/list should return all 22 tools";
+    EXPECT_EQ(tools.size(), 23) << "tools/list should return all 23 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {
@@ -249,8 +249,9 @@ TEST_F(MCPServerRoutingTest, MissingToolNameError) {
 TEST_F(MCPServerRoutingTest, UnknownToolError) {
     auto response = call_tool("nonexistent_tool");
 
-    // In test mode, ObjectTools::execute returns ToolCommon::ErrorCode::INTERNAL_ERROR for all tools (including unknown ones),
-    // so the routing stops there. The error code depends on test mode behavior.
+    // In test mode, ObjectTools::execute returns ToolCommon::ErrorCode::INTERNAL_ERROR for all
+    // tools (including unknown ones), so the routing stops there. The error code depends on test
+    // mode behavior.
     ASSERT_TRUE(response.contains("error"));
 }
 
@@ -259,7 +260,7 @@ TEST_F(MCPServerRoutingTest, InvalidJSONParsing) {
     auto response = json::parse(response_str);
 
     ASSERT_TRUE(response.contains("error"));
-    EXPECT_EQ(response["error"]["code"], -32700);
+    EXPECT_EQ(response["error"]["code"], ToolCommon::ErrorCode::PARSE_ERROR);
 }
 
 TEST_F(MCPServerRoutingTest, NotificationReturnsEmpty) {
