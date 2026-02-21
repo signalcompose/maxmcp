@@ -189,6 +189,19 @@ Documentation is the single source of truth (DDD - Documentation Driven Developm
 
 Always read and update documentation before/after code changes.
 
+## Skill Loading Rules (MCP Patch Operations)
+
+When performing Max/MSP patch operations via MCP tools, **always load the relevant skills before starting work**. This ensures consistent quality and adherence to project conventions.
+
+| Skill | Condition | Command |
+|-------|-----------|---------|
+| **patch-guidelines** | Always load when operating on Max patches | `/maxmcp:patch-guidelines` |
+| **max-techniques** | Load when implementing Max/MSP features (poly~, pattr, signal processing, etc.) | `/maxmcp:max-techniques` |
+| **m4l-techniques** | Load only when working on Max for Live devices | `/maxmcp:m4l-techniques` |
+| **max-resources** | Load as needed when looking up object references or examples | `/maxmcp:max-resources` |
+
+**Priority**: patch-guidelines is mandatory for all patch operations. Other skills are loaded based on the task context.
+
 ## Claude Code Plugin Marketplace
 
 MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
