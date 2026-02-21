@@ -11,6 +11,8 @@
 #include "jpatcher_api.h"
 #endif
 
+using json = nlohmann::json;
+
 namespace PatchHelpers {
 
 // Max SDK independent - shared between test and production
@@ -326,6 +328,32 @@ long restore_box_connections(t_object* patcher, t_object* new_box,
     }
 
     return reconnected;
+}
+
+json atom_to_json(const t_atom& a) {
+    switch (atom_gettype(&a)) {
+    case A_LONG:
+        return atom_getlong(&a);
+    case A_FLOAT:
+        return atom_getfloat(&a);
+    case A_SYM: {
+        t_symbol* sym = atom_getsym(&a);
+        return (sym && sym->s_name) ? sym->s_name : "";
+    }
+    default:
+        return atom_getfloat(&a);
+    }
+}
+
+json atoms_to_json(long ac, const t_atom* av) {
+    if (ac == 1) {
+        return atom_to_json(av[0]);
+    }
+    json arr = json::array();
+    for (long i = 0; i < ac; i++) {
+        arr.push_back(atom_to_json(av[i]));
+    }
+    return arr;
 }
 
 #endif  // MAXMCP_TEST_MODE

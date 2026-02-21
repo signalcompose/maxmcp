@@ -60,43 +60,44 @@ npm run format:check
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
 
-### MCP Tools (24 total)
+### MCP Tools (25 total)
 
 #### Patch Management (3)
 1. `list_active_patches` - List registered patches
 2. `get_patch_info` - Get patch metadata
 3. `get_frontmost_patch` - Get currently focused patch
 
-#### Object Operations (10)
+#### Object Operations (11)
 4. `add_max_object` - Create Max objects
 5. `remove_max_object` - Delete objects
 6. `get_objects_in_patch` - List objects in patch (with index, text, position, varname)
 7. `set_object_attribute` - Modify object attributes
-8. `get_object_io_info` - Get inlet/outlet counts
-9. `get_object_hidden` - Check visibility
-10. `set_object_hidden` - Set visibility
-11. `redraw_object` - Force redraw
-12. `replace_object_text` - Replace box text (recreates object, preserves connections)
-13. `assign_varnames` - Assign varnames to objects by index
+8. `get_object_attribute` - Read object attribute values
+9. `get_object_io_info` - Get inlet/outlet counts
+10. `get_object_hidden` - Check visibility
+11. `set_object_hidden` - Set visibility
+12. `redraw_object` - Force redraw
+13. `replace_object_text` - Replace box text (recreates object, preserves connections)
+14. `assign_varnames` - Assign varnames to objects by index
 
 #### Connection Operations (4)
-14. `connect_max_objects` - Create patchcords
-15. `disconnect_max_objects` - Remove patchcords
-16. `get_patchlines` - Get patchcord information
-17. `set_patchline_midpoints` - Set patchcord routing points
+15. `connect_max_objects` - Create patchcords
+16. `disconnect_max_objects` - Remove patchcords
+17. `get_patchlines` - Get patchcord information
+18. `set_patchline_midpoints` - Set patchcord routing points
 
 #### Patch State (3)
-18. `get_patch_lock_state` - Get lock state
-19. `set_patch_lock_state` - Set lock state
-20. `get_patch_dirty` - Check unsaved changes
+19. `get_patch_lock_state` - Get lock state
+20. `set_patch_lock_state` - Set lock state
+21. `get_patch_dirty` - Check unsaved changes
 
 #### Hierarchy (2)
-21. `get_parent_patcher` - Get parent patcher
-22. `get_subpatchers` - List subpatchers
+22. `get_parent_patcher` - Get parent patcher
+23. `get_subpatchers` - List subpatchers
 
 #### Utilities (2)
-23. `get_console_log` - Retrieve Max Console messages
-24. `get_avoid_rect_position` - Find safe placement positions
+24. `get_console_log` - Retrieve Max Console messages
+25. `get_avoid_rect_position` - Find safe placement positions
 
 ### Threading Model
 

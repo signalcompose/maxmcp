@@ -54,6 +54,13 @@ struct t_set_attribute_data {
     ToolCommon::DeferredResult* deferred_result;
 };
 
+struct t_get_attribute_data {
+    t_maxmcp* patch;
+    std::string varname;
+    std::string attribute;
+    ToolCommon::DeferredResult* deferred_result;
+};
+
 struct t_get_objects_data {
     t_maxmcp* patch;
     ToolCommon::DeferredResult* deferred_result;
@@ -216,6 +223,42 @@ static void set_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_at
                                    {{"status", "success"},
                                     {"varname", data->varname},
                                     {"attribute", data->attribute}}}}));
+}
+
+static void get_attribute_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("get_attribute_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_attribute_data, data, argv);
+
+    t_object* box = PatchHelpers::find_box_by_varname(data->patch->patcher, data->varname);
+
+    if (!box) {
+        std::string msg = "Object not found: " + data->varname;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
+        return;
+    }
+
+    long ac = 0;
+    t_atom* av = nullptr;
+    t_max_err err = object_attr_getvalueof(box, gensym(data->attribute.c_str()), &ac, &av);
+
+    if (err != MAX_ERR_NONE || ac == 0) {
+        if (av)
+            sysmem_freeptr(av);
+        std::string msg = "Attribute not found or has no value: " + data->attribute;
+        ConsoleLogger::log(msg.c_str());
+        COMPLETE_DEFERRED(data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
+        return;
+    }
+
+    json value = PatchHelpers::atoms_to_json(ac, av);
+    sysmem_freeptr(av);
+
+    ConsoleLogger::log(("Attribute read: " + data->varname + "." + data->attribute).c_str());
+    COMPLETE_DEFERRED(
+        data,
+        (json{{"result",
+               {{"varname", data->varname}, {"attribute", data->attribute}, {"value", value}}}}));
 }
 
 static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
@@ -515,6 +558,20 @@ json get_tool_schemas() {
                                 "e.g. 440, \"hello\", [100, 200, 300, 50]"}}}}},
             {"required", json::array({"patch_id", "varname", "attribute", "value"})}}}},
 
+         {{"name", "get_object_attribute"},
+          {"description", "Get the value of an attribute of a Max object. "
+                          "Returns the current value of the specified attribute."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+              {"varname", {{"type", "string"}, {"description", "Variable name of the object"}}},
+              {"attribute",
+               {{"type", "string"},
+                {"description",
+                 "Attribute name to get (e.g., patching_rect, bgcolor, fontsize)"}}}}},
+            {"required", json::array({"patch_id", "varname", "attribute"})}}}},
+
          {{"name", "get_object_io_info"},
           {"description", "Get inlet and outlet count for an object"},
           {"inputSchema",
@@ -752,6 +809,38 @@ json execute(const std::string& tool, const json& params) {
         if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
             delete deferred_result;
             return ToolCommon::timeout_error("setting attribute");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
+
+    } else if (tool == "get_object_attribute") {
+        std::string patch_id = params.value("patch_id", "");
+        std::string varname = params.value("varname", "");
+        std::string attribute = params.value("attribute", "");
+
+        if (patch_id.empty() || varname.empty() || attribute.empty()) {
+            return ToolCommon::make_error(
+                ToolCommon::ErrorCode::INVALID_PARAMS,
+                "Missing required parameters: patch_id, varname, and attribute");
+        }
+
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return ToolCommon::patch_not_found_error(patch_id);
+        }
+
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_get_attribute_data{patch, varname, attribute, deferred_result};
+
+        t_atom a;
+        atom_setobj(&a, data);
+        defer(patch, (method)get_attribute_deferred, gensym("get_attribute"), 1, &a);
+
+        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("getting attribute");
         }
 
         json result = deferred_result->result;

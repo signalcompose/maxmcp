@@ -3,7 +3,7 @@
  * Unit tests for MCP tool schema definitions and routing logic.
  *
  * Tests the actual tool module code (not mocks) under MAXMCP_TEST_MODE:
- * - Schema completeness: all 24 tools registered with valid JSON Schema
+ * - Schema completeness: all 25 tools registered with valid JSON Schema
  * - Routing: MCPServer dispatches to correct module
  * - Test mode consistency: all modules return proper errors in test mode
  * - Parameter validation: missing required params produce error responses
@@ -57,8 +57,8 @@ TEST_F(ToolSchemaTest, PatchToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
     auto schemas = ObjectTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 10)
-        << "ObjectTools should have 10 tools (add, remove, get_objects, set_attr, "
+    ASSERT_EQ(schemas.size(), 11)
+        << "ObjectTools should have 11 tools (add, remove, get_objects, set_attr, get_attr, "
            "get_io, get_hidden, set_hidden, redraw, replace_text, assign_varnames)";
 }
 
@@ -91,7 +91,7 @@ TEST_F(ToolSchemaTest, TotalToolCount) {
         PatchTools::get_tool_schemas().size() + ObjectTools::get_tool_schemas().size() +
         ConnectionTools::get_tool_schemas().size() + StateTools::get_tool_schemas().size() +
         HierarchyTools::get_tool_schemas().size() + UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 24) << "Total tool count should be 24";
+    EXPECT_EQ(total, 25) << "Total tool count should be 25";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
@@ -135,14 +135,15 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
 
     // Verify all expected tool names
     std::vector<std::string> expected = {
-        "list_active_patches",     "get_patch_info",          "get_frontmost_patch",
-        "add_max_object",          "remove_max_object",       "get_objects_in_patch",
-        "set_object_attribute",    "get_object_io_info",      "get_object_hidden",
-        "set_object_hidden",       "redraw_object",           "connect_max_objects",
-        "disconnect_max_objects",  "get_patch_lock_state",    "set_patch_lock_state",
-        "get_patch_dirty",         "get_parent_patcher",      "get_subpatchers",
-        "get_console_log",         "get_avoid_rect_position", "get_patchlines",
-        "set_patchline_midpoints", "replace_object_text",     "assign_varnames"};
+        "list_active_patches",  "get_patch_info",          "get_frontmost_patch",
+        "add_max_object",       "remove_max_object",       "get_objects_in_patch",
+        "set_object_attribute", "get_object_attribute",    "get_object_io_info",
+        "get_object_hidden",    "set_object_hidden",       "redraw_object",
+        "connect_max_objects",  "disconnect_max_objects",  "get_patch_lock_state",
+        "set_patch_lock_state", "get_patch_dirty",         "get_parent_patcher",
+        "get_subpatchers",      "get_console_log",         "get_avoid_rect_position",
+        "get_patchlines",       "set_patchline_midpoints", "replace_object_text",
+        "assign_varnames"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;
@@ -161,6 +162,39 @@ TEST_F(ToolSchemaTest, InputSchemaHasPropertiesField) {
                 << "inputSchema missing 'properties' for tool: " << schema["name"];
         }
     }
+}
+
+TEST_F(ToolSchemaTest, GetObjectAttributeSchemaCorrectness) {
+    auto schemas = ObjectTools::get_tool_schemas();
+
+    // Find get_object_attribute schema
+    json target;
+    for (const auto& schema : schemas) {
+        if (schema["name"] == "get_object_attribute") {
+            target = schema;
+            break;
+        }
+    }
+    ASSERT_FALSE(target.is_null()) << "get_object_attribute schema not found";
+
+    auto& props = target["inputSchema"]["properties"];
+    EXPECT_TRUE(props.contains("patch_id"));
+    EXPECT_TRUE(props.contains("varname"));
+    EXPECT_TRUE(props.contains("attribute"));
+    EXPECT_FALSE(props.contains("value"))
+        << "get_object_attribute should not have 'value' parameter";
+
+    auto& required = target["inputSchema"]["required"];
+    ASSERT_TRUE(required.is_array());
+    EXPECT_EQ(required.size(), 3);
+
+    std::set<std::string> req_set;
+    for (const auto& r : required) {
+        req_set.insert(r.get<std::string>());
+    }
+    EXPECT_TRUE(req_set.count("patch_id"));
+    EXPECT_TRUE(req_set.count("varname"));
+    EXPECT_TRUE(req_set.count("attribute"));
 }
 
 // ============================================================================
@@ -204,7 +238,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 24) << "tools/list should return all 24 tools";
+    EXPECT_EQ(tools.size(), 25) << "tools/list should return all 25 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {

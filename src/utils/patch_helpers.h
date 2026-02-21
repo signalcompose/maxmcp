@@ -248,6 +248,25 @@ void restore_box_attributes(t_object* new_box, const std::vector<SavedAttribute>
 long restore_box_connections(t_object* patcher, t_object* new_box,
                              const std::vector<SavedConnection>& connections);
 
+/**
+ * @brief Convert a single Max atom to a JSON value
+ *
+ * @param a The atom to convert
+ * @return JSON value (integer, double, or string)
+ */
+nlohmann::json atom_to_json(const t_atom& a);
+
+/**
+ * @brief Convert a Max atom array to a JSON value
+ *
+ * Returns a scalar JSON value if ac == 1, or a JSON array if ac > 1.
+ *
+ * @param ac Number of atoms
+ * @param av Pointer to atom array
+ * @return JSON value (scalar or array)
+ */
+nlohmann::json atoms_to_json(long ac, const t_atom* av);
+
 }  // namespace PatchHelpers
 
 #endif  // PATCH_HELPERS_H
