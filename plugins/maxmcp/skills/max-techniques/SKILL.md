@@ -49,5 +49,9 @@ Proven patterns for safe and reliable patch behavior.
 **Key topics**:
 - `trigger` as the safest constant parameter source
 - Sampling rate detection with `dspstate~` to avoid Nyquist issues
+- Avoiding `message` boxes — use `trigger`, `prepend`, `append` instead
+- `prepend set` for setting values without output
+- `zl.reg` for safe list storage
+- `pack` / `pak` for constructing specific lists
 
 See [Tips Reference](reference/tips.md)

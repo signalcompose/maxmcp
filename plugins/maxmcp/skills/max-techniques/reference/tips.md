@@ -94,6 +94,88 @@ select                           → branch by rate
 - Patches that may run at different sampling rates (e.g., shared patches, multi-interface setups)
 - Patches using `filtercoeff~`, `biquad~`, `svf~`, or other filter objects with frequency parameters
 
+## Message Manipulation Patterns
+
+### Avoid message Boxes
+
+`message` boxes have multiple risks:
+- Clicking the box in locked mode sends the message
+- Right inlet allows overwriting the stored value
+- Easy to trigger accidentally during editing
+
+Use `trigger` or dedicated objects instead.
+
+### Setting Values Without Output: prepend set
+
+To set an object's value without triggering output (equivalent to `set $1`), use `prepend set`:
+
+```
+incoming value
+  ↓
+prepend set
+  ↓
+number / flonum / message    → value is set, no output triggered
+```
+
+This is safer and more readable than using `message` with `set $1`.
+
+### Appending to Messages: append
+
+To add a value at the end of a message or list:
+
+```
+incoming value
+  ↓
+append hz
+  ↓
+→ "440 hz"
+```
+
+### Single-Value Messages: trigger
+
+For sending a specific constant value (e.g., `1`, `clear`), use `trigger` instead of `message`:
+
+```
+bang
+  ↓
+t 1         → always outputs 1
+```
+
+```
+bang
+  ↓
+t clear     → always outputs "clear"
+```
+
+**Why not message?** A `message` box with `1` can be clicked accidentally, and its value can be overwritten via the right inlet. `trigger` has neither problem.
+
+### List Storage: zl.reg
+
+To store and recall a list, use `zl.reg`:
+
+```
+list input
+  ↓
+zl.reg
+  ↓ (bang to recall)
+stored list output
+```
+
+**Why not message or coll?** `zl.reg` is purpose-built for list storage — no click risk, no file overhead.
+
+### Building Specific Lists: pack
+
+To construct a specific list from individual values:
+
+```
+pack 0 0. symbol
+  │   │    └── symbol inlet
+  │   └── float inlet
+  └── int inlet (triggers output)
+```
+
+`pack` outputs the list when the leftmost inlet receives a value. Use `pak` if any inlet should trigger output.
+
 ## Sources
 
 - https://leico.github.io/TechnicalNote/Max/constant
