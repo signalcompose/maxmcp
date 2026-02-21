@@ -83,21 +83,10 @@ Claude Code:
 MaxMCP/
 ├── src/                         # C++ source code
 │   ├── maxmcp.cpp              # Unified external (@mode agent / @mode patch)
-│   ├── mcp_server.cpp          # MCP protocol handler (JSON-RPC)
-│   ├── websocket_server.cpp    # libwebsockets WebSocket server
-│   ├── tools/                  # MCP tool implementations
-│   │   ├── patch_tools.cpp     # Patch management (3 tools)
-│   │   ├── object_tools.cpp    # Object operations (12 tools)
-│   │   ├── connection_tools.cpp # Connection operations (4 tools)
-│   │   ├── state_tools.cpp     # Patch state (3 tools)
-│   │   ├── hierarchy_tools.cpp # Hierarchy (2 tools)
-│   │   ├── utility_tools.cpp   # Utilities (2 tools)
-│   │   └── tool_common.cpp     # Shared tool helpers
-│   └── utils/                  # Shared utilities
-│       ├── patch_helpers.cpp   # Patcher API helpers
-│       ├── patch_registry.cpp  # Patch registration
-│       ├── console_logger.cpp  # Console log capture
-│       └── uuid_generator.cpp  # Patch ID generation
+│   ├── mcp_server.cpp          # MCP protocol handler
+│   ├── websocket_server.cpp    # WebSocket server
+│   ├── tools/                  # MCP tool implementations (7 files, 26 tools)
+│   └── utils/                  # Shared utilities (4 files)
 ├── tests/unit/                 # Google Test unit tests
 ├── package/MaxMCP/             # Max Package (build output)
 │   └── support/bridge/         # Node.js stdio-to-WebSocket bridge
@@ -105,6 +94,8 @@ MaxMCP/
 ├── deploy.sh                   # Deploy to Max 9 Packages
 └── CMakeLists.txt              # Build configuration
 ```
+
+For detailed source file organization, see [development-guide.md](development-guide.md) §4.1.
 
 ---
 
@@ -277,38 +268,11 @@ Follow this exact order to reproduce the working installation from our latest de
 
 ## Critical Implementation Notes
 
-### Thread Safety
-Max API calls **must** be on main thread:
-```cpp
-// WRONG - crashes
-void* some_thread() {
-    jpatcher_add_object(patcher, obj); // ❌ Not on main thread
-}
+- **Thread Safety**: All Max API calls must run on main thread via `defer()` / `defer_low()`
+- **Patcher Reference**: Obtained at instantiation via `gensym("#P")->s_thing`
+- **Lifecycle Monitoring**: Subscribe to patcher close event for auto-unregistration
 
-// CORRECT
-void* some_thread() {
-    defer_low(x, [](t_maxmcp* x) {
-        jpatcher_add_object(x->patcher, obj); // ✅ On main thread
-    }, 0, nullptr);
-}
-```
-
-### Patcher Reference
-Get patcher in `new()`:
-```cpp
-void* maxmcp_new(...) {
-    t_maxmcp* x = (t_maxmcp*)object_alloc(maxmcp_class);
-    x->patcher = (t_object*)gensym("#P")->s_thing;
-    return x;
-}
-```
-
-### Lifecycle Monitoring
-Subscribe to patcher close event:
-```cpp
-object_subscribe(gensym("#P"), gensym("close"),
-                (method)on_patcher_close, x);
-```
+For code examples and detailed architecture, see [architecture.md](architecture.md) §3.
 
 ---
 

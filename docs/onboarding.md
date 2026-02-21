@@ -103,46 +103,20 @@ If you're using Claude Code:
 MaxMCP/
 ├── docs/                    # Documentation (START HERE)
 │   ├── INDEX.md            # Documentation index
-│   ├── mcp-tools-reference.md # Complete MCP tools reference
-│   ├── architecture.md     # System design
-│   ├── specifications.md   # Technical spec
-│   ├── development-guide.md # Development best practices
-│   └── research/           # Research findings
+│   └── ...                 # Specifications, architecture, guides
 ├── src/                    # C++ source code
 │   ├── maxmcp.cpp         # Unified external (agent + patch modes)
-│   ├── mcp_server.cpp     # MCP protocol handler (JSON-RPC)
-│   ├── websocket_server.cpp # libwebsockets-based WebSocket server
-│   ├── tools/             # MCP tool implementations (26 tools)
-│   │   ├── patch_tools.cpp
-│   │   ├── object_tools.cpp
-│   │   ├── connection_tools.cpp
-│   │   ├── state_tools.cpp
-│   │   ├── hierarchy_tools.cpp
-│   │   ├── utility_tools.cpp
-│   │   └── tool_common.cpp
-│   └── utils/             # Helper utilities
-│       ├── patch_helpers.cpp
-│       ├── patch_registry.cpp
-│       ├── console_logger.cpp
-│       └── uuid_generator.cpp
-├── tests/                  # Unit tests (Google Test)
-│   └── unit/
-├── package/                # Distributable Max package
-│   └── MaxMCP/
-│       ├── externals/     # maxmcp.mxo
-│       └── support/bridge/ # Node.js stdio-to-WebSocket bridge
-├── plugins/                # Claude Code plugin
-│   └── maxmcp/
-│       └── skills/
-│           ├── patch-guidelines/   # Patch creation guidelines
-│           ├── max-techniques/     # Max/MSP techniques
-│           ├── m4l-techniques/     # Max for Live techniques
-│           └── max-resources/      # Max.app resource access
+│   ├── tools/             # MCP tool implementations (7 files, 26 tools)
+│   └── utils/             # Helper utilities (4 files)
+├── tests/unit/             # Unit tests (Google Test)
+├── package/MaxMCP/         # Distributable Max package
+├── plugins/maxmcp/         # Claude Code plugin (4 skills)
 ├── build.sh                # Build script
 ├── deploy.sh               # Deploy to Max 9 Packages
-├── CMakeLists.txt          # Build configuration
-└── README.md               # Project overview
+└── CMakeLists.txt          # Build configuration
 ```
+
+For detailed source file organization, see [development-guide.md](development-guide.md) §4.1.
 
 ---
 
@@ -150,38 +124,11 @@ MaxMCP/
 
 MaxMCP follows three core principles:
 
-### 1. DDD (Documentation Driven Development)
+1. **DDD (Documentation Driven Development)** — All development starts with documentation
+2. **TDD (Test Driven Development)** — Red → Green → Refactor
+3. **DRY (Don't Repeat Yourself)** — Single source of truth
 
-**All development starts with documentation.**
-
-```
-Write Spec → Implement → Test → Update Docs
-```
-
-**Workflow**:
-1. Before coding, write/update specification in `docs/`
-2. Implement according to spec
-3. Write tests to verify compliance
-4. Update documentation if implementation reveals insights
-
-**Never**:
-- Start coding without a spec
-- Let code and docs diverge
-- Skip documentation updates
-
-### 2. TDD (Test Driven Development)
-
-**Red → Green → Refactor**
-
-1. **Red**: Write failing test
-2. **Green**: Write minimal code to pass
-3. **Refactor**: Clean up while keeping tests green
-
-### 3. DRY (Don't Repeat Yourself)
-
-- Extract common logic
-- Link documentation instead of duplicating
-- Single source of truth for configuration
+For detailed explanations and code examples, see [development-guide.md](development-guide.md) §1.
 
 ---
 
@@ -207,8 +154,7 @@ git checkout -b feature/123-add-object-tool
 # Edit tests/ files
 
 # 6. Build and test
-cmake --build build
-cd build && ctest --output-on-failure
+./build.sh --test
 
 # 7. Update documentation
 # Update docs/ if needed
@@ -329,45 +275,7 @@ lldb /Applications/Max.app/Contents/MacOS/Max
 
 ## 📚 Coding Standards
 
-### File Organization
-
-- One class per file
-- Keep files under 500 lines
-- Separate interface (.h) and implementation (.cpp)
-
-### Naming Conventions
-
-```cpp
-// Classes: PascalCase
-class MCPServer {};
-
-// Functions: snake_case
-std::string generate_patch_id();
-
-// Variables: snake_case
-std::string patch_id;
-
-// Constants: UPPER_SNAKE_CASE
-const int MAX_BUFFER_SIZE = 1024;
-
-// Private members: trailing underscore
-class Example {
-private:
-    std::string name_;
-};
-```
-
-### Comments
-
-```cpp
-// Good: Explain WHY
-// Use defer_low because Max API is not thread-safe
-defer_low(x, callback, 0, nullptr);
-
-// Bad: Explain WHAT (self-explanatory)
-// Call defer_low
-defer_low(x, callback, 0, nullptr);
-```
+For complete coding standards (naming conventions, file organization, comments), see [development-guide.md](development-guide.md) §4.
 
 ---
 

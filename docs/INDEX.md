@@ -79,6 +79,15 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Error codes
 - Usage examples
 
+### 8. [Onboarding Guide](onboarding.md)
+**Purpose**: Get new developers started quickly
+**Audience**: New contributors
+**Contents**:
+- Prerequisites and setup checklist
+- Quick start steps
+- Development principles overview
+- Debugging tips
+
 ---
 
 ## 📖 Phase Completion Reports
@@ -148,6 +157,15 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 ---
 
 ## 📖 Additional Resources
+
+### [Onboarding Guide](onboarding.md)
+- **Purpose**: New developer quick start and checklist
+
+### [Release Workflow](RELEASE_WORKFLOW.md)
+- **Purpose**: Release Please automated versioning and release process
+
+### [Package Manager Submission](PACKAGE_MANAGER_SUBMISSION.md)
+- **Purpose**: Guide for submitting to Max Package Manager (Phase 3)
 
 ### Research Documentation
 - **Directory**: [`research/`](research/)
@@ -261,7 +279,9 @@ Documentation should be updated when:
 | Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |
 | See version history | [CHANGELOG](../CHANGELOG.md) |
 | Find E2E test results | [E2E Test Results](e2e-test-results-phase2.md) |
+| Get started as new developer | [Onboarding Guide](onboarding.md) |
 | Set up and run MaxMCP | [Server Usage Guide](server-usage.md) |
+| Understand release process | [Release Workflow](RELEASE_WORKFLOW.md) |
 | Find research notes | [Research Directory](research/) |
 | Use Claude Code plugin | [Plugin README](../plugins/maxmcp/README.md) |
 

@@ -31,28 +31,7 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 
 ## System Architecture
 
-### Overall Diagram
-```
-┌─────────────────────────────────────────────────────────┐
-│              Claude Code (MCP Client)                    │
-└────────────────────┬────────────────────────────────────┘
-                     │ stdio (JSON-RPC)
-            ┌────────▼─────────┐
-            │  Node.js Bridge  │ ← websocket-mcp-bridge.js
-            └────────┬─────────┘
-                     │ WebSocket (ws://localhost:7400)
-         ┌───────────▼─────────────┐
-         │ [maxmcp @mode agent]    │ ← Singleton MCP Server
-         └───────────┬─────────────┘
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
-   ┌────▼─────┐ ┌───▼─────┐ ┌───▼─────┐
-   │[maxmcp   │ │[maxmcp  │ │[maxmcp  │
-   │@mode     │ │@mode    │ │@mode    │
-   │ patch]   │ │ patch]  │ │ patch]  │
-   └──────────┘ └─────────┘ └─────────┘
-```
+For detailed architecture diagrams and component interactions, see [architecture.md](architecture.md).
 
 ### Architecture Approach
 
@@ -142,16 +121,9 @@ After:  [maxmcp @mode patch]                   ← No arguments!
 
 ### 3. MCP Tools (26 total)
 
-All 26 MCP tools are documented in [mcp-tools-reference.md](mcp-tools-reference.md).
+26 MCP tools across 6 categories: Patch Management (3), Object Operations (12), Connection Operations (4), Patch State (3), Hierarchy (2), Utilities (2).
 
-| Category | Count | Tools |
-|----------|-------|-------|
-| Patch Management | 3 | `list_active_patches`, `get_patch_info`, `get_frontmost_patch` |
-| Object Operations | 12 | `add_max_object`, `remove_max_object`, `get_objects_in_patch`, `set_object_attribute`, `get_object_attribute`, `get_object_value`, `get_object_io_info`, `get_object_hidden`, `set_object_hidden`, `redraw_object`, `replace_object_text`, `assign_varnames` |
-| Connection Operations | 4 | `connect_max_objects`, `disconnect_max_objects`, `get_patchlines`, `set_patchline_midpoints` |
-| Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
-| Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
-| Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
+Complete tool reference with parameters and response formats: [mcp-tools-reference.md](mcp-tools-reference.md).
 
 ---
 
@@ -190,106 +162,17 @@ MaxMCP/
 
 ## Source Code Structure
 
-### File Organization
-```
-src/
-├── maxmcp.cpp              # Unified external (@mode agent / @mode patch)
-├── maxmcp.h
-├── mcp_server.cpp          # MCP protocol handler (JSON-RPC)
-├── mcp_server.h
-├── websocket_server.cpp    # libwebsockets WebSocket server
-├── websocket_server.h
-├── tools/
-│   ├── patch_tools.cpp     # Patch management (3 tools)
-│   ├── object_tools.cpp    # Object operations (12 tools)
-│   ├── connection_tools.cpp # Connection operations (4 tools)
-│   ├── state_tools.cpp     # Patch state (3 tools)
-│   ├── hierarchy_tools.cpp # Hierarchy (2 tools)
-│   ├── utility_tools.cpp   # Utilities (2 tools)
-│   └── tool_common.cpp     # Shared tool helpers
-└── utils/
-    ├── patch_helpers.cpp   # Patcher API helpers
-    ├── patch_registry.cpp  # Patch registration
-    ├── console_logger.cpp  # Console log capture
-    └── uuid_generator.cpp  # Patch ID generation
-
-tests/unit/
-├── test_mcp_server.cpp
-├── test_patch_registry.cpp
-├── test_uuid_generator.cpp
-└── ...
-
-package/MaxMCP/             # Build output (Max Package)
-└── support/bridge/
-    └── websocket-mcp-bridge.js
-```
-
-### CMakeLists.txt (Key Parts)
-```cmake
-cmake_minimum_required(VERSION 3.19)
-project(MaxMCP)
-
-set(CMAKE_CXX_STANDARD 17)
-
-# Max SDK
-set(C74_MAX_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/max-sdk")
-include(${C74_MAX_SDK_PATH}/script/max-sdk-base.cmake)
-
-# Dependencies
-find_package(nlohmann_json REQUIRED)
-find_package(libwebsockets REQUIRED)
-
-# Source files
-set(SOURCES
-    src/maxmcp.cpp
-    src/mcp_server.cpp
-    src/websocket_server.cpp
-    src/tools/patch_tools.cpp
-    src/tools/object_tools.cpp
-    src/tools/connection_tools.cpp
-    src/tools/state_tools.cpp
-    src/tools/hierarchy_tools.cpp
-    src/tools/utility_tools.cpp
-    src/tools/tool_common.cpp
-    src/utils/patch_helpers.cpp
-    src/utils/patch_registry.cpp
-    src/utils/console_logger.cpp
-    src/utils/uuid_generator.cpp
-)
-
-add_library(${PROJECT_NAME} MODULE ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    nlohmann_json::nlohmann_json
-    websockets
-)
-
-include(${C74_MAX_SDK_PATH}/script/max-posttarget.cmake)
-
-# Tests (optional)
-option(BUILD_TESTS "Build unit tests" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-```
+For the detailed file organization and CMakeLists.txt structure, see [development-guide.md](development-guide.md) §3 (Build System) and §4.1 (File Organization).
 
 ---
 
 ## Build & Deploy
 
 ```bash
-# Build (configure + build + install to package/MaxMCP)
-./build.sh              # Debug build
-./build.sh --test       # Debug build with tests
-./build.sh Release      # Release build
-./build.sh --clean      # Clean build first
-
-# Deploy to Max 9 Packages
-./deploy.sh
-
-# Typical workflow
 ./build.sh --test && ./deploy.sh
 ```
+
+For all build options and deployment details, see [development-guide.md](development-guide.md) §3.2 and §9.
 
 ---
 
