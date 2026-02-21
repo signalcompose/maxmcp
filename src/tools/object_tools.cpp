@@ -13,6 +13,9 @@
 #include "utils/patch_helpers.h"
 #include "utils/patch_registry.h"
 
+#include <set>
+#include <vector>
+
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
 #include "ext_obex.h"
@@ -85,6 +88,12 @@ struct t_replace_text_data {
     t_maxmcp* patch;
     std::string varname;
     std::string new_text;
+    ToolCommon::DeferredResult* deferred_result;
+};
+
+struct t_assign_varnames_data {
+    t_maxmcp* patch;
+    json assignments;
     ToolCommon::DeferredResult* deferred_result;
 };
 
@@ -215,6 +224,7 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
 
     json objects = json::array();
     t_object* patcher = data->patch->patcher;
+    int index = 0;
 
     for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
         t_symbol* varname = object_attr_getsym(box, gensym("varname"));
@@ -223,10 +233,14 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         t_symbol* maxclass = jbox_get_maxclass(box);
         std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
 
+        std::string text = PatchHelpers::get_box_text(box);
+
         t_rect rect;
         jbox_get_patching_rect(box, &rect);
 
-        json obj_info = {{"maxclass", maxclass_str},
+        json obj_info = {{"index", index},
+                         {"maxclass", maxclass_str},
+                         {"text", text},
                          {"position", json::array({rect.x, rect.y})},
                          {"size", json::array({rect.width, rect.height})}};
 
@@ -235,6 +249,7 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         }
 
         objects.push_back(obj_info);
+        index++;
     }
 
     COMPLETE_DEFERRED(data, (json{{"patch_id", data->patch->patch_id},
@@ -386,6 +401,55 @@ static void replace_object_text_deferred(t_maxmcp* patch, t_symbol* s, long argc
                                     {"reconnected", reconnected}}}}));
 }
 
+static void assign_varnames_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("assign_varnames_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_assign_varnames_data, data, argv);
+
+    t_object* patcher = data->patch->patcher;
+
+    // Build index → box mapping
+    std::vector<t_object*> boxes;
+    for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
+        boxes.push_back(box);
+    }
+
+    // Validate all indices are in range
+    for (const auto& assignment : data->assignments) {
+        int idx = assignment["index"].get<int>();
+        if (idx < 0 || idx >= static_cast<int>(boxes.size())) {
+            std::string msg = "Index " + std::to_string(idx) + " out of range (0-" +
+                              std::to_string(boxes.size() - 1) + ")";
+            COMPLETE_DEFERRED(data,
+                              ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, msg));
+            return;
+        }
+    }
+
+    // Apply varname assignments
+    json assigned = json::array();
+    for (const auto& assignment : data->assignments) {
+        int idx = assignment["index"].get<int>();
+        std::string varname = assignment["varname"].get<std::string>();
+        t_object* box = boxes[idx];
+
+        object_attr_setsym(box, gensym("varname"), gensym(varname.c_str()));
+
+        t_symbol* maxclass = jbox_get_maxclass(box);
+        std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
+
+        assigned.push_back({{"index", idx}, {"varname", varname}, {"maxclass", maxclass_str}});
+    }
+
+    jpatcher_set_dirty(patcher, 1);
+    ConsoleLogger::log(
+        ("Varnames assigned: " + std::to_string(assigned.size()) + " objects").c_str());
+
+    COMPLETE_DEFERRED(data, (json{{"result",
+                                   {{"status", "success"},
+                                    {"assigned", static_cast<int>(assigned.size())},
+                                    {"assignments", assigned}}}}));
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -506,7 +570,31 @@ json get_tool_schemas() {
                 {"description", "New box text. For regular objects: full text including class "
                                 "(e.g., 'cycle~ 880'). For message/comment/textedit: the displayed "
                                 "text content."}}}}},
-            {"required", json::array({"patch_id", "varname", "new_text"})}}}}});
+            {"required", json::array({"patch_id", "varname", "new_text"})}}}},
+
+         {{"name", "assign_varnames"},
+          {"description",
+           "Assign varnames to objects identified by index. Use get_objects_in_patch first "
+           "to get object indices, then assign meaningful varnames based on object type and "
+           "context. Existing varnames can be overwritten."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID"}}},
+              {"assignments",
+               {{"type", "array"},
+                {"items",
+                 {{"type", "object"},
+                  {"properties",
+                   {{"index",
+                     {{"type", "integer"},
+                      {"description", "Object index from get_objects_in_patch"}}},
+                    {"varname",
+                     {{"type", "string"},
+                      {"description", "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}}}}},
+                  {"required", json::array({"index", "varname"})}}},
+                {"description", "Array of index-varname pairs to assign"}}}}},
+            {"required", json::array({"patch_id", "assignments"})}}}}});
 }
 
 // ============================================================================
@@ -838,6 +926,66 @@ json execute(const std::string& tool, const json& params) {
         if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
             delete deferred_result;
             return ToolCommon::timeout_error("replacing object text");
+        }
+
+        json result = deferred_result->result;
+        delete deferred_result;
+        return result;
+
+    } else if (tool == "assign_varnames") {
+        std::string patch_id = params.value("patch_id", "");
+
+        if (patch_id.empty()) {
+            return ToolCommon::missing_param_error("patch_id");
+        }
+
+        if (!params.contains("assignments") || !params["assignments"].is_array()) {
+            return ToolCommon::missing_param_error("assignments");
+        }
+
+        json assignments = params["assignments"];
+
+        if (assignments.empty()) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "assignments array must not be empty");
+        }
+
+        // Validate each assignment and check for duplicate varnames
+        std::set<std::string> seen_varnames;
+        for (const auto& a : assignments) {
+            if (!a.contains("index") || !a["index"].is_number_integer()) {
+                return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                              "Each assignment must have an integer 'index'");
+            }
+            if (!a.contains("varname") || !a["varname"].is_string() ||
+                a["varname"].get<std::string>().empty()) {
+                return ToolCommon::make_error(
+                    ToolCommon::ErrorCode::INVALID_PARAMS,
+                    "Each assignment must have a non-empty string 'varname'");
+            }
+            std::string vn = a["varname"].get<std::string>();
+            if (seen_varnames.count(vn)) {
+                return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                              "Duplicate varname: " + vn);
+            }
+            seen_varnames.insert(vn);
+        }
+
+        t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+        if (!patch) {
+            return ToolCommon::patch_not_found_error(patch_id);
+        }
+
+        auto* deferred_result = new ToolCommon::DeferredResult();
+        auto* data = new t_assign_varnames_data{patch, assignments, deferred_result};
+
+        t_atom a;
+        atom_setobj(&a, data);
+        defer(patch, (method)assign_varnames_deferred, gensym("assign_varnames"), 1, &a);
+
+        if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
+            delete deferred_result;
+            return ToolCommon::timeout_error("assigning varnames");
         }
 
         json result = deferred_result->result;

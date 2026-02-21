@@ -3,7 +3,7 @@
  * Unit tests for MCP tool schema definitions and routing logic.
  *
  * Tests the actual tool module code (not mocks) under MAXMCP_TEST_MODE:
- * - Schema completeness: all 23 tools registered with valid JSON Schema
+ * - Schema completeness: all 24 tools registered with valid JSON Schema
  * - Routing: MCPServer dispatches to correct module
  * - Test mode consistency: all modules return proper errors in test mode
  * - Parameter validation: missing required params produce error responses
@@ -57,9 +57,9 @@ TEST_F(ToolSchemaTest, PatchToolsSchemaCount) {
 
 TEST_F(ToolSchemaTest, ObjectToolsSchemaCount) {
     auto schemas = ObjectTools::get_tool_schemas();
-    ASSERT_EQ(schemas.size(), 9)
-        << "ObjectTools should have 9 tools (add, remove, get_objects, set_attr, "
-           "get_io, get_hidden, set_hidden, redraw, replace_text)";
+    ASSERT_EQ(schemas.size(), 10)
+        << "ObjectTools should have 10 tools (add, remove, get_objects, set_attr, "
+           "get_io, get_hidden, set_hidden, redraw, replace_text, assign_varnames)";
 }
 
 TEST_F(ToolSchemaTest, ConnectionToolsSchemaCount) {
@@ -91,7 +91,7 @@ TEST_F(ToolSchemaTest, TotalToolCount) {
         PatchTools::get_tool_schemas().size() + ObjectTools::get_tool_schemas().size() +
         ConnectionTools::get_tool_schemas().size() + StateTools::get_tool_schemas().size() +
         HierarchyTools::get_tool_schemas().size() + UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 23) << "Total tool count should be 23";
+    EXPECT_EQ(total, 24) << "Total tool count should be 24";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
@@ -142,7 +142,7 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
         "disconnect_max_objects",  "get_patch_lock_state",    "set_patch_lock_state",
         "get_patch_dirty",         "get_parent_patcher",      "get_subpatchers",
         "get_console_log",         "get_avoid_rect_position", "get_patchlines",
-        "set_patchline_midpoints", "replace_object_text"};
+        "set_patchline_midpoints", "replace_object_text",     "assign_varnames"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;
@@ -204,7 +204,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 23) << "tools/list should return all 23 tools";
+    EXPECT_EQ(tools.size(), 24) << "tools/list should return all 24 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {

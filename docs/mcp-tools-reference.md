@@ -9,7 +9,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 23 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 24 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -18,7 +18,7 @@ MaxMCP provides 23 MCP tools for controlling Max/MSP patches through natural lan
 | Category | Count | Description |
 |----------|-------|-------------|
 | Patch Management | 3 | List, query, and manage patches |
-| Object Operations | 9 | Create, modify, replace, and query objects |
+| Object Operations | 10 | Create, modify, replace, assign varnames, and query objects |
 | Connection Operations | 4 | Create, remove, and manage patchcords |
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
@@ -158,13 +158,22 @@ List all objects in a patch with metadata.
     "patch_id": "synth_a7f2",
     "objects": [
       {
-        "maxclass": "cycle~",
-        "varname": "osc1",
+        "index": 0,
+        "maxclass": "newobj",
+        "text": "cycle~ 440",
         "position": [100, 100],
+        "size": [80, 22],
+        "varname": "osc1"
+      },
+      {
+        "index": 1,
+        "maxclass": "number",
+        "text": "",
+        "position": [100, 150],
         "size": [50, 22]
       }
     ],
-    "count": 1
+    "count": 2
   }
 }
 ```
@@ -307,6 +316,52 @@ For regular objects, `new_text` is the full box text including the class name (e
 - Position, varname, presentation state, and hidden state are preserved
 - All patchcord connections (both incoming and outgoing) are automatically restored
 - For textfield types (message, comment, textedit, live.comment), `new_text` sets the displayed content
+
+### `assign_varnames`
+
+Assign varnames to objects identified by index. Use `get_objects_in_patch` first to get object indices, then assign meaningful varnames based on object type and context. Existing varnames can be overwritten.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "assignments": {
+    "type": "array",
+    "required": true,
+    "description": "Array of index-varname pairs",
+    "items": {
+      "index": {"type": "integer", "description": "Object index from get_objects_in_patch"},
+      "varname": {"type": "string", "description": "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}
+    }
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "status": "success",
+    "assigned": 2,
+    "assignments": [
+      {"index": 0, "varname": "osc_440", "maxclass": "newobj"},
+      {"index": 1, "varname": "gain_ctrl", "maxclass": "number"}
+    ]
+  }
+}
+```
+
+**Notes**:
+- Objects are identified by their `index` from `get_objects_in_patch` output
+- Duplicate varnames in a single call are rejected
+- Out-of-range indices return an error
+- Existing varnames can be overwritten (useful for renaming)
+
+**Typical workflow**:
+1. Call `get_objects_in_patch` to see all objects with their indices and text
+2. Identify objects without varnames
+3. Call `assign_varnames` with meaningful names based on object type/context
+4. Subsequent tools can now reference these objects by varname
 
 ---
 

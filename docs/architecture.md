@@ -639,6 +639,7 @@ All MCP tool calls validate:
 | add_max_object | < 100ms | Includes UI update |
 | connect_objects | < 80ms | Includes UI update |
 | get_objects_in_patch | < 100ms | 50 objects |
+| assign_varnames | < 100ms | 50 assignments |
 
 ### 7.2 Memory Footprint
 

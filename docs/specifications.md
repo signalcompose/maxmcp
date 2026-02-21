@@ -283,8 +283,9 @@ class MaxMCP {
    - `disconnect_max_objects(patch_id, src, outlet, dst, inlet)`
 
 7. **Patch Information**
-   - `get_objects_in_patch(patch_id)`
+   - `get_objects_in_patch(patch_id)` - Returns index, text, position, size, varname per object
    - `get_avoid_rect_position(patch_id)`
+   - `assign_varnames(patch_id, assignments)` - Assign varnames to objects by index
 
 8. **Documentation** (Optional)
    - `list_all_objects()`
