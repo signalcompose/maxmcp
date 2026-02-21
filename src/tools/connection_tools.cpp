@@ -314,8 +314,29 @@ static void set_patchline_midpoints_deferred(t_maxmcp* patch, t_symbol* s, long 
         }
 
         long count = (long)data->coords.size();
-        double* coords_ptr = count > 0 ? data->coords.data() : nullptr;
-        object_attr_setdouble_array(line, gensym("midpoints"), count, coords_ptr);
+        if (count > 0) {
+            object_attr_setdouble_array(line, gensym("midpoints"), count, data->coords.data());
+        } else {
+            // No setter API for clearing midpoints; reconnect the patchline
+            bool was_hidden = jpatchline_get_hidden(line);
+            t_jrgba saved_color;
+            jpatchline_get_color(line, &saved_color);
+
+            object_free(line);
+
+            t_atom connect_args[4];
+            atom_setobj(&connect_args[0], src_box);
+            atom_setlong(&connect_args[1], data->outlet);
+            atom_setobj(&connect_args[2], dst_box);
+            atom_setlong(&connect_args[3], data->inlet);
+            t_atom rv;
+            line = (t_object*)object_method_typed(patcher, gensym("connect"), 4, connect_args,
+                                                  &rv);
+            if (line) {
+                jpatchline_set_hidden(line, was_hidden);
+                jpatchline_set_color(line, &saved_color);
+            }
+        }
 
         jpatcher_set_dirty(patcher, 1);
 

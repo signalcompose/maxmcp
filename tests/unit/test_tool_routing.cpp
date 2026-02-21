@@ -143,7 +143,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
         "set_patch_lock_state", "get_patch_dirty",         "get_parent_patcher",
         "get_subpatchers",      "get_console_log",         "get_avoid_rect_position",
         "get_patchlines",       "set_patchline_midpoints", "replace_object_text",
-        "assign_varnames"};
+        "assign_varnames",
+        "get_object_value"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;

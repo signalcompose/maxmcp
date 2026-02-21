@@ -339,8 +339,8 @@ long restore_box_connections(t_object* patcher, t_object* new_box,
                 object_attr_setdouble_array(new_line, gensym("midpoints"), (long)midpts_copy.size(),
                                             midpts_copy.data());
             }
+            reconnected++;
         }
-        reconnected++;
     }
 
     return reconnected;
