@@ -141,7 +141,11 @@ For complex patches, use subpatchers (p object):
 
 For detailed guidelines, see:
 - [Layout Rules](reference/layout-rules.md) - Detailed positioning and spacing rules
+- [Architecture Patterns](reference/architecture-patterns.md) - Common subpatcher and signal flow patterns
 - [Naming Conventions](reference/naming-conventions.md) - Varname and object naming standards
+- [Presentation Layout](reference/presentation-layout.md) - Dual-mode design: patching vs presentation positioning
+- [Visual Design](reference/visual-design.md) - Panel backgrounds, color palettes, border styling
+- [Object Internals](reference/object-internals.md) - Internal specifications (maxclass vs display differences)
 - [JavaScript Guide](reference/javascript-guide.md) - v8/v8ui scripting recommendations
 
 ## MCP Tools Quick Reference
@@ -154,8 +158,11 @@ For detailed guidelines, see:
 | `get_patch_info` | Get patch metadata |
 | `add_max_object` | Create a new object |
 | `set_object_attribute` | Modify object properties |
+| `get_object_value` | Get current value (number, slider, etc.) |
 | `connect_max_objects` | Create patchcord |
 | `disconnect_max_objects` | Remove patchcord |
+| `get_patchlines` | List all patchcords with coordinates and midpoints |
+| `set_patchline_midpoints` | Add/remove midpoints to fold patchcords |
 | `remove_max_object` | Delete an object |
 | `get_avoid_rect_position` | Find safe position |
 | `get_console_log` | Retrieve Max console messages |

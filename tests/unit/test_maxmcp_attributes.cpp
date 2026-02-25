@@ -7,14 +7,15 @@
  * without Max environment, so we test the core logic that drives the attributes.
  */
 
-#include <gtest/gtest.h>
 #include "uuid_generator.h"
+
+#include <gtest/gtest.h>
 
 /**
  * Test Fixture for maxmcp attributes logic
  */
 class MaxMCPAttributesTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Test setup if needed
     }
@@ -25,7 +26,7 @@ protected:
 
     // Helper to simulate patch_id generation logic from maxmcp_new
     std::string generate_test_patch_id(const std::string& patcher_name,
-                                        const std::string& alias = "") {
+                                       const std::string& alias = "") {
         if (!alias.empty()) {
             // Alias overrides auto-generated ID (simulates maxmcp_new logic)
             return alias;
@@ -84,7 +85,7 @@ TEST_F(MaxMCPAttributesTest, EmptyAlias) {
 TEST_F(MaxMCPAttributesTest, AliasEnablesMultipleInstances) {
     auto patch_id1 = generate_test_patch_id("synth.maxpat", "synth_osc");
     auto patch_id2 = generate_test_patch_id("synth.maxpat", "synth_filter");
-    auto patch_id3 = generate_test_patch_id("synth.maxpat"); // No alias
+    auto patch_id3 = generate_test_patch_id("synth.maxpat");  // No alias
 
     // All should have different patch IDs
     EXPECT_EQ(patch_id1, "synth_osc");
@@ -168,7 +169,7 @@ TEST_F(MaxMCPAttributesTest, PatchIDFormat) {
     EXPECT_EQ(patch_id.length(), 14);
 
     // UUID part should be 8 characters and alphanumeric
-    std::string uuid_part = patch_id.substr(6); // After "synth_"
+    std::string uuid_part = patch_id.substr(6);  // After "synth_"
     EXPECT_EQ(uuid_part.length(), 8);
 
     for (char c : uuid_part) {
@@ -218,7 +219,7 @@ TEST_F(MaxMCPAttributesTest, AliasOverrideBehavior) {
     // Scenario 2: With alias - override with custom ID
     auto id_with_alias = generate_test_patch_id("synth.maxpat", "custom_synth");
     EXPECT_EQ(id_with_alias, "custom_synth");
-    EXPECT_NE(id_with_alias.length(), 14); // Different length from auto ID
+    EXPECT_NE(id_with_alias.length(), 14);  // Different length from auto ID
 
     // Verify they're different
     EXPECT_NE(id_without_alias, id_with_alias);

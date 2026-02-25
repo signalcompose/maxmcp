@@ -24,10 +24,11 @@
  *   ./test_websocket_server --gtest_filter=*DISABLED_* --gtest_also_run_disabled_tests
  */
 
-#include <gtest/gtest.h>
-#include <thread>
 #include <chrono>
 #include <future>
+#include <thread>
+
+#include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
 // WebSocket client for testing (will be implemented)
@@ -39,7 +40,7 @@
 using namespace std::chrono_literals;
 
 class WebSocketServerTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Start server on test port
         server = new WebSocketServer(TEST_PORT);
@@ -215,12 +216,10 @@ TEST_F(WebSocketServerTest, DISABLED_MultiClientRequestsAreQueued) {
     });
 
     // Both clients send requests simultaneously
-    auto future1 = std::async(std::launch::async, [&]() {
-        client1.send(R"({"jsonrpc":"2.0","method":"test","id":1})");
-    });
-    auto future2 = std::async(std::launch::async, [&]() {
-        client2.send(R"({"jsonrpc":"2.0","method":"test","id":2})");
-    });
+    auto future1 = std::async(
+        std::launch::async, [&]() { client1.send(R"({"jsonrpc":"2.0","method":"test","id":1})"); });
+    auto future2 = std::async(
+        std::launch::async, [&]() { client2.send(R"({"jsonrpc":"2.0","method":"test","id":2})"); });
 
     future1.wait();
     future2.wait();
@@ -357,7 +356,7 @@ TEST_F(WebSocketServerTest, ServerStopsCleanly) {
 // Main
 // ============================================================================
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

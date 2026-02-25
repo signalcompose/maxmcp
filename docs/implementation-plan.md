@@ -1,7 +1,9 @@
 # MaxMCP Implementation Plan
 
 **Last Updated**: 2025-10-19
-**Status**: Active
+**Status**: Historical (archived)
+
+> **Note**: This is the original implementation plan from October 2025. The project has since evolved significantly: the two-object architecture (`maxmcp.server` + `maxmcp`) was unified into a single `maxmcp` external with `@mode agent` / `@mode patch`, and the tool count grew from the planned 10 to 26. For current documentation, see [architecture.md](./architecture.md) and [mcp-tools-reference.md](./mcp-tools-reference.md).
 
 ---
 

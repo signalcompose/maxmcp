@@ -3,6 +3,8 @@
  * Unit tests for MCP Server request/response handling
  */
 
+#include "tools/tool_common.h"
+
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
@@ -15,7 +17,7 @@ using json = nlohmann::json;
  * Test Fixture for MCP Server
  */
 class MCPServerTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Setup test environment
     }
@@ -31,72 +33,41 @@ protected:
         std::string method = req.value("method", "");
 
         if (method == "tools/list") {
-            return {
-                {"jsonrpc", "2.0"},
-                {"result", {
-                    {"tools", json::array({
-                        {
-                            {"name", "get_console_log"},
-                            {"description", "Retrieve recent Max Console messages"}
-                        },
-                        {
-                            {"name", "list_active_patches"},
-                            {"description", "List all registered MaxMCP client patches"}
-                        },
-                        {
-                            {"name", "add_max_object"},
-                            {"description", "Add a Max object to a patch"}
-                        }
-                    })}
-                }}
-            };
+            return {{"jsonrpc", "2.0"},
+                    {"result",
+                     {{"tools",
+                       json::array({{{"name", "get_console_log"},
+                                     {"description", "Retrieve recent Max Console messages"}},
+                                    {{"name", "list_active_patches"},
+                                     {"description", "List all registered MaxMCP client patches"}},
+                                    {{"name", "add_max_object"},
+                                     {"description", "Add a Max object to a patch"}}})}}}};
         } else if (method == "tools/call") {
             // Safely check for required parameter
             if (!req.contains("params") || !req["params"].contains("name")) {
-                return {
-                    {"jsonrpc", "2.0"},
-                    {"error", {
-                        {"code", -32602},
-                        {"message", "Invalid params: missing 'name' field"}
-                    }}
-                };
+                return {{"jsonrpc", "2.0"},
+                        {"error",
+                         {{"code", ToolCommon::ErrorCode::INVALID_PARAMS},
+                          {"message", "Invalid params: missing 'name' field"}}}};
             }
 
             std::string tool_name = req["params"]["name"];
 
             if (tool_name == "get_console_log") {
-                return {
-                    {"jsonrpc", "2.0"},
-                    {"result", {
-                        {"logs", json::array()},
-                        {"count", 0}
-                    }}
-                };
+                return {{"jsonrpc", "2.0"}, {"result", {{"logs", json::array()}, {"count", 0}}}};
             } else if (tool_name == "list_active_patches") {
-                return {
-                    {"jsonrpc", "2.0"},
-                    {"result", {
-                        {"patches", json::array()},
-                        {"count", 0}
-                    }}
-                };
+                return {{"jsonrpc", "2.0"}, {"result", {{"patches", json::array()}, {"count", 0}}}};
             } else {
-                return {
-                    {"jsonrpc", "2.0"},
-                    {"error", {
-                        {"code", -32602},
-                        {"message", "Unknown tool: " + tool_name}
-                    }}
-                };
+                return {{"jsonrpc", "2.0"},
+                        {"error",
+                         {{"code", ToolCommon::ErrorCode::INVALID_PARAMS},
+                          {"message", "Unknown tool: " + tool_name}}}};
             }
         } else {
-            return {
-                {"jsonrpc", "2.0"},
-                {"error", {
-                    {"code", -32601},
-                    {"message", "Method not found"}
-                }}
-            };
+            return {{"jsonrpc", "2.0"},
+                    {"error",
+                     {{"code", ToolCommon::ErrorCode::METHOD_NOT_FOUND},
+                      {"message", "Method not found"}}}};
         }
     }
 };
@@ -105,11 +76,7 @@ protected:
  * Test: tools/list request
  */
 TEST_F(MCPServerTest, ToolsListRequest) {
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "tools/list"}
-    };
+    json request = {{"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/list"}};
 
     auto response = simulate_handle_request(request);
 
@@ -119,7 +86,7 @@ TEST_F(MCPServerTest, ToolsListRequest) {
 
     auto tools = response["result"]["tools"];
     EXPECT_TRUE(tools.is_array());
-    EXPECT_GE(tools.size(), 3); // At least 3 tools
+    EXPECT_GE(tools.size(), 3);  // At least 3 tools
 
     // Verify tool names
     bool has_console_log = false;
@@ -128,9 +95,12 @@ TEST_F(MCPServerTest, ToolsListRequest) {
 
     for (const auto& tool : tools) {
         std::string name = tool["name"];
-        if (name == "get_console_log") has_console_log = true;
-        if (name == "list_active_patches") has_list_patches = true;
-        if (name == "add_max_object") has_add_object = true;
+        if (name == "get_console_log")
+            has_console_log = true;
+        if (name == "list_active_patches")
+            has_list_patches = true;
+        if (name == "add_max_object")
+            has_add_object = true;
     }
 
     EXPECT_TRUE(has_console_log);
@@ -146,14 +116,8 @@ TEST_F(MCPServerTest, ToolsCallGetConsoleLog) {
         {"jsonrpc", "2.0"},
         {"id", 2},
         {"method", "tools/call"},
-        {"params", {
-            {"name", "get_console_log"},
-            {"arguments", {
-                {"lines", 50},
-                {"clear", false}
-            }}
-        }}
-    };
+        {"params",
+         {{"name", "get_console_log"}, {"arguments", {{"lines", 50}, {"clear", false}}}}}};
 
     auto response = simulate_handle_request(request);
 
@@ -167,15 +131,10 @@ TEST_F(MCPServerTest, ToolsCallGetConsoleLog) {
  * Test: tools/call request with list_active_patches
  */
 TEST_F(MCPServerTest, ToolsCallListPatches) {
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 3},
-        {"method", "tools/call"},
-        {"params", {
-            {"name", "list_active_patches"},
-            {"arguments", {}}
-        }}
-    };
+    json request = {{"jsonrpc", "2.0"},
+                    {"id", 3},
+                    {"method", "tools/call"},
+                    {"params", {{"name", "list_active_patches"}, {"arguments", {}}}}};
 
     auto response = simulate_handle_request(request);
 
@@ -189,17 +148,13 @@ TEST_F(MCPServerTest, ToolsCallListPatches) {
  * Test: Unknown method error
  */
 TEST_F(MCPServerTest, UnknownMethod) {
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 4},
-        {"method", "unknown/method"}
-    };
+    json request = {{"jsonrpc", "2.0"}, {"id", 4}, {"method", "unknown/method"}};
 
     auto response = simulate_handle_request(request);
 
     EXPECT_EQ(response["jsonrpc"], "2.0");
     EXPECT_TRUE(response.contains("error"));
-    EXPECT_EQ(response["error"]["code"], -32601);
+    EXPECT_EQ(response["error"]["code"], ToolCommon::ErrorCode::METHOD_NOT_FOUND);
     EXPECT_EQ(response["error"]["message"], "Method not found");
 }
 
@@ -207,21 +162,16 @@ TEST_F(MCPServerTest, UnknownMethod) {
  * Test: Unknown tool error
  */
 TEST_F(MCPServerTest, UnknownTool) {
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 5},
-        {"method", "tools/call"},
-        {"params", {
-            {"name", "unknown_tool"},
-            {"arguments", {}}
-        }}
-    };
+    json request = {{"jsonrpc", "2.0"},
+                    {"id", 5},
+                    {"method", "tools/call"},
+                    {"params", {{"name", "unknown_tool"}, {"arguments", {}}}}};
 
     auto response = simulate_handle_request(request);
 
     EXPECT_EQ(response["jsonrpc"], "2.0");
     EXPECT_TRUE(response.contains("error"));
-    EXPECT_EQ(response["error"]["code"], -32602);
+    EXPECT_EQ(response["error"]["code"], ToolCommon::ErrorCode::INVALID_PARAMS);
 }
 
 /**
@@ -242,20 +192,14 @@ TEST_F(MCPServerTest, ValidJSONParsing) {
 TEST_F(MCPServerTest, InvalidJSONParsing) {
     std::string line = "invalid json {";
 
-    EXPECT_THROW({
-        auto request = json::parse(line);
-    }, json::parse_error);
+    EXPECT_THROW({ auto request = json::parse(line); }, json::parse_error);
 }
 
 /**
  * Test: JSON-RPC response format
  */
 TEST_F(MCPServerTest, ResponseFormat) {
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "tools/list"}
-    };
+    json request = {{"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/list"}};
 
     auto response = simulate_handle_request(request);
 
@@ -272,18 +216,13 @@ TEST_F(MCPServerTest, ResponseFormat) {
  */
 TEST_F(MCPServerTest, ParameterValidation) {
     // Missing required parameter
-    json request = {
-        {"jsonrpc", "2.0"},
-        {"id", 6},
-        {"method", "tools/call"},
-        {"params", {
-            // Missing "name" field
-            {"arguments", {}}
-        }}
-    };
+    json request = {{"jsonrpc", "2.0"},
+                    {"id", 6},
+                    {"method", "tools/call"},
+                    {"params",
+                     {// Missing "name" field
+                      {"arguments", {}}}}};
 
     // Should handle gracefully (implementation dependent)
-    EXPECT_NO_THROW({
-        auto response = simulate_handle_request(request);
-    });
+    EXPECT_NO_THROW({ auto response = simulate_handle_request(request); });
 }

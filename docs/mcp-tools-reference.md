@@ -1,7 +1,6 @@
 # MaxMCP MCP Tools Reference
 
-**Version**: 1.1.0
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-22
 
 This document provides a complete reference for all MCP tools available in MaxMCP.
 
@@ -9,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 20 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -18,8 +17,8 @@ MaxMCP provides 20 MCP tools for controlling Max/MSP patches through natural lan
 | Category | Count | Description |
 |----------|-------|-------------|
 | Patch Management | 3 | List, query, and manage patches |
-| Object Operations | 8 | Create, modify, and query objects |
-| Connection Operations | 2 | Create and remove patchcords |
+| Object Operations | 12 | Create, modify, replace, assign varnames, and query objects |
+| Connection Operations | 4 | Create, remove, and manage patchcords |
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
@@ -158,13 +157,22 @@ List all objects in a patch with metadata.
     "patch_id": "synth_a7f2",
     "objects": [
       {
-        "maxclass": "cycle~",
-        "varname": "osc1",
+        "index": 0,
+        "maxclass": "newobj",
+        "text": "cycle~ 440",
         "position": [100, 100],
+        "size": [80, 22],
+        "varname": "osc1"
+      },
+      {
+        "index": 1,
+        "maxclass": "number",
+        "text": "",
+        "position": [100, 150],
         "size": [50, 22]
       }
     ],
-    "count": 1
+    "count": 2
   }
 }
 ```
@@ -182,6 +190,35 @@ Set an attribute of a Max object.
   "value": {"required": true, "description": "Number, string, or array"}
 }
 ```
+
+### `get_object_attribute`
+
+Get the value of an attribute of a Max object. Returns the current value of the specified attribute.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "varname": {"type": "string", "required": true},
+  "attribute": {"type": "string", "required": true, "description": "Attribute name (e.g., patching_rect, bgcolor, fontsize)"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "varname": "osc1",
+    "attribute": "patching_rect",
+    "value": [100, 200, 80, 22]
+  }
+}
+```
+
+**Notes**:
+- Returns scalar value for single-value attributes, array for multi-value attributes
+- Uses `object_attr_getvalueof()` internally
+- Returns an error if the attribute does not exist or has no value
 
 ### `get_object_io_info`
 
@@ -274,6 +311,112 @@ Force redraw of a specific object.
 }
 ```
 
+### `replace_object_text`
+
+Replace the box text of an existing Max object by deleting and recreating it. All patchcord connections are automatically saved and restored.
+
+For regular objects, `new_text` is the full box text including the class name (e.g., `"cycle~ 880"`). For message/comment/textedit objects, `new_text` is the displayed text content.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "varname": {"type": "string", "required": true, "description": "Variable name of the object"},
+  "new_text": {"type": "string", "required": true, "description": "New box text or content"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "status": "success",
+    "varname": "my_comment",
+    "old_text": "cycle~ 440",
+    "new_text": "cycle~ 880",
+    "reconnected": 3
+  }
+}
+```
+
+**Notes**:
+- The object is deleted and recreated with the new text
+- Position, varname, presentation state, and hidden state are preserved
+- All patchcord connections (both incoming and outgoing) are automatically restored
+- For textfield types (message, comment, textedit, live.comment), `new_text` sets the displayed content
+
+### `assign_varnames`
+
+Assign varnames to objects identified by index. Use `get_objects_in_patch` first to get object indices, then assign meaningful varnames based on object type and context. Existing varnames can be overwritten.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "assignments": {
+    "type": "array",
+    "required": true,
+    "description": "Array of index-varname pairs",
+    "items": {
+      "index": {"type": "integer", "description": "Object index from get_objects_in_patch"},
+      "varname": {"type": "string", "description": "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}
+    }
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "status": "success",
+    "assigned": 2,
+    "assignments": [
+      {"index": 0, "varname": "osc_440", "maxclass": "newobj"},
+      {"index": 1, "varname": "gain_ctrl", "maxclass": "number"}
+    ]
+  }
+}
+```
+
+**Notes**:
+- Objects are identified by their `index` from `get_objects_in_patch` output
+- Duplicate varnames in a single call are rejected
+- Out-of-range indices return an error
+- Existing varnames can be overwritten (useful for renaming)
+
+**Typical workflow**:
+1. Call `get_objects_in_patch` to see all objects with their indices and text
+2. Identify objects without varnames
+3. Call `assign_varnames` with meaningful names based on object type/context
+4. Subsequent tools can now reference these objects by varname
+
+### `get_object_value`
+
+Get the current value of a Max object. Uses `object_getvalueof()` internally. Works with objects that implement the getvalueof interface (e.g., number boxes, flonum, sliders, dials).
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "varname": {"type": "string", "required": true}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "varname": "freq_num",
+    "value": 440
+  }
+}
+```
+
+**Notes**:
+- Returns a number or array depending on the object type
+- Returns an error if the object does not support `getvalueof` or has no value
+
 ---
 
 ## Connection Operations
@@ -305,6 +448,56 @@ Remove a patchcord connection between two Max objects.
   "outlet": {"type": "number", "required": true},
   "dst_varname": {"type": "string", "required": true},
   "inlet": {"type": "number", "required": true}
+}
+```
+
+### `get_patchlines`
+
+List all patchlines (connections) in a patch with metadata including source/destination, coordinates, color, and visibility.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "patch_id": "synth_a7f2",
+    "patchlines": [
+      {
+        "src_varname": "osc1",
+        "outlet": 0,
+        "dst_varname": "dac",
+        "inlet": 0,
+        "start_point": {"x": 125, "y": 122},
+        "end_point": {"x": 125, "y": 172},
+        "num_midpoints": 0,
+        "hidden": false,
+        "color": {"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0}
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+### `set_patchline_midpoints`
+
+Set midpoint coordinates for a patchcord. Pass an array of `{x, y}` objects to fold the cord, or an empty array to straighten it.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "src_varname": {"type": "string", "required": true},
+  "outlet": {"type": "number", "required": true},
+  "dst_varname": {"type": "string", "required": true},
+  "inlet": {"type": "number", "required": true},
+  "midpoints": {"type": "array", "required": true, "description": "Array of {x, y} objects, or [] to remove"}
 }
 ```
 

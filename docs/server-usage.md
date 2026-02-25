@@ -1,6 +1,6 @@
 # MaxMCP Server Usage Guide
 
-**Last Updated**: 2025-11-18
+**Last Updated**: 2026-02-22
 
 ---
 
@@ -11,7 +11,7 @@ The `[maxmcp]` external runs in two modes:
 - `@mode agent` – Spins up the WebSocket MCP server inside Max on a specific port (default 7400). Only one agent per Max instance.
 - `@mode patch` – Registers an individual patch so Claude can discover and manipulate it. One per patch you want to expose.
 
-Claude Code connects through the Node.js bridge (`bridge/websocket-mcp-bridge.js`), which forwards stdio JSON-RPC to that WebSocket server.
+Claude Code connects through the Node.js bridge (`package/MaxMCP/support/bridge/websocket-mcp-bridge.js`), which forwards stdio JSON-RPC to that WebSocket server.
 
 ---
 
@@ -58,32 +58,26 @@ Closing the patch automatically unregisters it.
 
 1. Install dependencies once:
    ```bash
-   cd bridge
+   cd package/MaxMCP/support/bridge
    npm install
    ```
 2. Start the bridge (stdio ↔ WebSocket):
    ```bash
-   node bridge/websocket-mcp-bridge.js ws://localhost:7400
+   node package/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
    ```
    - Add an auth token as the next argument if your agent requires it.
    - Use verbose mode for troubleshooting:
      ```bash
-     DEBUG=1 node bridge/websocket-mcp-bridge.js ws://localhost:7400
+     DEBUG=1 node package/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
      ```
    - If the bridge prints `ECONNREFUSED`, start or restart the agent patcher.
 
 3. Smoke test without Claude:
    ```bash
    echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | \
-     node bridge/websocket-mcp-bridge.js ws://localhost:7400
+     node package/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
    ```
    Successful output lists the available tools.
-
-4. Optional mock server:
-   ```bash
-   node test-mcp-server.js 7400
-   ```
-   Useful for CLI-only testing when Max is unavailable.
 
 ---
 
@@ -91,7 +85,7 @@ Closing the patch automatically unregisters it.
 
 ```bash
 claude mcp add maxmcp node \
-  ~/Documents/MaxMCP/bridge/websocket-mcp-bridge.js \
+  ~/Documents/Max\ 9/Packages/MaxMCP/support/bridge/websocket-mcp-bridge.js \
   ws://localhost:7400
 ```
 
@@ -106,20 +100,11 @@ Expected response lists any `[maxmcp @mode patch]` instances currently registere
 
 ## Communication Protocol Summary
 
-The bridge speaks standard MCP (JSON-RPC over stdio). The Max agent exposes these MCP tools via WebSocket:
+The bridge speaks standard MCP (JSON-RPC over stdio). The Max agent exposes 26 MCP tools via WebSocket across 6 categories: Patch Management, Object Operations, Connection Operations, Patch State, Hierarchy, and Utilities.
 
-- `list_active_patches`
-- `get_patch_info`
-- `get_objects_in_patch`
-- `get_console_log`
-- `add_max_object`
-- `remove_max_object`
-- `set_object_attribute`
-- `connect_max_objects`
-- `disconnect_max_objects`
-- `get_avoid_rect_position`
+For a complete tool reference with parameters and response formats, see [MCP Tools Reference](./mcp-tools-reference.md).
 
-Invoke them through Claude Code or by piping JSON requests into the bridge as shown above.
+Invoke tools through Claude Code or by piping JSON requests into the bridge as shown above.
 
 ---
 

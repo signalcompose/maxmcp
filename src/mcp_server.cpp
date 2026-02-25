@@ -87,8 +87,8 @@ void MCPServer::stop() {
  *
  * Collects schemas from:
  * - PatchTools (3 tools)
- * - ObjectTools (8 tools)
- * - ConnectionTools (2 tools)
+ * - ObjectTools (12 tools)
+ * - ConnectionTools (4 tools)
  * - StateTools (3 tools)
  * - HierarchyTools (2 tools)
  * - UtilityTools (2 tools)

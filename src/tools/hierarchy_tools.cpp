@@ -213,7 +213,7 @@ json execute(const std::string& tool, const json& params) {
         atom_setobj(&a, data);
         defer(patch, (method)get_subpatchers_deferred, gensym("get_subpatchers"), 1, &a);
 
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
             delete deferred_result;
             return ToolCommon::timeout_error("getting subpatchers");
         }

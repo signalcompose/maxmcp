@@ -1,6 +1,6 @@
 # MaxMCP Development Guide
 
-**Last Updated**: 2025-10-19
+**Last Updated**: 2026-02-22
 
 ---
 
@@ -94,30 +94,25 @@ json validate_and_respond(const json& params) {
 
 ```bash
 # macOS
-brew install cmake
-brew install nlohmann-json
-brew install googletest  # For unit tests
+brew install cmake nlohmann-json libwebsockets openssl googletest
 
-# Download Max SDK
-curl -L https://github.com/Cycling74/max-sdk/archive/refs/heads/main.zip -o max-sdk.zip
-unzip max-sdk.zip
-mv max-sdk-main max-sdk
+# Clone Max SDK (recursive for submodules)
+git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
 ```
 
 ### 2.2 Project Initialization
 
 ```bash
-cd /Users/yamato/Src/proj_max_mcp/MaxMCP
+# Clone and set up
+git clone https://github.com/signalcompose/MaxMCP.git
+cd MaxMCP
+git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
 
-# Create directory structure
-mkdir -p src/{tools,utils,docs}
-mkdir -p tests
-mkdir -p examples
-mkdir -p externals
+# Install bridge dependencies
+cd package/MaxMCP/support/bridge && npm install && cd ../../../..
 
-# Initialize CMake
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+# Build
+./build.sh --test
 ```
 
 ### 2.3 IDE Setup (VS Code)
@@ -217,13 +212,18 @@ find_package(nlohmann_json REQUIRED)
 set(SOURCES
     src/maxmcp.cpp
     src/mcp_server.cpp
-    src/tools/patch_management.cpp
-    src/tools/object_operations.cpp
-    src/tools/connection_management.cpp
-    src/tools/documentation.cpp
-    src/utils/json_helpers.cpp
+    src/websocket_server.cpp
+    src/tools/patch_tools.cpp
+    src/tools/object_tools.cpp
+    src/tools/connection_tools.cpp
+    src/tools/state_tools.cpp
+    src/tools/hierarchy_tools.cpp
+    src/tools/utility_tools.cpp
+    src/tools/tool_common.cpp
+    src/utils/patch_helpers.cpp
+    src/utils/patch_registry.cpp
+    src/utils/console_logger.cpp
     src/utils/uuid_generator.cpp
-    src/utils/defer_helpers.cpp
 )
 
 # External object
@@ -245,19 +245,25 @@ endif()
 
 ```bash
 # Debug build
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+./build.sh
+
+# Debug build with tests
+./build.sh --test
 
 # Release build
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+./build.sh Release
 
-# Clean
-rm -rf build
+# Clean build
+./build.sh --clean
 
-# Install to Max
-cp build/maxmcp.mxo ~/Documents/Max\ 9/Library/
+# Deploy to Max 9 Packages
+./deploy.sh
+
+# Typical workflow
+./build.sh --test && ./deploy.sh
 ```
+
+For manual CMake commands, see CLAUDE.md.
 
 ---
 
@@ -267,19 +273,25 @@ cp build/maxmcp.mxo ~/Documents/Max\ 9/Library/
 
 ```
 src/
-├── maxmcp.cpp              # Main external object (< 300 lines)
+├── maxmcp.cpp              # Unified external (@mode agent / @mode patch)
 ├── maxmcp.h
-├── mcp_server.cpp          # MCP server implementation (< 500 lines)
+├── mcp_server.cpp          # MCP protocol handler (JSON-RPC)
 ├── mcp_server.h
+├── websocket_server.cpp    # libwebsockets WebSocket server
+├── websocket_server.h
 ├── tools/
-│   ├── patch_management.cpp    # Patch tools (< 200 lines each)
-│   ├── object_operations.cpp
-│   ├── connection_management.cpp
-│   └── documentation.cpp
+│   ├── patch_tools.cpp     # Patch management (3 tools)
+│   ├── object_tools.cpp    # Object operations (12 tools)
+│   ├── connection_tools.cpp # Connection operations (4 tools)
+│   ├── state_tools.cpp     # Patch state (3 tools)
+│   ├── hierarchy_tools.cpp # Hierarchy (2 tools)
+│   ├── utility_tools.cpp   # Utilities (2 tools)
+│   └── tool_common.cpp     # Shared tool helpers
 └── utils/
-    ├── json_helpers.cpp
-    ├── uuid_generator.cpp
-    └── defer_helpers.cpp       # Max main thread helpers
+    ├── patch_helpers.cpp   # Patcher API helpers
+    ├── patch_registry.cpp  # Patch registration
+    ├── console_logger.cpp  # Console log capture
+    └── uuid_generator.cpp  # Patch ID generation
 ```
 
 **Principles**:
@@ -585,16 +597,18 @@ valgrind --leak-check=full --tool=memcheck build/maxmcp.mxo
 ### 9.1 Build for Distribution
 
 ```bash
-# macOS Universal Binary (arm64 + x86_64)
+# Build and deploy
+./build.sh Release && ./deploy.sh
+
+# macOS Universal Binary (arm64 + x86_64) - manual
 cmake -B build -S . \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 cmake --build build
 
-# Windows 64-bit
-# (Use Visual Studio or MinGW)
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
+# Windows 64-bit (future)
+# cmake -B build -S . -G "Visual Studio 17 2022" -A x64
+# cmake --build build --config Release
 ```
 
 ### 9.2 Package Structure
@@ -614,15 +628,43 @@ MaxMCP/
 └── README.md
 ```
 
-### 9.3 Testing Package
+### 9.3 Testing Package (Build → Deploy → Test)
+
+Two scripts handle the complete workflow:
+
+#### Phase 1: Build (`build.sh`)
+
+Configure, build, test, and install to `package/MaxMCP`:
 
 ```bash
-# Install to Max Packages
-cp -r MaxMCP ~/Documents/Max\ 9/Packages/
-
-# Restart Max
-# Test installation
+./build.sh              # Debug build (no tests)
+./build.sh --test       # Debug build with tests
+./build.sh Release      # Release build
+./build.sh --clean      # Clean build directory first
+./build.sh --test --clean  # Full clean rebuild with tests
 ```
+
+#### Phase 2: Deploy (`deploy.sh`)
+
+Remove old package and deploy to Max 9 Packages:
+
+```bash
+./deploy.sh
+```
+
+This script automatically:
+1. Removes the old `~/Documents/Max 9/Packages/MaxMCP`
+2. Copies the new package from `package/MaxMCP`
+
+#### Typical workflow
+
+```bash
+./build.sh --test && ./deploy.sh
+```
+
+After deploy:
+1. Restart Max to load the updated external
+2. If using Claude Code with MCP, restart Claude Code to reconnect
 
 ---
 

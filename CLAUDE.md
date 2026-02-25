@@ -8,48 +8,34 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 **Architecture**: Claude Code ↔ stdio ↔ Node.js Bridge ↔ WebSocket ↔ maxmcp.mxo ↔ Max/MSP Patches
 
-## Build Commands
+## Build & Deploy
 
 ```bash
-# Configure (Debug)
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+# Build (configure + build + install to package/MaxMCP)
+./build.sh              # Debug build
+./build.sh --test       # Debug build with tests
+./build.sh Release      # Release build
+./build.sh --clean      # Clean build first
 
-# Configure with tests
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+# Deploy to Max 9 Packages (removes old package automatically)
+./deploy.sh
 
-# Build
-cmake --build build
-
-# Install to package directory
-cmake --install build --prefix package/MaxMCP
+# Typical workflow
+./build.sh --test && ./deploy.sh
 ```
 
-## Testing
+### Manual commands (for reference)
 
 ```bash
-# Run all tests
-cd build && ctest --output-on-failure
-
-# Run specific test suite
-ctest -R UUIDGenerator --verbose
-
-# Run with verbose output
-ctest -V
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+cmake --build build
+cd build && ctest --output-on-failure && cd ..
+cmake --install build --prefix package/MaxMCP
 ```
 
 **Test framework**: Google Test 1.17.0
 **Test files**: `tests/unit/test_*.cpp`
 **Test mode macro**: `MAXMCP_TEST_MODE` (enables compilation without Max SDK)
-
-## Installing Package Files to Max
-
-```bash
-# Install complete package (externals, examples, support files)
-cp -R package/MaxMCP ~/Documents/Max\ 9/Packages/
-
-# Or install only the built external
-cp -R build/maxmcp.mxo ~/Documents/Max\ 9/Packages/MaxMCP/externals/
-```
 
 ## Code Quality
 
@@ -74,39 +60,18 @@ npm run format:check
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
 
-### MCP Tools (20 total)
+### MCP Tools (26 total)
 
-#### Patch Management (3)
-1. `list_active_patches` - List registered patches
-2. `get_patch_info` - Get patch metadata
-3. `get_frontmost_patch` - Get currently focused patch
+Full tool reference with parameters and response formats: [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md)
 
-#### Object Operations (8)
-4. `add_max_object` - Create Max objects
-5. `remove_max_object` - Delete objects
-6. `get_objects_in_patch` - List objects in patch
-7. `set_object_attribute` - Modify object attributes
-8. `get_object_io_info` - Get inlet/outlet counts
-9. `get_object_hidden` - Check visibility
-10. `set_object_hidden` - Set visibility
-11. `redraw_object` - Force redraw
-
-#### Connection Operations (2)
-12. `connect_max_objects` - Create patchcords
-13. `disconnect_max_objects` - Remove patchcords
-
-#### Patch State (3)
-14. `get_patch_lock_state` - Get lock state
-15. `set_patch_lock_state` - Set lock state
-16. `get_patch_dirty` - Check unsaved changes
-
-#### Hierarchy (2)
-17. `get_parent_patcher` - Get parent patcher
-18. `get_subpatchers` - List subpatchers
-
-#### Utilities (2)
-19. `get_console_log` - Retrieve Max Console messages
-20. `get_avoid_rect_position` - Find safe placement positions
+| Category | Count | Tools |
+|----------|-------|-------|
+| Patch Management | 3 | `list_active_patches`, `get_patch_info`, `get_frontmost_patch` |
+| Object Operations | 12 | `add_max_object`, `remove_max_object`, `get_objects_in_patch`, `set_object_attribute`, `get_object_attribute`, `get_object_value`, `get_object_io_info`, `get_object_hidden`, `set_object_hidden`, `redraw_object`, `replace_object_text`, `assign_varnames` |
+| Connection Operations | 4 | `connect_max_objects`, `disconnect_max_objects`, `get_patchlines`, `set_patchline_midpoints` |
+| Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
+| Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
+| Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
 
 ### Threading Model
 
@@ -197,6 +162,19 @@ Documentation is the single source of truth (DDD - Documentation Driven Developm
 
 Always read and update documentation before/after code changes.
 
+## Skill Loading Rules (MCP Patch Operations)
+
+When performing Max/MSP patch operations via MCP tools, **always load the relevant skills before starting work**. This ensures consistent quality and adherence to project conventions.
+
+| Skill | Condition | Command |
+|-------|-----------|---------|
+| **patch-guidelines** | Always load when operating on Max patches | `/maxmcp:patch-guidelines` |
+| **max-techniques** | Load when implementing Max/MSP features (poly~, pattr, signal processing, etc.) | `/maxmcp:max-techniques` |
+| **m4l-techniques** | Load only when working on Max for Live devices | `/maxmcp:m4l-techniques` |
+| **max-resources** | Load as needed when looking up object references or examples | `/maxmcp:max-resources` |
+
+**Priority**: patch-guidelines is mandatory for all patch operations. Other skills are loaded based on the task context.
+
 ## Claude Code Plugin Marketplace
 
 MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
@@ -226,6 +204,32 @@ Provides:
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### max-techniques
+
+Max/MSP implementation techniques and best practices.
+
+```bash
+/maxmcp:max-techniques
+```
+
+Provides:
+- poly~ & bpatcher architecture patterns
+- pattr/pattrstorage parameter management
+- Constant parameter safety, sampling rate handling
+
+#### m4l-techniques
+
+Max for Live development techniques and best practices.
+
+```bash
+/maxmcp:m4l-techniques
+```
+
+Provides:
+- Live Object Model (path → id → live.object → live.observer)
+- Device namespaces (`---` vs `#0`) and pattr persistence
+- Controller mapping, dBFS reference, Push2 automapping
 
 #### max-resources
 
@@ -259,6 +263,12 @@ plugins/
     │   ├── patch-guidelines/
     │   │   ├── SKILL.md
     │   │   └── reference/
+    │   ├── max-techniques/
+    │   │   ├── SKILL.md
+    │   │   └── reference/        # poly~, bpatcher, pattr, tips
+    │   ├── m4l-techniques/
+    │   │   ├── SKILL.md
+    │   │   └── reference/        # LOM, namespaces, M4L tips
     │   └── max-resources/
     │       ├── SKILL.md
     │       ├── scripts/        # Search and retrieval scripts
