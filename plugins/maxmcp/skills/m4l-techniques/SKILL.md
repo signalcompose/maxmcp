@@ -4,6 +4,7 @@ description: |
   Max for Live development techniques and best practices. Use this skill when:
   - Accessing Ableton Live parameters from Max for Live (Live Object Model)
   - Using live.path, live.object, live.observer
+  - Building dynamic LOM paths or monitoring Live set properties
   - Managing M4L device namespaces (--- vs #0)
   - Handling pattr persistence issues in M4L context
   - Working with Push2 parameter mapping
@@ -28,6 +29,18 @@ The foundation for programmatic control of Ableton Live from Max for Live device
 - Real-time monitoring with `live.observer`
 
 See [Live Object Model Reference](reference/live-object-model.md)
+
+### LOM Applied Patterns
+
+Reusable patterns for building production M4L devices with the Live Object Model.
+
+**Key topics**:
+- Dynamic LOM path construction with `pak` + `zl.join`
+- Dynamic parameter range from live.observer list counting
+- Visual feedback via `highlighted_clip_slot`
+- Triggering LOM methods with `live.text` button mode
+
+See [LOM Applied Patterns Reference](reference/lom-patterns.md)
 
 ### Namespaces & Parameter Persistence
 

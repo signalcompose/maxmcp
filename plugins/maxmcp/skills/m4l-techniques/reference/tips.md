@@ -111,6 +111,55 @@ Index 15:   Crossover 3-4
 
 **Tip**: Use gaps strategically to group related parameters visually on the Push2 display.
 
+## Two-Stage Initialization (live.thisdevice + delay)
+
+### The Problem
+
+Some M4L devices need to resolve LOM paths and set up observers at startup. However, Live's internal objects may not be fully ready when `live.thisdevice` fires. Attempting LOM path resolution too early results in failed connections or missing IDs.
+
+### The Pattern
+
+```
+live.thisdevice
+  ↓ (bang on device load)
+t b b
+│   │
+│   └→ s ---lb1              ← immediate init broadcast
+└───→ delay 100
+        ↓
+        s ---lb2             ← delayed init broadcast
+```
+
+### How It Works
+
+1. `live.thisdevice` fires a bang when the device loads
+2. `t b b` splits into two initialization phases:
+   - **Phase 1 (immediate)**: `s ---lb1` broadcasts to all `r ---lb1` receivers. Used for operations that don't depend on Live's state (UI setup, view path resolution)
+   - **Phase 2 (delayed)**: `delay 100` waits 100ms, then `s ---lb2` broadcasts. Used for LOM path resolution, observer setup, and anything requiring Live to be fully ready
+
+### Why --- Namespace
+
+The `---` prefix is an M4L device-unique namespace. Each device instance gets its own `---lb1` and `---lb2` channels, preventing cross-device interference. See [Namespace & Parameters Reference](namespace-parameters.md) for details.
+
+### Receiver Side Examples
+
+```
+r ---lb1                     r ---lb2
+  ↓                            ↓
+pack path live_set view      pack path live_set
+  ↓                            ↓
+live.path                    live.path
+  ↓                            ↓
+(resolve view for UI)        (resolve live_set for observer setup)
+```
+
+### When to Use
+
+- Devices that resolve LOM paths on startup
+- Devices with `live.observer` that need stable IDs
+- Devices that read Live set state (track count, scene count) on load
+- Any device that accesses LOM properties during initialization
+
 ## Sources
 
 - https://leico.github.io/TechnicalNote/Live/knob-mapping
