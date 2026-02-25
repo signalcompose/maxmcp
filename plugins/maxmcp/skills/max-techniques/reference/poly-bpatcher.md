@@ -33,6 +33,8 @@ Inside the subpatcher:
 
 The parent `poly~` object's outlet count equals the maximum of message and audio outlet counts.
 
+**Important**: Each index number must be unique — do not place two `in 1` or two `out~ 1` objects in the same subpatcher. Use different index numbers (e.g., `in 1`, `in 2`) to create additional inlets/outlets.
+
 ### Voice Targeting with `target`
 
 ```
@@ -60,6 +62,8 @@ Inside a `poly~` subpatcher, `thispoly~` provides:
 ```
 adsr~ → thispoly~ (outlet 1 of adsr~ indicates "voice active" state)
 ```
+
+**Multiple instances**: `thispoly~` can be placed multiple times in the same subpatcher — all report the same voice number and share the same mute state. This is useful when mute control and voice number retrieval happen in different locations (e.g., left column for `adsr~` → `thispoly~`, right column for `loadbang` → `thispoly~` → `sprintf`). Avoid unnecessary duplication; use only where wiring to a single instance would be impractical.
 
 #### #0 (Unique Instance ID)
 
@@ -187,6 +191,100 @@ receive #1_volume           → #1 matches the voice number via @args
 ```
 
 **Benefit**: Modifying the bpatcher template once updates all voice UIs simultaneously. One production project uses this pattern with ~50 send/receive connections per voice.
+
+## poly~ Communication Hierarchy
+
+Complex poly~ architectures use three distinct communication layers, each with different scope and timing:
+
+### Layer 1: Global Broadcast (r __Master_*)
+
+Global `send`/`receive` pairs that reach all voices across all poly~ instances. Used for system-wide initialization events and shared state changes.
+
+```
+// Parent or top-level patch
+s __Init_BufferNames        ← all sampler voices everywhere respond
+s __Init_ReadSamples        ← all voices load their samples
+s __Init_BindBuffers        ← all wave~/waveform~ bind to buffers
+```
+
+All poly~ voices receive these simultaneously. Combine with Cascading Multi-Stage Initialization (see tips.md) for ordered startup.
+
+### Layer 2: Instance-Scoped (r #1_*)
+
+`receive` objects using the argument-based prefix. Shared by all voices within the same poly~ instance, but isolated from other instances.
+
+```
+// Inside poly~ voice subpatcher
+r #1_OriginKey              ← all 16 voices in this instance share the same base key
+r #1_Start                  ← all voices use the same loop start
+r #1_End                    ← all voices use the same loop end
+```
+
+The parent sets these values via `send`:
+```
+s myPrefix_Sampler_OriginKey     ← #1 was set to "myPrefix_Sampler" via @args
+```
+
+### Layer 3: Per-Voice (in N via target)
+
+Message input routed to individual voices by poly~'s voice allocation or explicit `target` messages. Each voice receives different data.
+
+```
+// Parent
+prepend note → mc.poly~     ← poly~ routes to the allocated voice
+
+// Inside voice
+in 1 → unpack 0 0           ← only this voice processes the note
+```
+
+### Choosing the Right Layer
+
+| Need | Layer | Mechanism |
+|------|-------|-----------|
+| System-wide init events | Global | `r __Master_*` |
+| Per-instrument parameters (key, loop region) | Instance | `r #1_*` |
+| Per-note data (pitch, velocity) | Per-voice | `in N` |
+| Per-voice dynamic naming | Per-voice | `thispoly~` + `sprintf` |
+
+## Argument Forwarding with Transformation
+
+When a parent subpatcher loads a child via `poly~` or `bpatcher`, arguments can be selectively forwarded, combined, or renumbered.
+
+### Concatenation
+
+Append a suffix to the parent's argument to create a child-specific namespace:
+
+```
+// Parent has #1 = "myProject"
+mc.poly~ child_patch 16 @args #1_Sampler #2 #4
+                               ↓          ↓  ↓
+                          child #1     child #2  child #3
+```
+
+The child receives `#1` = `"myProject_Sampler"` — a unique namespace derived from the parent's prefix.
+
+### Selective Forwarding
+
+Not all parent arguments need to reach the child. Pass only what the child needs:
+
+```
+// Parent: 5 arguments (#1-#5)
+//   #1: unique prefix
+//   #2: base key
+//   #3: sample file prefix
+//   #4: sample interval (ms)
+//   #5: sample count
+
+mc.poly~ child 16 @args #1_Sampler #2 #4
+// Child receives only 3 args:
+//   child #1 = parent #1 + "_Sampler"  (concatenated)
+//   child #2 = parent #2              (forwarded as-is)
+//   child #3 = parent #4              (renumbered: parent's 4th → child's 3rd)
+```
+
+### Documentation Convention
+
+Both parent and child should document their arguments with a comment block (see patch-guidelines: Subpatcher Argument Documentation). When arguments are transformed, the mapping is implicit in the `@args` — the comment in each patch documents the meaning at that level.
 
 ## mc.poly~ Caveats
 

@@ -129,6 +129,83 @@ In the Parameter Inspector, expand the **Range/Enum** section:
 
 Select **Float** as the parameter type and set **Unit Style** to **Int**. This allows storing values outside the standard integer boundaries while displaying them as integers.
 
+## Remote UI with pattr @invisible @bindto
+
+### The Problem
+
+In hierarchical patches (top-level → subpatchers → poly~ voices), parameters defined inside subpatchers are not directly visible or controllable from the top level. You need a way to create a centralized control panel in the parent patch that mirrors and controls parameters deep in the hierarchy.
+
+### The Pattern
+
+```
+// Top-level patch — "Remote UI" section
+pattr @invisible 1 @bindto sub_synth::comp_threshold   ← read: monitors value
+  ↓
+prepend set
+  ↓
+number                                                   ← displays current value
+  ↓
+pattr @invisible 1 @bindto sub_synth::comp_threshold   ← write: sends changes back
+```
+
+### How It Works
+
+Each remote parameter uses **two pattr objects**:
+
+1. **Read pattr** (top → display): Monitors the subpatcher's pattr value. When the value changes in the subpatcher, this pattr outputs the new value → `prepend set` → `number` (displays without triggering output)
+2. **Write pattr** (display → bottom): Connected from the `number` output. When the user changes the number box, the new value flows to this pattr, which writes it back to the subpatcher's parameter
+
+**Why `prepend set`?** Without it, the read pattr's output would flow to the number box and immediately trigger its output, creating a feedback loop. `prepend set` sets the value silently.
+
+**Why `@invisible 1`?** These pattr objects are infrastructure — they should not appear in the pattrstorage client window or clutter the parameter list. They exist solely to bridge the hierarchy.
+
+### Addressing Subpatcher Parameters
+
+The `@bindto` path uses `::` to traverse the patcher hierarchy:
+
+```
+@bindto sub_synth::gain                    ← direct child subpatcher
+@bindto sub_synth::comp_threshold          ← pattr named "comp_threshold" inside "sub_synth"
+```
+
+The subpatcher must have a `varname` (scripting name) for this addressing to work.
+
+### When to Use
+
+- Standalone applications with deep subpatcher hierarchies
+- Creating a centralized control panel for parameters spread across subpatchers
+- Any patch where the top level needs to monitor and control subpatcher state
+
+## Centralized State with pattrstorage @greedy
+
+### The Pattern
+
+```
+pattrstorage myPresets @greedy 1
+```
+
+### How @greedy Works
+
+By default, `pattrstorage` only registers pattr objects that are directly connected or explicitly bound. With `@greedy 1`, it automatically discovers and registers **all pattr objects in the entire patcher hierarchy**, including:
+
+- `pattr @invisible 1 @bindto` objects (Remote UI bridges)
+- pattr objects inside subpatchers
+- pattr objects added after pattrstorage was created
+
+### Combined with Remote UI
+
+When Remote UI pattr bridges and `@greedy 1` are used together, a single `pattrstorage` at the top level can save and recall the complete state of all parameters across the entire hierarchy:
+
+```
+pattrstorage myApp @greedy 1
+  ├── captures: Remote UI pattr → sub_synth::gain
+  ├── captures: Remote UI pattr → sub_synth::comp_threshold
+  ├── captures: Remote UI pattr → sub_fx::delay_time
+  └── ... (all parameters across all subpatchers)
+```
+
+**Result**: `store 1` saves everything, `recall 1` restores everything — the entire application state in one preset operation.
+
 ## Quick Reference
 
 | Task | Solution |
@@ -139,6 +216,8 @@ Select **Float** as the parameter type and set **Unit Style** to **Int**. This a
 | Multiple bpatcher instances | Use `#1_` argument prefix for `pattr` names |
 | Values beyond 0-127 | Adjust Range in Parameter Inspector |
 | Preset management | Use `pattrstorage` with named `pattr` objects |
+| Remote parameter control | Use `pattr @invisible 1 @bindto sub::param` (read + write pair) |
+| Capture all parameters | Use `pattrstorage @greedy 1` |
 
 ## Sources
 
