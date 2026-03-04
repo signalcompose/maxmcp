@@ -3,9 +3,11 @@
  * Unit tests for UUID Generator
  */
 
-#include <gtest/gtest.h>
 #include "uuid_generator.h"
+
 #include <set>
+
+#include <gtest/gtest.h>
 
 /**
  * Test: UUID generation with default length (8)
@@ -93,7 +95,7 @@ TEST(UUIDGenerator, PatchIDFormat) {
     EXPECT_EQ(patch_id.length(), 14);
 
     // UUID part should be 8 characters
-    std::string uuid_part = patch_id.substr(6); // After "synth_"
+    std::string uuid_part = patch_id.substr(6);  // After "synth_"
     EXPECT_EQ(uuid_part.length(), 8);
 }
 
@@ -107,7 +109,7 @@ TEST(UUIDGenerator, PatchIDVariousNames) {
     auto id2 = generate_patch_id("master.maxpat", 8);
     EXPECT_TRUE(id2.rfind("master_", 0) == 0);
 
-    auto id3 = generate_patch_id("test", 8); // No extension
+    auto id3 = generate_patch_id("test", 8);  // No extension
     EXPECT_TRUE(id3.rfind("test_", 0) == 0);
 }
 

@@ -275,6 +275,10 @@ inline DeferredResultPtr make_deferred_result() {
 
 constexpr auto DEFAULT_DEFER_TIMEOUT = std::chrono::milliseconds(5000);
 
+// Extended timeout for heavy read operations that iterate all objects/patchlines
+// in a patch (e.g., get_patchlines, get_subpatchers, get_objects_in_patch)
+constexpr auto HEAVY_OPERATION_TIMEOUT = std::chrono::milliseconds(30000);
+
 // ============================================================================
 // Error Response Helpers (Readable: Using named constants)
 // ============================================================================

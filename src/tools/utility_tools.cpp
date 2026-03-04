@@ -139,13 +139,12 @@ static json execute_get_console_log(const json& params) {
     return ConsoleLogger::get_logs(lines, clear);
 }
 
+#ifndef MAXMCP_TEST_MODE
+
 /**
  * @brief Execute get_avoid_rect_position tool
  */
 static json execute_get_avoid_rect_position(const json& params) {
-#ifdef MAXMCP_TEST_MODE
-    return ToolCommon::test_mode_error();
-#else
     std::string patch_id = params.value("patch_id", "");
     double width = params.value("width", 50.0);
     double height = params.value("height", 20.0);
@@ -159,18 +158,13 @@ static json execute_get_avoid_rect_position(const json& params) {
         return ToolCommon::patch_not_found_error(patch_id);
     }
 
-    // Allocate DeferredResult on heap
-    DeferredResult* deferred_result = new DeferredResult();
-    t_get_position_data* data = new t_get_position_data{patch, width, height, deferred_result};
+    auto* deferred_result = new DeferredResult();
+    auto* data = new t_get_position_data{patch, width, height, deferred_result};
 
-    // Create atom to hold pointer
     t_atom a;
     atom_setobj(&a, data);
-
-    // Defer to main thread
     defer(patch, (method)get_position_deferred, gensym("get_position"), 1, &a);
 
-    // Wait for defer callback to complete
     if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
         delete deferred_result;
         return ToolCommon::timeout_error("waiting for position calculation");
@@ -178,10 +172,10 @@ static json execute_get_avoid_rect_position(const json& params) {
 
     json result = deferred_result->result;
     delete deferred_result;
-
     return {{"result", result}};
-#endif
 }
+
+#endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
 // Public Dispatcher
@@ -191,10 +185,13 @@ json execute(const std::string& tool, const json& params) {
     if (tool == "get_console_log") {
         return execute_get_console_log(params);
     } else if (tool == "get_avoid_rect_position") {
+#ifdef MAXMCP_TEST_MODE
+        return ToolCommon::test_mode_error();
+#else
         return execute_get_avoid_rect_position(params);
+#endif
     }
 
-    // Tool not handled by this module - return nullptr to signal not handled
     return nullptr;
 }
 

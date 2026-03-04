@@ -3,9 +3,10 @@
  * Unit tests for PatchRegistry
  */
 
-#include <gtest/gtest.h>
-#include "patch_registry.h"
 #include "maxmcp.h"
+#include "patch_registry.h"
+
+#include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -17,7 +18,7 @@ using json = nlohmann::json;
  * Test Fixture for PatchRegistry
  */
 class PatchRegistryTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Clear registry before each test
         // Note: PatchRegistry needs a reset method for testing

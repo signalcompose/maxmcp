@@ -171,6 +171,84 @@ outlet_sig_r    # Right signal output
 outlet_env      # Envelope output
 ```
 
+### Subpatcher Argument Documentation
+
+When a subpatcher receives arguments (via `bpatcher @args` or `poly~ @args`), document them with a `comment` object placed near the top of the patch. Use the format `#N : description` for each argument:
+
+```
+comment: "#1 : unique_prefix
+#2 : base key - used start position of sample
+#3 : Sample file prefix
+#4 : distance between samples(ms)
+#5 : Sample file count"
+```
+
+**Placement**: Position the comment near the top-left of the patch, close to the first `inlet` object, so it is immediately visible when the subpatcher is opened.
+
+**Why document arguments?**
+- Arguments (`#1`, `#2`, ...) are replaced at load time — their meaning is invisible in the running patch
+- Without documentation, understanding what values to pass requires reading the entire subpatcher
+- Serves as the "function signature" for the subpatcher
+
+### Inlet/Outlet Comment Annotation
+
+The `comment` attribute on `inlet` and `outlet` objects serves as a self-documenting interface. It appears as a tooltip when hovering over the corresponding inlet/outlet in the parent patch, helping users connect the correct data types.
+
+**Format**: `(type) description`
+
+```
+inlet  @comment "(list) note data"
+inlet  @comment "(bang) change rhythm palette"
+outlet @comment "(signal) L channel Out"
+outlet @comment "(signal) R channel Out"
+outlet @comment "(bang) when buffer read done"
+outlet @comment "(symbol) playing sound name"
+```
+
+**Common type annotations**:
+
+| Type | Meaning | Example |
+|------|---------|---------|
+| `(signal)` | Audio signal (~) | `(signal) L channel Out` |
+| `(bang)` | Bang trigger | `(bang) when buffer read done` |
+| `(int)` | Integer value | `(int) MIDI note number` |
+| `(float)` | Float value | `(float) frequency in Hz` |
+| `(list)` | List of values | `(list) note data` |
+| `(symbol)` | Symbol/string | `(symbol) playing sound name` |
+
+**Why annotate every inlet/outlet?**
+- Parent patch users see the expected data type on hover — no need to open the subpatcher
+- Prevents common wiring mistakes (e.g., connecting a message outlet to a signal inlet)
+- Acts as living documentation that stays with the object
+
+### Intermediate Data Flow Comments
+
+For complex data transformations within a patch, place `comment` objects at key processing stages to document how the data format changes. This is especially useful when list order or data type changes mid-flow.
+
+**Example — note data reordering**:
+
+```
+in 1
+  ↓          comment: "(int) note\n(int) velocity"
+swap
+  ↓          comment: "(int) velocity\n(int) note"
+unpack 0 0
+```
+
+**Example — calculation annotation**:
+
+```
+pak 0. 0.    comment: "duration = end - start"
+  ↓
+* 1.         comment: "speed * duration"
+```
+
+**When to add intermediate comments**:
+- After `swap`, `zl.rev`, `unpack`/`pack` that change data order
+- At arithmetic stages where the meaning of the value changes
+- Before complex branching where multiple outlets carry different data
+- At the boundary between "what comes in" and "what goes out" of a processing section
+
 ## Special Cases
 
 ### Multiple Voices
