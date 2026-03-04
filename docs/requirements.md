@@ -48,7 +48,7 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 #### FR-4: Add Max Object
 - **Priority**: P0
 - **Description**: Create new Max object in specified patch
-- **Input**: `patch_id`, `position`, `obj_type`, `varname`, `args`
+- **Input**: `patch_id`, `position`, `obj_type`, `varname`, `arguments`
 - **Output**: Success status, created object info
 - **Success Criteria**: Object appears in patch, responds to messages
 

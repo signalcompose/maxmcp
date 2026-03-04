@@ -247,7 +247,7 @@ Contributions welcome! Please see [CONTRIBUTING.md](https://github.com/signalcom
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file
+Signal compose Fair Trade License v1.0 - see [LICENSE](LICENSE) file
 
 ---
 

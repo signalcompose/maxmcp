@@ -14,7 +14,7 @@ MaxMCP is a native C++ external object for Max/MSP that acts as an MCP (Model Co
 - ✅ **Automatic patch detection**: Auto-generated patch IDs
 - ✅ **Natural language control**: "Add a 440Hz oscillator to synth patch"
 - ✅ **Multi-patch support**: Control multiple patches simultaneously
-- ✅ **Complete MCP toolset**: 10 tools for comprehensive patch control
+- ✅ **Complete MCP toolset**: 26 tools for comprehensive patch control
 - ✅ **Auto-cleanup**: Lifecycle management on patch close
 
 ## Architecture
@@ -42,8 +42,8 @@ Max/MSP Patches
 - **Architecture**: arm64 (Apple Silicon native)
 - **MCP Protocol**: stdio-based JSON-RPC
 - **JSON Library**: nlohmann/json 3.11.0+
-- **WebSocket**: libwebsockets (bundled)
-- **TLS**: OpenSSL 3.x (bundled)
+- **WebSocket**: libwebsockets (installed via Homebrew, bundled into .mxo at build time)
+- **TLS**: OpenSSL 3.x (installed via Homebrew, bundled into .mxo at build time)
 - **Code Signing**: Ad-hoc signature (auto-applied)
 - **Distribution**: Max Package
 
@@ -70,7 +70,7 @@ Use this path if you're cloning the repository and want to build the external yo
    ```
 2. **Install prerequisites**
    ```bash
-   brew install cmake libwebsockets openssl
+   brew install cmake nlohmann-json libwebsockets openssl
    ```
    - Requires macOS 13+, Xcode Command Line Tools, Max 9.1+, Node.js 18+ with npm.
 3. **Fetch the Max SDK with submodules**
@@ -80,31 +80,35 @@ Use this path if you're cloning the repository and want to build the external yo
    The `--recursive` flag is critical; without it `max-pretarget.cmake` is missing.
 4. **Install bridge dependencies**
    ```bash
-   cd bridge
+   cd package/MaxMCP/support/bridge
    npm install
-   cd ..
+   cd ../../../..
    ```
    This installs the `ws` dependency used by `websocket-mcp-bridge.js`.
 5. **Build the external**
    ```bash
-   ./build.sh Release clean   # optional but recommended for first build
+   ./build.sh --clean Release   # optional but recommended for first build
    ./build.sh Release
    ```
-   The script configures CMake, builds the external, and copies `maxmcp.mxo`
-   into `~/Documents/Max 9/Library/`. Confirm the bundle exists:
+   The script configures CMake, builds the external, and installs `maxmcp.mxo`
+   into `package/MaxMCP/externals/`. Confirm the bundle exists:
    ```bash
-   ls ~/Documents/Max\ 9/Library/maxmcp.mxo/Contents/MacOS/maxmcp
+   ls package/MaxMCP/externals/maxmcp.mxo/Contents/MacOS/maxmcp
    ```
-6. **(Optional) Manual CMake invocation**
-   If you prefer direct CMake commands or need a custom install location:
+6. **Deploy to Max 9 Packages**
    ```bash
-   cmake -B build -S . -DCMAKE_BUILD_TYPE=Release \
-         -DC74_LIBRARY_OUTPUT_DIRECTORY="$HOME/Documents/Max 9/Library"
-   cmake --build build --config Release
+   ./deploy.sh
    ```
-7. **Verify bridge tooling**
+   This copies `package/MaxMCP` to `~/Documents/Max 9/Packages/MaxMCP`.
+7. **(Optional) Manual CMake invocation**
    ```bash
-   cd bridge
+   cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+   cmake --build build
+   cmake --install build --prefix package/MaxMCP
+   ```
+8. **Verify bridge tooling**
+   ```bash
+   cd package/MaxMCP/support/bridge
    npm test   # runs Jest suite against websocket-mcp-bridge.js
    ```
 
@@ -135,9 +139,9 @@ open ~/Documents/Max\ 9/Packages/MaxMCP/examples/00-index.maxpat
    ```
 4. Start the Node bridge in a terminal:
    ```bash
-   node ~/Documents/MaxMCP/bridge/websocket-mcp-bridge.js ws://localhost:7400
+   node ~/Documents/Max\ 9/Packages/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
    ```
-   Run `npm install` inside `bridge/` first if you have not already.
+   Run `npm install` inside `package/MaxMCP/support/bridge/` first if you have not already.
 
 ### 3. Configure Claude Code
 Run this command in your terminal:
@@ -167,18 +171,18 @@ In Claude Code, say:
 
 ## Available MCP Tools
 
-MaxMCP provides 10 tools for comprehensive patch control:
+MaxMCP provides 26 tools across 6 categories:
 
-1. **list_active_patches** - List all registered patches
-2. **get_console_log** - Retrieve Max Console messages
-3. **add_max_object** - Create new Max objects
-4. **get_objects_in_patch** - List all objects in a patch
-5. **set_object_attribute** - Modify object attributes
-6. **connect_max_objects** - Create patchcords
-7. **disconnect_max_objects** - Remove patchcords
-8. **remove_max_object** - Delete objects
-9. **get_patch_info** - Get patch metadata
-10. **get_avoid_rect_position** - Find safe object placement positions
+| Category | Count | Tools |
+|----------|-------|-------|
+| Patch Management | 3 | `list_active_patches`, `get_patch_info`, `get_frontmost_patch` |
+| Object Operations | 12 | `add_max_object`, `remove_max_object`, `get_objects_in_patch`, `set_object_attribute`, `get_object_attribute`, `get_object_value`, `get_object_io_info`, `get_object_hidden`, `set_object_hidden`, `redraw_object`, `replace_object_text`, `assign_varnames` |
+| Connection Operations | 4 | `connect_max_objects`, `disconnect_max_objects`, `get_patchlines`, `set_patchline_midpoints` |
+| Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
+| Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
+| Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
+
+See [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) for full parameter and response documentation.
 
 ## Development Status
 
@@ -187,7 +191,7 @@ MaxMCP provides 10 tools for comprehensive patch control:
 ✅ **Completed**:
 - Phase 1: Core external objects, WebSocket server
 - Phase 2: Complete MCP toolset, E2E testing, Max Package integration
-- Phase 1 Infrastructure: CI/CD pipeline, comprehensive testing (57 tests), code quality automation
+- Phase 1 Infrastructure: CI/CD pipeline, comprehensive testing (117 tests), code quality automation
 
 🔄 **Next**:
 - Phase 3: Max Package Manager submission
@@ -206,7 +210,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and `docs/` for detailed sp
 
 ## Claude Code Plugin
 
-MaxMCP provides a Claude Code plugin with two skills for Max/MSP development.
+MaxMCP provides a Claude Code plugin with four skills for Max/MSP development.
 
 ### Installation
 
@@ -231,6 +235,32 @@ Provides:
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
 
+#### max-techniques
+
+Max/MSP implementation techniques and best practices:
+
+```bash
+/maxmcp:max-techniques
+```
+
+Provides:
+- poly~ & bpatcher architecture patterns
+- pattr/pattrstorage parameter management
+- Constant parameter safety, sampling rate handling
+
+#### m4l-techniques
+
+Max for Live development techniques and best practices:
+
+```bash
+/maxmcp:m4l-techniques
+```
+
+Provides:
+- Live Object Model (path → id → live.object → live.observer)
+- Device namespaces (`---` vs `#0`) and pattr persistence
+- Controller mapping, dBFS reference, Push2 automapping
+
 #### max-resources
 
 Access Max.app built-in documentation and examples:
@@ -245,23 +275,17 @@ Provides:
 - Code snippets
 - Full-text search of Max documentation
 
-**First-time setup** (required once, or after Max update):
-```bash
-cd plugins/maxmcp/skills/max-resources/scripts
-./build-index.sh
-```
-
 ## Example Patches
 
 The package includes comprehensive example patches in `examples/`:
 
 - **00-index.maxpat** - Main help/index (also available via right-click → "Open maxmcp Help")
 - **01-basic-registration.maxpat** - Basic patch registration
-- **02-basic-client.maxpat** - Client mode demonstration
-- **03-custom-alias.maxpat** - Custom alias usage
-- **04-group-assignment.maxpat** - Group filtering
-- **05-06-07-multi-patch-*.maxpat** - Multi-patch scenarios
-- **01-claude-code-connection.maxpat** - E2E test scenarios
+- **01-claude-code-connection.maxpat** - Claude Code E2E connection test
+- **02-custom-alias.maxpat** - Custom alias usage
+- **03-group-assignment.maxpat** - Group filtering
+- **04-05-06-multi-patch-*.maxpat** - Multi-patch scenarios (synth1, synth2, fx1)
+- **07-mcp-tools-test.maxpat** - MCP tools testing
 
 ## Troubleshooting
 
@@ -273,9 +297,9 @@ The package includes comprehensive example patches in `examples/`:
 ### Claude Code can't connect
 - Verify bridge is running: Check Max Console for "Bridge launched" message
 - Restart Claude Code after `claude mcp add` command
-- Verify MCP config: `cat ~/.config/claude-code/mcp.json`
-- Run the bridge with debugging to capture WebSocket errors:  
-  `DEBUG=1 node bridge/websocket-mcp-bridge.js ws://localhost:7400`
+- Check MCP configuration with `claude mcp list`
+- Run the bridge with debugging to capture WebSocket errors:
+  `DEBUG=1 node ~/Documents/Max\ 9/Packages/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400`
 
 ### Objects not appearing
 - Ensure patch is unlocked (Cmd+E)
@@ -284,7 +308,7 @@ The package includes comprehensive example patches in `examples/`:
 
 ## License
 
-MaxMCP is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full license text.
+MaxMCP is licensed under the **Signal compose Fair Trade License v1.0**. See [LICENSE](LICENSE) for the full license text.
 
 ### Third-Party Licenses
 
@@ -294,10 +318,10 @@ MaxMCP uses open-source libraries. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LIC
 
 MaxMCP uses a comprehensive CI/CD pipeline with automated testing and code quality checks:
 
-- **Testing**: 57 unit tests (Google Test 1.17.0) with 100% pass rate
+- **Testing**: 117 unit tests (Google Test 1.17.0) with 100% pass rate
 - **CI/CD**: GitHub Actions workflows for automated testing and linting
 - **Code Quality**: Pre-commit hooks with clang-format, ESLint, and automated tests
-- **Local Setup**: `pre-commit install` to enable local quality checks
+- **Local Setup**: `npm install` to enable pre-commit hooks via Husky
 
 See [docs/PHASE1_INFRASTRUCTURE.md](docs/PHASE1_INFRASTRUCTURE.md) for details on the testing infrastructure.
 

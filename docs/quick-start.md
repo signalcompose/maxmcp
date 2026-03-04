@@ -54,7 +54,7 @@ User: "Add a 440Hz oscillator to synth patch"
 Claude Code:
   1. list_active_patches() → ["synth_a7f2", "fx_b3e1"]
   2. Fuzzy match "synth" → "synth_a7f2"
-  3. add_max_object(patch_id="synth_a7f2", obj_type="cycle~", args=[440])
+  3. add_max_object(patch_id="synth_a7f2", obj_type="cycle~", arguments=[440])
 ```
 
 ---

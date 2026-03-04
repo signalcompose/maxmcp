@@ -198,7 +198,7 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | ./dist/maxmcp-bridge ws:
 
 ## License
 
-MIT
+Signal compose Fair Trade License v1.0 - see [LICENSE](../../LICENSE)
 
 ---
 

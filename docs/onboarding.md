@@ -8,7 +8,7 @@ Welcome to MaxMCP! This guide will help you get started with development.
 
 Before you begin, ensure you have:
 
-- **macOS 10.15+** or **Windows 10+**
+- **macOS 13+** or **Windows 10+**
 - **Max/MSP 9.0+** installed
 - **Xcode Command Line Tools** (macOS) or **Visual Studio 2022** (Windows)
 - **CMake 3.19+**
@@ -26,8 +26,8 @@ Before you begin, ensure you have:
 git clone https://github.com/signalcompose/MaxMCP.git
 cd MaxMCP
 
-# Verify you're on develop branch
-git branch --show-current  # Should output: develop
+# Verify you're on main branch
+git branch --show-current  # Should output: main
 ```
 
 ### 2. Install Dependencies
@@ -137,9 +137,9 @@ For detailed explanations and code examples, see [development-guide.md](developm
 ### Creating a New Feature
 
 ```bash
-# 1. Ensure you're on develop
-git checkout develop
-git pull origin develop
+# 1. Ensure you're on main
+git checkout main
+git pull origin main
 
 # 2. Create feature branch
 git checkout -b feature/123-add-object-tool
@@ -172,18 +172,17 @@ Closes #123"
 
 # 9. Push and create PR
 git push -u origin feature/123-add-object-tool
-gh pr create --base develop --head feature/123-add-object-tool
+gh pr create --base main --head feature/123-add-object-tool
 ```
 
 ### Git Workflow Rules
 
-**Branch Strategy**:
+**Branch Strategy** (GitHub Flow):
 ```
-main          ← Production releases
-  └── develop ← Development (default branch)
-       ├── feature/xxx
-       ├── bugfix/xxx
-       └── docs/xxx
+main          ← Production (default branch, protected)
+  ├── feature/XX-description
+  ├── bugfix/description
+  └── docs/description
 ```
 
 **Commit Message Format** (Conventional Commits):
@@ -348,7 +347,7 @@ We review for:
 - [ ] Tests run successfully
 - [ ] `[maxmcp]` object tested in Max
 - [ ] Development workflow understood (DDD, TDD, DRY)
-- [ ] Git workflow understood (Git Flow, Conventional Commits)
+- [ ] Git workflow understood (GitHub Flow, Conventional Commits)
 - [ ] First feature branch created
 - [ ] First PR submitted
 

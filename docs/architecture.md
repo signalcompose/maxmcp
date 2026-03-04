@@ -90,25 +90,35 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 - `@port` (default: 7400) — WebSocket server port
 - `@mode agent` — Activates server mode
 
-**Data Structure**:
+**Data Structure** (see `src/maxmcp.h`):
 ```cpp
-struct t_maxmcp {
-    t_object ob;                        // Max object header
+typedef struct _maxmcp {
+    t_object ob;                        // Max object header (must be first)
 
-    // Agent mode
-    std::unique_ptr<MCPServer> mcp_server;           // MCP protocol handler
-    std::unique_ptr<WebSocketServer> ws_server;      // WebSocket server
-    std::unique_ptr<ConsoleLogger> logger;           // Console log capture
+    // Mode selection
+    t_symbol* mode;                     // "agent" or "patch" (@mode attribute)
 
-    // Patch mode
-    std::string patch_id;               // Auto-generated patch ID
-    t_object* patcher;                  // Pointer to owning patcher
+    // === AGENT MODE FIELDS ===
+    void* outlet_log;                   // Outlet for log messages
+    bool initialized;                   // MCP initialize handshake completed
+    std::string protocol_version;       // Negotiated protocol version
+    std::atomic<bool> running;          // Server running state
+    WebSocketServer* ws_server;         // WebSocket server instance
+    t_atom_long port;                   // WebSocket server port (@port attribute)
+    bool debug;                         // Debug mode (@debug attribute)
 
-    // Common
-    t_symbol* mode;                     // "agent" or "patch"
-    long port;                          // WebSocket port (agent only)
-};
+    // === PATCH MODE FIELDS ===
+    std::string patch_id;               // Auto-generated unique ID
+    std::string display_name;           // User-friendly name for patch
+    std::string patcher_name;           // Max patcher filename
+    t_object* patcher;                  // Reference to parent patcher object
+    t_symbol* alias;                    // Custom patch ID override (@alias attribute)
+    t_symbol* group;                    // Patch group name (@group attribute)
+} t_maxmcp;
 ```
+
+> **Note**: Legacy source files (`maxmcp_server.cpp`, `udp_server.cpp`) from an earlier
+> architecture where agent and client were separate externals have been removed.
 
 **Singleton Pattern**:
 ```cpp
@@ -303,7 +313,7 @@ Claude Code:
   3. add_max_object(
        patch_id="synth_a7f2",
        obj_type="cycle~",
-       args=[440],
+       arguments=[440],
        position=[100, 100],
        varname="osc1"
      )
