@@ -9,15 +9,15 @@
 #ifndef TEST_WEBSOCKET_CLIENT_H
 #define TEST_WEBSOCKET_CLIENT_H
 
-#include <string>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
 #include <libwebsockets.h>
+#include <mutex>
+#include <queue>
+#include <string>
 
 class TestWebSocketClient {
-public:
+  public:
     TestWebSocketClient() : wsi_(nullptr), context_(nullptr), connected_(false) {}
 
     ~TestWebSocketClient() {
@@ -65,7 +65,7 @@ public:
         return connected_;
     }
 
-private:
+  private:
     struct lws* wsi_;
     struct lws_context* context_;
     bool connected_;
@@ -77,11 +77,11 @@ private:
     std::condition_variable queue_cv_;
 
     // libwebsockets callback
-    static int callback(struct lws* wsi, enum lws_callback_reasons reason,
-                       void* user, void* in, size_t len);
+    static int callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in,
+                        size_t len);
 
     // Internal message handler
     void on_message_received(const std::string& message);
 };
 
-#endif // TEST_WEBSOCKET_CLIENT_H
+#endif  // TEST_WEBSOCKET_CLIENT_H

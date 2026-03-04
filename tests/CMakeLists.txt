@@ -23,6 +23,7 @@ include_directories(
 set(TEST_SOURCES
     unit/test_uuid_generator.cpp
     unit/test_patch_registry.cpp
+    unit/test_patch_helpers.cpp
     unit/test_maxmcp_attributes.cpp
     unit/test_console_logger.cpp
     unit/test_mcp_server.cpp
@@ -33,6 +34,7 @@ set(UTIL_SOURCES
     ../src/utils/uuid_generator.cpp
     ../src/utils/console_logger.cpp
     ../src/utils/patch_registry.cpp
+    ../src/utils/patch_helpers.cpp
 )
 
 # Create test executable
