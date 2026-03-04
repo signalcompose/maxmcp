@@ -58,7 +58,9 @@ npm run format:check
 - **`src/maxmcp.cpp`**: Unified external object supporting both agent and patch modes via `@mode` attribute
 - **`src/mcp_server.cpp`**: MCP protocol handler (JSON-RPC), implements all MCP tools
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
+- **`src/tools/`**: MCP tool implementations organized by category (patch, object, connection, state, hierarchy, utility)
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
+- **`src/maxmcp_server.cpp`**, **`src/udp_server.cpp`**: Legacy files (not included in current build, pending removal)
 
 ### MCP Tools (26 total)
 

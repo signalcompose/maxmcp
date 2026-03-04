@@ -196,45 +196,57 @@ git commit --no-verify -m "emergency: fix critical bug"
 
 ```cmake
 cmake_minimum_required(VERSION 3.19)
-project(MaxMCP VERSION 2.0.0)
+project(MaxMCP)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Max SDK
 set(C74_MAX_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/max-sdk")
-include(${C74_MAX_SDK_PATH}/script/max-sdk-base.cmake)
+include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-pretarget.cmake)
 
 # Dependencies
-find_package(nlohmann_json REQUIRED)
+find_package(nlohmann_json 3.11.0 REQUIRED)
+find_package(Libwebsockets REQUIRED)
 
-# Source files
-set(SOURCES
-    src/maxmcp.cpp
-    src/mcp_server.cpp
-    src/websocket_server.cpp
+# Shared utility files
+set(UTILS_SRC
+    src/utils/uuid_generator.cpp
+    src/utils/console_logger.cpp
+    src/utils/patch_registry.cpp
+    src/utils/patch_helpers.cpp
+)
+
+# MCP Tool implementation files
+set(TOOLS_SRC
+    src/tools/tool_common.cpp
     src/tools/patch_tools.cpp
     src/tools/object_tools.cpp
     src/tools/connection_tools.cpp
     src/tools/state_tools.cpp
     src/tools/hierarchy_tools.cpp
     src/tools/utility_tools.cpp
-    src/tools/tool_common.cpp
-    src/utils/patch_helpers.cpp
-    src/utils/patch_registry.cpp
-    src/utils/console_logger.cpp
-    src/utils/uuid_generator.cpp
+)
+
+# Source files (unified object with @mode attribute)
+set(PROJECT_SRC
+    src/maxmcp.cpp
+    src/mcp_server.cpp
+    src/websocket_server.cpp
+    ${UTILS_SRC}
+    ${TOOLS_SRC}
 )
 
 # External object
-add_library(${PROJECT_NAME} MODULE ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+add_library(${PROJECT_NAME} MODULE ${PROJECT_SRC})
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    nlohmann_json::nlohmann_json websockets_shared)
 
-# Max SDK configuration
-include(${C74_MAX_SDK_PATH}/script/max-posttarget.cmake)
+# Max SDK post-target configuration
+include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
 
 # Tests (optional)
-option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
@@ -287,11 +299,15 @@ src/
 │   ├── hierarchy_tools.cpp # Hierarchy (2 tools)
 │   ├── utility_tools.cpp   # Utilities (2 tools)
 │   └── tool_common.cpp     # Shared tool helpers
-└── utils/
-    ├── patch_helpers.cpp   # Patcher API helpers
-    ├── patch_registry.cpp  # Patch registration
-    ├── console_logger.cpp  # Console log capture
-    └── uuid_generator.cpp  # Patch ID generation
+├── utils/
+│   ├── patch_helpers.cpp   # Patcher API helpers
+│   ├── patch_registry.cpp  # Patch registration
+│   ├── console_logger.cpp  # Console log capture
+│   └── uuid_generator.cpp  # Patch ID generation
+│
+│ # Legacy files (not included in current build, pending removal)
+├── maxmcp_server.cpp/h     # Legacy server external
+└── udp_server.cpp/h        # Legacy UDP server
 ```
 
 **Principles**:
@@ -471,14 +487,13 @@ def test_add_object_to_patch():
 
 ## 6. Git Workflow
 
-### 6.1 Branch Strategy (Git Flow)
+### 6.1 Branch Strategy (GitHub Flow)
 
 ```
-main          ← Production releases
-  └── develop ← Development (default branch)
-       ├── feature/xxx
-       ├── bugfix/xxx
-       └── docs/xxx
+main          ← Production (default branch, protected)
+  ├── feature/XX-description  ← Feature branches (XX = issue number)
+  ├── bugfix/description      ← Bug fixes
+  └── docs/description        ← Documentation updates
 ```
 
 ### 6.2 Commit Messages
@@ -515,10 +530,10 @@ Closes #12
 
 ### 6.3 Pull Request Process
 
-1. Create feature branch from `develop`
+1. Create feature branch from `main`
 2. Implement feature with tests
 3. Update documentation
-4. Create PR to `develop`
+4. Create PR to `main`
 5. Ensure CI passes
 6. Merge (merge commit, not squash)
 
