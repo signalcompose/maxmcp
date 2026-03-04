@@ -157,10 +157,19 @@ yarn.lock
 .stylelintcache
 .nyc_output
 
-# Environment
+# [code:security-patterns:fbe2794b]
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.key
+*.pem
+*.p12
+*.pfx
+credentials*
+!credentials.example.*
+# [/code:security-patterns]
 
 # Development tools (MaxMCP-Dev only)
 .export-config.yml
@@ -183,6 +192,5 @@ package/MaxMCP/support/maxmcp-bridge
 
 # Claude Code
 .claude/*
-!.claude/plans/
 .claude/settings.local.json
 *.local.md
