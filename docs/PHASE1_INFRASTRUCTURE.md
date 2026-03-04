@@ -3,7 +3,7 @@
 **Date**: 2025-11-11
 **Status**: ✅ COMPLETE
 
-> **Note**: This is a historical completion report. Test count has since grown from 57 to 119.
+> **Note**: This is a historical completion report. Test count has since grown from 57 to 117 (5 additional tests are currently disabled).
 > See the current test suite by running `./build.sh --test`.
 
 ---

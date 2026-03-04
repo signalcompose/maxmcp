@@ -120,7 +120,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 **Status**: Complete ✅
 **Achievements**:
 - GitHub Actions CI/CD pipeline (C++ and Node.js workflows)
-- Comprehensive unit test suite (119 tests, 100% passing)
+- Comprehensive unit test suite (117 tests, 100% passing)
 - Pre-commit hooks (clang-format, ESLint, test validation)
 - Code quality automation
 - MAXMCP_TEST_MODE for CI compatibility

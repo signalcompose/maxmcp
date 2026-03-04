@@ -191,7 +191,7 @@ See [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) for full paramete
 ✅ **Completed**:
 - Phase 1: Core external objects, WebSocket server
 - Phase 2: Complete MCP toolset, E2E testing, Max Package integration
-- Phase 1 Infrastructure: CI/CD pipeline, comprehensive testing (119 tests), code quality automation
+- Phase 1 Infrastructure: CI/CD pipeline, comprehensive testing (117 tests), code quality automation
 
 🔄 **Next**:
 - Phase 3: Max Package Manager submission
@@ -318,7 +318,7 @@ MaxMCP uses open-source libraries. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LIC
 
 MaxMCP uses a comprehensive CI/CD pipeline with automated testing and code quality checks:
 
-- **Testing**: 119 unit tests (Google Test 1.17.0) with 100% pass rate
+- **Testing**: 117 unit tests (Google Test 1.17.0) with 100% pass rate
 - **CI/CD**: GitHub Actions workflows for automated testing and linting
 - **Code Quality**: Pre-commit hooks with clang-format, ESLint, and automated tests
 - **Local Setup**: `npm install` to enable pre-commit hooks via Husky
