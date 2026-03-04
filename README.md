@@ -284,7 +284,7 @@ The package includes comprehensive example patches in `examples/`:
 
 ## License
 
-MaxMCP is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full license text.
+MaxMCP is licensed under the **Signal compose Fair Trade License v1.0**. See [LICENSE](LICENSE) for the full license text.
 
 ### Third-Party Licenses
 

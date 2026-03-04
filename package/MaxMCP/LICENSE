@@ -1,21 +1,180 @@
-MIT License
+Signal compose Fair Trade License v1.0
 
-Copyright (c) 2025 signalcompose
+Copyright (c) 2026 Signal compose Inc.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+================================================================================
+WHY THIS LICENSE
+================================================================================
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This is not a payment demand. It is an invitation to a fair relationship.
+
+We believe in you.
+
+If you are a student, an indie developer, a solo creator, a small team chasing
+a dream — please use our software freely. If you have almost nothing, even a
+small donation is welcome. And if you have nothing at all right now, that is
+okay too. Use it. Build something great.
+
+When you succeed — when your company grows, when your product ships — we ask
+that you do the right thing. Not because we will check. Not because we will
+block you. But because you believe in fairness, just as we do.
+
+This is a Fair Trade license.
+
+Like fair trade coffee, it is built on a direct relationship between makers and
+users. We pour our time and care into this software. In return, we ask for
+support — whether through a license fee, a donation, a kind word, or simply
+staying in the community.
+
+Inspire us to keep going.
+
+We want to support creators, not restrict them.
+
+Want to support without a commercial license?
+Donations are always welcome:
+  https://github.com/sponsors/signalcompose
+  https://github.com/sponsors/dropcontrol
+  https://github.com/sponsors/leico
+
+--------------------------------------------------------------------------------
+
+これは支払いの要求ではありません。公正な関係へのご招待です。
+
+あなたのことを信じています。
+
+学生さん、インディー開発者、個人クリエイター、夢を追いかける小さなチーム —
+どうぞ自由に使ってください。今は余裕がなければ、少しのドネーションでも
+十分です。何もできない状況なら、それでも構いません。使って、何か素晴らしいものを
+作ってください。
+
+あなたが成功したとき — 会社が成長したとき、プロダクトがリリースできたとき —
+正しいことをしてください。私たちが確認するからではありません。ブロックするから
+でもありません。あなたが、私たちと同じように、公正さを信じているから。
+
+これはフェアトレード・ライセンスです。
+
+フェアトレードのコーヒーと同じように、作る人と使う人の直接的な関係の上に
+成り立っています。私たちはこのソフトウェアに時間と情熱を注いでいます。
+その代わりに、サポートをお願いします — ライセンス料でも、ドネーションでも、
+ひとことの応援でも、コミュニティに居続けてくれるだけでも。
+
+私たちの活動を続ける力になってください。
+
+クリエイターを応援したい。制限したくない。
+
+================================================================================
+BASE LICENSE
+================================================================================
+
+This software is licensed under the Apache License, Version 2.0 (the "Base
+License"), with the additional conditions below.
+
+You may obtain a copy of the Apache License at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+All rights granted under the Apache License 2.0 (use, copy, modify, distribute)
+remain in effect, subject to the following additional conditions.
+
+================================================================================
+COMMONS CLAUSE (v1.0)
+================================================================================
+
+The grant of rights under this License does not include the right to Sell the
+Software.
+
+"Sell" means providing the Software to third parties for a fee or other
+consideration, where the value derives entirely or substantially from the
+Software's functionality. This includes hosting or consulting services whose
+primary value is the Software itself.
+
+Internal use within your organization is always permitted.
+
+================================================================================
+COMMERCIAL LICENSE
+================================================================================
+
+Commercial use of this software requires a commercial license.
+
+This is not about restricting use — it is about ensuring that organizations
+using this software professionally contribute fairly to its ongoing development.
+
+Contact: licensing@signalcompose.com
+
+We are happy to discuss custom terms. This is a conversation, not a wall.
+
+================================================================================
+COMMERCIAL LICENSE OPTIONS
+================================================================================
+
+Choose what fits your use. You know your situation best.
+
+PRICING (per seat — one license per team member):
+
+  Annual        $99 / seat / year
+  Perpetual     $299 / seat — one-time purchase
+
+EXAMPLES:
+
+  Solo developer                    →  1 seat × Annual ($99/year)
+  5-person studio                   →  5 seats × Annual ($495/year)
+  Team of 10, long-term investment  →  10 seats × Perpetual ($2,990)
+
+To purchase: https://signalcompose.gumroad.com/l/maxmcp1year
+Custom terms or questions: licensing@signalcompose.com
+
+We are happy to talk. This is a relationship, not a transaction.
+
+================================================================================
+ACADEMIC USE
+================================================================================
+
+Academic use is free.
+
+You qualify for free use if you are:
+- A student enrolled at an accredited educational institution
+- A faculty member, teacher, or researcher at an accredited institution
+- Using the software solely for educational or non-commercial research
+
+If you are unsure whether you qualify, contact us at: licensing@signalcompose.com
+
+All other use — including commercial, professional, or organizational use —
+requires a commercial license.
+
+================================================================================
+ABOUT SUPPORT AND MAINTENANCE
+================================================================================
+
+This software is provided as-is. We do not offer formal support as part of this
+license.
+
+That said: we do maintain this software. We read feedback, fix bugs, and care
+about what we build. We simply cannot guarantee timelines or responses.
+
+If you need a formal support agreement, reach out: licensing@signalcompose.com
+
+Contributions are welcome. Bug reports are appreciated.
+This is a community, and your voice matters.
+
+--------------------------------------------------------------------------------
+
+このソフトウェアはその時点の状態（as-is）で提供されます。
+このライセンスにサポートは含まれません。
+
+ただし、私たちはこのソフトウェアをメンテナンスしています。
+フィードバックを読み、バグを修正し、作るものを大切にしています。
+対応の時期や保証はできませんが、大切にしていないわけではありません。
+
+正式なサポート契約が必要な場合は、別途ご相談ください: licensing@signalcompose.com
+
+コントリビューションとフィードバックをお待ちしています。
+ここはコミュニティです。あなたの声は届きます。
+
+================================================================================
+DISCLAIMER
+================================================================================
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. See the Apache License 2.0 for the full disclaimer and limitation of
+liability terms.
+
+================================================================================
