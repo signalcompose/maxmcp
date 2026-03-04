@@ -194,64 +194,15 @@ git commit --no-verify -m "emergency: fix critical bug"
 
 ### 3.1 CMakeLists.txt Structure
 
-```cmake
-cmake_minimum_required(VERSION 3.19)
-project(MaxMCP)
+The CMakeLists.txt handles:
+- Max SDK integration (`max-pretarget.cmake` / `max-posttarget.cmake`)
+- Dependencies: `nlohmann_json`, `libwebsockets`
+- Source organization: `UTILS_SRC`, `TOOLS_SRC`, `PROJECT_SRC`
+- **dylib bundling** (macOS): Copies libwebsockets, libssl, libcrypto into `.mxo/Contents/Frameworks/` and fixes install names. Skippable with `-DSKIP_BUNDLE_DEPS=ON` for CI.
+- **Ad-hoc code signing** (macOS): Automatically signs the `.mxo` bundle post-build.
+- Optional unit tests: `-DBUILD_TESTS=ON`
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Max SDK
-set(C74_MAX_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/max-sdk")
-include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-pretarget.cmake)
-
-# Dependencies
-find_package(nlohmann_json 3.11.0 REQUIRED)
-find_package(Libwebsockets REQUIRED)
-
-# Shared utility files
-set(UTILS_SRC
-    src/utils/uuid_generator.cpp
-    src/utils/console_logger.cpp
-    src/utils/patch_registry.cpp
-    src/utils/patch_helpers.cpp
-)
-
-# MCP Tool implementation files
-set(TOOLS_SRC
-    src/tools/tool_common.cpp
-    src/tools/patch_tools.cpp
-    src/tools/object_tools.cpp
-    src/tools/connection_tools.cpp
-    src/tools/state_tools.cpp
-    src/tools/hierarchy_tools.cpp
-    src/tools/utility_tools.cpp
-)
-
-# Source files (unified object with @mode attribute)
-set(PROJECT_SRC
-    src/maxmcp.cpp
-    src/mcp_server.cpp
-    src/websocket_server.cpp
-    ${UTILS_SRC}
-    ${TOOLS_SRC}
-)
-
-# External object
-add_library(${PROJECT_NAME} MODULE ${PROJECT_SRC})
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    nlohmann_json::nlohmann_json websockets_shared)
-
-# Max SDK post-target configuration
-include(${C74_MAX_SDK_PATH}/source/max-sdk-base/script/max-posttarget.cmake)
-
-# Tests (optional)
-option(BUILD_TESTS "Build unit tests" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-```
+See the actual [CMakeLists.txt](../CMakeLists.txt) for full details.
 
 ### 3.2 Build Commands
 
@@ -305,9 +256,7 @@ src/
 │   ├── console_logger.cpp  # Console log capture
 │   └── uuid_generator.cpp  # Patch ID generation
 │
-│ # Legacy files (not included in current build, pending removal)
-├── maxmcp_server.cpp/h     # Legacy server external
-└── udp_server.cpp/h        # Legacy UDP server
+└── (no other files)
 ```
 
 **Principles**:
@@ -386,19 +335,10 @@ object_error((t_object*)x, "Failed to create object: %s", obj_type.c_str());
 
 ## 5. Testing Strategy
 
-### 5.1 Test Pyramid
+### 5.1 Test Strategy
 
-```
-     E2E Tests (10%)
-       /      \
-      /        \
-     /__________\
-    Integration (30%)
-      /          \
-     /            \
-    /______________\
-   Unit Tests (60%)
-```
+**Primary**: Unit tests (Google Test) — covers logic without Max SDK dependency.
+**E2E**: Manual testing with Claude Code — see [manual-test-new-tools.md](manual-test-new-tools.md).
 
 ### 5.2 Unit Tests
 
@@ -434,54 +374,33 @@ cd build
 ctest --output-on-failure
 ```
 
-### 5.3 Integration Tests
+### 5.3 Test Structure
 
-**Location**: `tests/integration/`
+**Location**: `tests/`
 
-**Approach**: Mock Max API, test component interactions
-
-```cpp
-// tests/integration/test_mcp_server.cpp
-TEST(MCPServer, ListActivePatches) {
-    MockMaxAPI max_api;
-    MCPServer server(&max_api);
-
-    json request = {
-        {"method", "tools/call"},
-        {"params", {
-            {"name", "list_active_patches"},
-            {"arguments", {}}
-        }}
-    };
-
-    json response = server.handle_request(request);
-    EXPECT_EQ(response["result"].size(), 2);  // 2 patches
-}
 ```
+tests/
+├── CMakeLists.txt          # Test build configuration
+├── stubs/
+│   └── maxmcp.h            # Max SDK stub for test compilation
+└── unit/
+    ├── test_console_logger.cpp
+    ├── test_maxmcp_attributes.cpp
+    ├── test_mcp_server.cpp
+    ├── test_patch_helpers.cpp
+    ├── test_patch_registry.cpp
+    ├── test_tool_routing.cpp
+    ├── test_uuid_generator.cpp
+    ├── test_websocket_client.cpp
+    ├── test_websocket_client.h
+    └── test_websocket_server.cpp
+```
+
+**Test mode macro**: `MAXMCP_TEST_MODE` enables compilation without Max SDK.
 
 ### 5.4 E2E Tests
 
-**Location**: `tests/e2e/`
-
-**Approach**: Python scripts controlling real Max instance
-
-```python
-# tests/e2e/test_basic_workflow.py
-def test_add_object_to_patch():
-    # 1. Open Max patch
-    patch = open_max_patch("test.maxpat")
-
-    # 2. Call MCP tool
-    response = add_max_object(
-        patch_id=patch.id,
-        obj_type="cycle~",
-        args=[440]
-    )
-
-    # 3. Verify
-    assert response["status"] == "success"
-    assert patch.has_object("cycle~")
-```
+E2E testing is performed manually with Claude Code. See [manual-test-new-tools.md](manual-test-new-tools.md) for procedures.
 
 ---
 
@@ -630,15 +549,22 @@ cmake --build build
 
 ```
 MaxMCP/
-├── init/
-│   └── maxmcp.txt
+├── docs/
+│   └── refpages/
+│       └── maxmcp.maxref.xml
+├── examples/                # Example patches (00-index, basic, multi-patch, etc.)
 ├── externals/
-│   ├── maxmcp.mxo      # macOS Universal
-│   └── maxmcp.mxe64    # Windows x64
+│   └── maxmcp.mxo           # macOS (arm64)
 ├── help/
 │   └── maxmcp.maxhelp
-├── examples/
-├── docs/
+├── icon.png                  # Package icon
+├── javascript/               # JavaScript support files
+├── misc/                     # Miscellaneous (toolbar SVG, etc.)
+├── patchers/                 # Patcher files
+├── support/
+│   ├── bridge/               # Node.js stdio-to-WebSocket bridge
+│   └── ...                   # Legacy bridge scripts
+├── LICENSE
 ├── package-info.json
 └── README.md
 ```

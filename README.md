@@ -42,8 +42,8 @@ Max/MSP Patches
 - **Architecture**: arm64 (Apple Silicon native)
 - **MCP Protocol**: stdio-based JSON-RPC
 - **JSON Library**: nlohmann/json 3.11.0+
-- **WebSocket**: libwebsockets (bundled)
-- **TLS**: OpenSSL 3.x (bundled)
+- **WebSocket**: libwebsockets (installed via Homebrew, bundled into .mxo at build time)
+- **TLS**: OpenSSL 3.x (installed via Homebrew, bundled into .mxo at build time)
 - **Code Signing**: Ad-hoc signature (auto-applied)
 - **Distribution**: Max Package
 
@@ -308,7 +308,7 @@ The package includes comprehensive example patches in `examples/`:
 
 ## License
 
-MaxMCP is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full license text.
+MaxMCP is licensed under the **Signal compose Fair Trade License v1.0**. See [LICENSE](LICENSE) for the full license text.
 
 ### Third-Party Licenses
 

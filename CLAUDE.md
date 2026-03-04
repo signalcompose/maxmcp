@@ -60,7 +60,7 @@ npm run format:check
 - **`src/websocket_server.cpp`**: libwebsockets-based WebSocket server for bridge communication
 - **`src/tools/`**: MCP tool implementations organized by category (patch, object, connection, state, hierarchy, utility)
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
-- **`src/maxmcp_server.cpp`**, **`src/udp_server.cpp`**: Legacy files (not included in current build, pending removal)
+- ~~Legacy files removed~~ (`maxmcp_server.cpp`, `udp_server.cpp` were from earlier separate-external architecture)
 
 ### MCP Tools (26 total)
 

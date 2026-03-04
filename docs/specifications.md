@@ -141,21 +141,27 @@ Claude Code handles natural language resolution on the client side:
 ### Directory Layout
 ```
 MaxMCP/
+├── docs/
+│   └── refpages/
+│       └── maxmcp.maxref.xml   # Max Reference integration
+├── examples/                    # Example patches (00-index, basic, multi-patch, etc.)
 ├── externals/
 │   └── maxmcp.mxo              # macOS (arm64)
 ├── help/
 │   └── maxmcp.maxhelp          # Help patch
-├── docs/
-│   └── refpages/
-│       └── maxmcp.maxref.xml   # Max Reference integration
+├── icon.png                     # Package icon
+├── javascript/                  # JavaScript support files
+├── misc/                        # Miscellaneous (toolbar SVG, etc.)
+├── patchers/                    # Patcher files
 ├── support/
-│   └── bridge/
-│       ├── websocket-mcp-bridge.js  # stdio-to-WebSocket bridge
-│       ├── package.json
-│       └── node_modules/
+│   ├── bridge/
+│   │   ├── websocket-mcp-bridge.js  # stdio-to-WebSocket bridge
+│   │   ├── package.json
+│   │   └── node_modules/
+│   └── ...                      # Legacy bridge scripts
+├── LICENSE
 ├── package-info.json
-├── README.md
-└── LICENSE
+└── README.md
 ```
 
 ---

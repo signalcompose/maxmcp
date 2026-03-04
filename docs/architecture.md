@@ -117,9 +117,8 @@ typedef struct _maxmcp {
 } t_maxmcp;
 ```
 
-> **Note**: Legacy source files `maxmcp_server.cpp` and `udp_server.cpp` exist in the
-> repository but are not included in the current build. They are from an earlier architecture
-> where agent and client were separate externals.
+> **Note**: Legacy source files (`maxmcp_server.cpp`, `udp_server.cpp`) from an earlier
+> architecture where agent and client were separate externals have been removed.
 
 **Singleton Pattern**:
 ```cpp
@@ -314,7 +313,7 @@ Claude Code:
   3. add_max_object(
        patch_id="synth_a7f2",
        obj_type="cycle~",
-       args=[440],
+       arguments=[440],
        position=[100, 100],
        varname="osc1"
      )

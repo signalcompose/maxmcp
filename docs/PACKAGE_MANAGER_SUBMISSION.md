@@ -13,7 +13,7 @@ This guide describes how to submit MaxMCP to the Cycling '74 Max Package Manager
 
 - [x] `package-info.json` (with complete metadata)
 - [x] `README.md`
-- [x] `LICENSE` (MIT)
+- [x] `LICENSE` (Signal compose Fair Trade License v1.0)
 - [x] `icon.png` (500×500 PNG at package root)
 - [x] `misc/MaxMCP_toolbar.svg`
 - [x] `externals/` folder with .mxo files
@@ -66,7 +66,7 @@ This guide describes how to submit MaxMCP to the Cycling '74 Max Package Manager
   "description": "MCP Server for Max/MSP - Control Max patches with Claude Code using natural language",
   "homepage": "https://github.com/signalcompose/MaxMCP",
   "repository": "https://github.com/signalcompose/MaxMCP.git",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "tags": ["MCP", "AI", "automation", "Claude", "code-generation", "protocol"],
   "max_version_min": "9.0.0",
   "max_version_max": "none",
@@ -206,7 +206,7 @@ Package Name: MaxMCP
 Author: signalcompose
 Version: 1.0.0
 Category: Utilities
-License: MIT
+License: Signal compose Fair Trade License v1.0
 
 Description:
 MaxMCP is an MCP (Model Context Protocol) server for Max/MSP that enables natural language control of Max patches using Claude Code. It provides seamless integration between AI-powered development tools and Max/MSP's visual programming environment.
