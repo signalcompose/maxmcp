@@ -36,6 +36,7 @@ cmake --install build --prefix package/MaxMCP
 **Test framework**: Google Test 1.17.0
 **Test files**: `tests/unit/test_*.cpp`
 **Test mode macro**: `MAXMCP_TEST_MODE` (enables compilation without Max SDK)
+**Integration test checklist**: [docs/integration-test-checklist.md](docs/integration-test-checklist.md) (MCP全26ツールの実機テスト用)
 
 ## Code Quality
 
