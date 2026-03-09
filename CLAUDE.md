@@ -183,11 +183,16 @@ MaxMCP provides a Claude Code plugin marketplace for patch creation guidelines.
 
 ### Plugin Installation
 
-```bash
-# Add marketplace
-/plugin marketplace add signalcompose/maxmcp
+The plugin is bundled inside the Max package (`package/MaxMCP/plugins/maxmcp/`).
+After installing the Max package, users can add the plugin from the local path:
 
-# Install plugin
+```bash
+# From local Max package
+/plugin marketplace add ~/Documents/Max\ 9/Packages/MaxMCP/plugins
+/plugin install maxmcp@maxmcp
+
+# Or from GitHub marketplace
+/plugin marketplace add signalcompose/maxmcp
 /plugin install maxmcp@maxmcp
 ```
 
@@ -255,26 +260,54 @@ Provides:
 3. Reads XML and extracts reference information (digest, inlets, outlets, methods)
 4. Can also find related examples and snippets via filesystem search
 
+### How Skills Work
+
+Claude Code discovers skills by scanning `skills/*/SKILL.md` under the plugin directory. Each `SKILL.md` has YAML frontmatter that defines how the skill is registered:
+
+```yaml
+---
+name: skill-name              # Used in /maxmcp:<name> command
+description: |                 # Claude uses this to determine when to suggest the skill
+  When to use this skill...
+invocation: user               # "user" = explicit slash command only
+argument-hint: "[args]"        # Optional: shown in help text
+---
+```
+
+- `name` — Skill identifier, invoked as `/maxmcp:<name>`
+- `description` — Trigger conditions; Claude matches user prompts against this text
+- `invocation` — `user` requires explicit `/maxmcp:<name>` invocation
+- `argument-hint` — Optional parameter hint (e.g., `"[<object-name>|fts <query>]"`)
+
+The markdown body after the frontmatter is loaded as the skill's prompt content. Files in subdirectories (e.g., `reference/`) are available for the skill to reference.
+
+For detailed skill development instructions, see [package/MaxMCP/plugins/maxmcp/README.md](package/MaxMCP/plugins/maxmcp/README.md).
+
 ### Plugin Structure
 
 ```
-plugins/
-└── maxmcp/
-    ├── .claude-plugin/plugin.json
-    ├── skills/
-    │   ├── patch-guidelines/
-    │   │   ├── SKILL.md
-    │   │   └── reference/
-    │   ├── max-techniques/
-    │   │   ├── SKILL.md
-    │   │   └── reference/        # poly~, bpatcher, pattr, tips
-    │   ├── m4l-techniques/
-    │   │   ├── SKILL.md
-    │   │   └── reference/        # LOM, namespaces, M4L tips
-    │   └── max-resources/
-    │       ├── SKILL.md
-    │       ├── scripts/        # Search and retrieval scripts
-    │       ├── references/     # Format documentation
-    │       └── examples/       # Usage examples
-    └── README.md
+package/MaxMCP/
+├── plugins/
+│   └── maxmcp/
+│       ├── .claude-plugin/plugin.json
+│       ├── skills/
+│       │   ├── patch-guidelines/
+│       │   │   ├── SKILL.md
+│       │   │   └── reference/
+│       │   ├── max-techniques/
+│       │   │   ├── SKILL.md
+│       │   │   └── reference/        # poly~, bpatcher, pattr, tips
+│       │   ├── m4l-techniques/
+│       │   │   ├── SKILL.md
+│       │   │   └── reference/        # LOM, namespaces, M4L tips
+│       │   └── max-resources/
+│       │       ├── SKILL.md
+│       │       ├── scripts/        # Search and retrieval scripts
+│       │       ├── references/     # Format documentation
+│       │       └── examples/       # Usage examples
+│       └── README.md
+├── externals/
+├── support/
+├── patchers/
+└── ...
 ```
