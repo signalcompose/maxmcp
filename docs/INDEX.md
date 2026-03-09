@@ -155,12 +155,12 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Expected results and error scenarios
 
 ### [Integration Test Checklist](integration-test-checklist.md)
-**Purpose**: MCP全26ツールの実機テスト用チェックリスト
+**Purpose**: Manual verification checklist for all 26 MCP tools
 **Date**: 2026-03-09
 **Contents**:
-- 全26ツールのチェックリスト（表形式）
-- 推奨テスト手順
-- PR作成時・リリース前の確認用
+- Table-format checklist covering all 26 tools
+- Recommended test flow
+- For use before PR merges and releases
 
 ---
 
