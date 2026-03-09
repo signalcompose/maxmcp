@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 project(MaxMCP)
 
-# Build mode: "agent" or "client"
-# Set via: cmake -B build -S . -DBUILD_MODE=client
-set(BUILD_MODE "client" CACHE STRING "Build mode: agent or client")
-
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,18 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Export compile commands for clang-tidy and other tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# macOS Universal Binary (Apple Silicon + Intel)
-# NOTE: Universal build disabled for maxmcp.agent due to libwebsockets arm64-only dependency
-# Client builds can still use Universal Binary
+# macOS Architecture
+# arm64 only: unified build includes libwebsockets which is arm64-only via Homebrew
 if(APPLE)
     if(NOT CMAKE_OSX_ARCHITECTURES)
-        if(BUILD_MODE STREQUAL "agent")
-            set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures" FORCE)
-            message(STATUS "Building for arm64 only (agent mode requires native libwebsockets)")
-        else()
-            set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures" FORCE)
-            message(STATUS "Building Universal Binary: arm64 and x86_64")
-        endif()
+        set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures" FORCE)
+        message(STATUS "Building for arm64 only (libwebsockets arm64 dependency)")
     endif()
 endif()
 

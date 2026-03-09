@@ -11,6 +11,6 @@
   "devDependencies": {
     "esbuild": "^0.19.0"
   },
-  "author": "MaxMCP",
-  "license": "MIT"
+  "author": "Signal compose",
+  "license": "SEE LICENSE IN LICENSE"
 }

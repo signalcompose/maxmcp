@@ -195,6 +195,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Summary
 
-All dependencies use permissive licenses (MIT, BSD 3-Clause, Apache 2.0) that are compatible with MaxMCP's MIT License. There are no copyleft (GPL/LGPL) dependencies.
+All dependencies use permissive licenses (MIT, BSD 3-Clause, Apache 2.0) that are compatible with MaxMCP's Signal compose Fair Trade License v1.0 (Apache 2.0 base). There are no copyleft (GPL/LGPL) dependencies.
 
 For the most up-to-date license information, please refer to each project's repository.

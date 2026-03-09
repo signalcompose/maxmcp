@@ -31,10 +31,14 @@ using json = nlohmann::json;
  * - remove_max_object
  * - get_objects_in_patch
  * - set_object_attribute
+ * - get_object_attribute
+ * - get_object_value
  * - get_object_io_info
  * - get_object_hidden
  * - set_object_hidden
  * - redraw_object
+ * - replace_object_text
+ * - assign_varnames
  *
  * @return JSON array of tool schema objects
  */
