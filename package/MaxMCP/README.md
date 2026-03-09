@@ -49,22 +49,38 @@ Create a new Max patch and add:
 
 The optional argument ("synth") sets the display name. If omitted, the patch filename is used.
 
-### 2. Configure Claude Code
+### 2. Configure Claude Code MCP
 
-Add MaxMCP server to your Claude Code MCP settings:
+Run this command in your terminal to register the MCP server:
 
-```json
-{
-  "mcpServers": {
-    "maxmcp": {
-      "command": "/path/to/maxmcp.server.mxo/Contents/MacOS/maxmcp.server",
-      "args": []
-    }
-  }
-}
+```bash
+claude mcp add maxmcp node ~/Documents/Max\ 9/Packages/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
 ```
 
-### 3. Start Creating
+After adding, restart Claude Code.
+
+### 3. Install Claude Code Plugin (Recommended)
+
+Install the MaxMCP plugin for AI-assisted patch creation skills:
+
+```bash
+# Add local marketplace (from installed Max package)
+/plugin marketplace add ~/Documents/Max\ 9/Packages/MaxMCP/plugins
+
+# Install the plugin
+/plugin install maxmcp@maxmcp
+```
+
+This provides slash commands for patch guidelines, Max/MSP techniques, and object reference lookup:
+
+| Command | Description |
+|---------|-------------|
+| `/maxmcp:patch-guidelines` | Layout rules, naming conventions, JS best practices |
+| `/maxmcp:max-techniques` | poly~, bpatcher, pattr patterns |
+| `/maxmcp:m4l-techniques` | Live Object Model, namespaces, Push2 mapping |
+| `/maxmcp:max-resources` | Object reference pages, examples, snippets |
+
+### 4. Start Creating
 
 In Claude Code, try:
 ```

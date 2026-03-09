@@ -110,7 +110,7 @@ MaxMCP/
 │   └── utils/             # Helper utilities (4 files)
 ├── tests/unit/             # Unit tests (Google Test)
 ├── package/MaxMCP/         # Distributable Max package
-├── plugins/maxmcp/         # Claude Code plugin (4 skills)
+├── package/MaxMCP/plugins/  # Claude Code plugin (4 skills)
 ├── build.sh                # Build script
 ├── deploy.sh               # Deploy to Max 9 Packages
 └── CMakeLists.txt          # Build configuration

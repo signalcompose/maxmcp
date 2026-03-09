@@ -176,9 +176,10 @@ This index provides a comprehensive overview of all MaxMCP documentation.
   - WebSocket protocol investigations
 
 ### Claude Code Plugin
-- **Directory**: [`plugins/maxmcp/`](../plugins/maxmcp/)
+- **Directory**: [`package/MaxMCP/plugins/maxmcp/`](../package/MaxMCP/plugins/maxmcp/)
 - **Purpose**: Claude Code plugin for patch creation guidelines and Max resource access
-- **Installation**: `/plugin marketplace add signalcompose/maxmcp && /plugin install maxmcp@maxmcp`
+- **Installation (local)**: `/plugin marketplace add ~/Documents/Max\ 9/Packages/MaxMCP/plugins && /plugin install maxmcp@maxmcp`
+- **Installation (GitHub)**: `/plugin marketplace add signalcompose/maxmcp && /plugin install maxmcp@maxmcp`
 
 **Skills**:
 
@@ -283,7 +284,7 @@ Documentation should be updated when:
 | Set up and run MaxMCP | [Server Usage Guide](server-usage.md) |
 | Understand release process | [Release Workflow](RELEASE_WORKFLOW.md) |
 | Find research notes | [Research Directory](research/) |
-| Use Claude Code plugin | [Plugin README](../plugins/maxmcp/README.md) |
+| Use Claude Code plugin | [Plugin README](../package/MaxMCP/plugins/maxmcp/README.md) |
 
 ---
 

@@ -4,7 +4,17 @@ Claude Code plugin providing guidelines and tools for creating Max/MSP patches w
 
 ## Installation
 
-### From Marketplace
+### From Local Max Package (Recommended)
+
+```bash
+# Add local marketplace (from installed Max package)
+/plugin marketplace add ~/Documents/Max\ 9/Packages/MaxMCP/plugins
+
+# Install the plugin
+/plugin install maxmcp@maxmcp
+```
+
+### From GitHub Marketplace
 
 ```bash
 # Add the MaxMCP marketplace
@@ -96,12 +106,6 @@ Access Max/MSP built-in resources directly from Claude Code:
 /maxmcp:max-resources
 ```
 
-**First-time setup** (builds object index cache):
-```bash
-# Run within the skill's scripts directory
-./scripts/build-index.sh
-```
-
 **Trigger words**: "Max object", "reference", "how to use", "example", "snippet"
 
 ## Reference Documentation
@@ -126,6 +130,93 @@ Access Max/MSP built-in resources directly from Claude Code:
 - [Reference Format](skills/max-resources/references/refpage-format.md) - XML reference page structure
 - [Patch Format](skills/max-resources/references/maxpat-format.md) - .maxpat JSON structure
 - [MCP Recreation](skills/max-resources/references/mcp-recreation.md) - Example-to-patch workflow
+
+## Skill Development Guide
+
+### How Claude Code Discovers Skills
+
+Claude Code automatically scans `skills/*/SKILL.md` under the plugin directory. Any subdirectory containing a `SKILL.md` file is registered as a skill. No additional configuration in `plugin.json` is needed.
+
+```
+skills/
+└── my-new-skill/
+    ├── SKILL.md          ← Required: defines skill metadata and prompt
+    └── reference/        ← Optional: supporting documentation
+        └── guide.md
+```
+
+### SKILL.md Format
+
+Each `SKILL.md` consists of **YAML frontmatter** (metadata) and **markdown body** (prompt content).
+
+```yaml
+---
+name: my-new-skill
+description: |
+  Short description of when to use this skill. Claude uses this text
+  to determine when to suggest the skill to users. Be specific about
+  trigger conditions:
+  - Working with feature X
+  - User asks about topic Y
+  - Building component Z
+invocation: user
+argument-hint: "[optional-args]"
+---
+
+# Skill Title
+
+Prompt content goes here. This markdown is loaded as the skill's
+instructions when invoked.
+
+## Section
+
+You can reference files in subdirectories:
+- See [guide.md](reference/guide.md) for details
+```
+
+### Frontmatter Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Skill identifier. Used in `/pluginname:<name>` command |
+| `description` | Yes | When to use this skill. Claude matches user prompts against this text |
+| `invocation` | No | `user` (default) = explicit slash command only |
+| `argument-hint` | No | Parameter hint shown in help (e.g., `"[<object-name>]"`) |
+
+### Invocation
+
+Skills are invoked with the format `/<plugin-name>:<skill-name>`:
+
+```bash
+/maxmcp:patch-guidelines
+/maxmcp:max-resources cycle~
+```
+
+### Supporting Files
+
+Files in subdirectories (e.g., `reference/`) are available for the skill to read during execution. Organize by purpose:
+
+- `reference/` — Detailed documentation, patterns, and conventions
+- `scripts/` — Shell scripts for filesystem operations
+- `examples/` — Usage examples and workflows
+
+### Adding a New Skill
+
+1. Create a directory under `skills/`:
+   ```bash
+   mkdir -p package/MaxMCP/plugins/maxmcp/skills/my-skill/reference
+   ```
+
+2. Create `SKILL.md` with frontmatter and prompt content
+
+3. Add reference files as needed
+
+4. Test by running:
+   ```bash
+   /maxmcp:my-skill
+   ```
+
+No rebuild or restart is required — Claude Code detects new skills on the next plugin load.
 
 ## Requirements
 
