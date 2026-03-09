@@ -154,6 +154,14 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 - Claude Code prompts for testing
 - Expected results and error scenarios
 
+### [Integration Test Checklist](integration-test-checklist.md)
+**Purpose**: Manual verification checklist for all 26 MCP tools
+**Date**: 2026-03-09
+**Contents**:
+- Table-format checklist covering all 26 tools
+- Recommended test flow
+- For use before PR merges and releases
+
 ---
 
 ## 📖 Additional Resources
@@ -279,6 +287,7 @@ Documentation should be updated when:
 | Check Infrastructure results | [Phase 1 Infrastructure](PHASE1_INFRASTRUCTURE.md) |
 | See version history | [CHANGELOG](../CHANGELOG.md) |
 | Find E2E test results | [E2E Test Results](e2e-test-results-phase2.md) |
+| Run integration test checklist | [Integration Test Checklist](integration-test-checklist.md) |
 | Get started as new developer | [Onboarding Guide](onboarding.md) |
 | Set up and run MaxMCP | [Server Usage Guide](server-usage.md) |
 | Understand release process | [Release Workflow](RELEASE_WORKFLOW.md) |
