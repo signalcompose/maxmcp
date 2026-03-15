@@ -216,6 +216,8 @@ Guidelines for creating well-organized Max patches.
 ```
 
 Provides:
+- Execution model (hot/cold inlets) and safe messaging patterns
+- Object text conventions (abbreviations, type safety)
 - Layout rules for object positioning
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
@@ -244,9 +246,10 @@ Max/MSP implementation techniques and best practices.
 ```
 
 Provides:
-- poly~ & bpatcher architecture patterns
+- poly~ voice management and bpatcher component patterns
 - pattr/pattrstorage parameter management
-- Constant parameter safety, sampling rate handling
+- Cascading multi-stage initialization
+- Sampling rate handling, feedback loop prevention
 
 #### m4l-techniques
 
