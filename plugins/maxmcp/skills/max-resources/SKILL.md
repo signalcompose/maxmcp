@@ -188,6 +188,18 @@ Lightweight helper scripts for operations that require Bash:
 
 ## When to Use
 
+### 必須参照（推測で接続しない）
+
+以下の場合、**推測せずにこのスキルでリファレンスを確認する**:
+
+- **outlet/inlet の役割が不明なオブジェクトに接続する前**: outlet の数だけでなく、各 outlet が何を出力するかを確認（例: pattr は 3 outlet だが、outlet 1 は bindto 専用）
+- **オブジェクトに送るメッセージの形式が不明な時**: live.object の `set value N` vs `value N` のように、メッセージ形式が正しくないと動作しない
+- **アトリビュート値の意味が不明な時**: live.dial の `appearance` (0=Vertical, 1=Tiny, 2=Panel, 3=Large) のように、値の意味をリファレンスで確認
+
+推測による接続・設定は手戻りの最大の原因。**1回のリファレンス確認で防げる問題を、推測→失敗→修正のサイクルで3回以上のやり取りに増やさない。**
+
+### ユーザーからの質問
+
 Use this skill when users ask about:
 - Max object usage ("How do I use cycle~?")
 - Object parameters, inlets, outlets, methods

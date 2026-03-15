@@ -204,6 +204,61 @@ pack 0 0. symbol
 
 `pack` outputs the list when the leftmost inlet receives a value. Use `pak` if any inlet should trigger output.
 
+## Connection Design Flow（接続設計フロー）
+
+`trigger` と cold inlet を持つオブジェクトを組み合わせる際、接続を作る**前に**以下の手順で設計する。
+ここでは `pack` を例に説明するが、`+`、`int` など cold inlet を持つすべてのオブジェクトに同じ原則が適用される。
+
+### Step 1: 下流の pack/pak の inlet 構造を特定
+
+```
+pack 0. 0.
+  inlet 0 (左) = hot（発火トリガー）
+  inlet 1 (右) = cold（値格納のみ）
+```
+
+### Step 2: trigger の outlet 順序を設計
+
+trigger は右→左の順に発火する。cold inlet に送る値を右側、hot inlet に送る値を左側に配置:
+
+```
+正しい設計:
+  t b i
+    outlet 1 (右, 先に発火) → cold inlet に値を格納
+    outlet 0 (左, 後に発火) → hot inlet に値を送信（発火）
+
+誤った設計:
+  t b i
+    outlet 0 (左, 後に発火) → cold inlet（値は格納されるが発火しない）
+    outlet 1 (右, 先に発火) → hot inlet（cold の値が未格納のまま発火）
+```
+
+### Step 3: _parameter_order も同じ原則で設計
+
+Live パラメータの復元順序も hot/cold と同じ原則:
+
+```
+_parameter_order 設計:
+  1. cold inlet に接続するパラメータ（先に復元 → 格納）
+  2. hot inlet に接続するパラメータ（後に復元 → 発火）
+  3. _parameter_range を設定するチェーンのパラメータ（範囲設定が先）
+  4. その範囲内で値を復元するパラメータ（値復元が後）
+  5. 独立パラメータ（最後）
+```
+
+### Step 4: 配置を接続順序に合わせる
+
+trigger の outlet 順序（右→左）に合わせて、下流オブジェクトを左右に配置:
+
+```
+t b b b
+  outlet 0 (左, 最後)    outlet 1 (中央)    outlet 2 (右, 最初)
+         ↓                     ↓                    ↓
+  [最後に実行]          [2番目に実行]         [最初に実行]
+```
+
+視覚的な左→右の並びと、実行順序の右→左が対応するように配置する。
+
 ## Sources
 
 - https://leico.github.io/TechnicalNote/Max/constant

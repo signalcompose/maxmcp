@@ -96,3 +96,134 @@ get_object_attribute: attribute = "format"
 | `comment` | テキスト内容ではなくオブジェクト型情報を返す |
 
 message/comment のテキスト内容は `get_objects_in_patch`（box text を含む）で取得するか、`replace_object_text` で変更する。
+
+## 5. live.* オブジェクト生成テンプレート
+
+オブジェクト生成時に設定すべきアトリビュートの一覧。`add_max_object` の `attributes` パラメータは反映されない場合があるため、生成後に `get_object_attribute` で確認し、未反映の場合は `set_object_attribute` で再設定する。
+
+### live.dial
+
+```
+obj_type: live.dial
+varname: control_dial
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `_parameter_type` | `set_object_attribute` | 0 (Float) |
+| `_parameter_unitstyle` | `set_object_attribute` | 1 (Float表示) |
+| `_parameter_range` | `set_object_attribute` | [0, 1] |
+| `_parameter_shortname` | `set_object_attribute` | "Control" |
+| `_parameter_longname` | `set_object_attribute` | "control_dial" |
+| `_parameter_order` | `set_object_attribute` | (設計に基づく) |
+| `_parameter_initial_enable` | `set_object_attribute` | 1 |
+| `_parameter_initial` | `set_object_attribute` | 0 |
+| `showname` | `set_object_attribute` | 0 |
+| `shownumber` | `set_object_attribute` | 0 |
+| `appearance` | `set_object_attribute` | 0=Vertical, 1=Tiny, 2=Panel, 3=Large |
+
+### live.numbox
+
+```
+obj_type: live.numbox
+varname: range_min
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `_parameter_type` | `set_object_attribute` | 0 (Float) |
+| `_parameter_unitstyle` | `set_object_attribute` | 1 (Float表示) |
+| `_parameter_range` | `set_object_attribute` | [-100000, 100000] |
+| `_parameter_shortname` | `set_object_attribute` | "Min" |
+| `_parameter_longname` | `set_object_attribute` | "range_min" |
+| `_parameter_order` | `set_object_attribute` | (設計に基づく) |
+| `_parameter_initial_enable` | `set_object_attribute` | 1 |
+| `_parameter_initial` | `set_object_attribute` | 0 |
+| `appearance` | `set_object_attribute` | 0=Numbox, 2=Slider |
+
+### live.text
+
+```
+obj_type: live.text
+varname: learn_toggle
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `mode` | `set_object_attribute` | 1 (Toggle) |
+| `text` | `set_object_attribute` | "Learn" (OFF時テキスト) |
+| `texton` | `set_object_attribute` | "Learn" (ON時テキスト) |
+| `_parameter_shortname` | `set_object_attribute` | "Learn" |
+| `_parameter_longname` | `set_object_attribute` | "learn_toggle" |
+| `_parameter_type` | `set_object_attribute` | 2 (Int) |
+| `_parameter_range` | `set_object_attribute` | [0, 1] |
+| `_parameter_order` | `set_object_attribute` | (設計に基づく) |
+| `_parameter_initial_enable` | `set_object_attribute` | 1 |
+| `_parameter_initial` | `set_object_attribute` | 0 |
+
+### pattr
+
+```
+obj_type: pattr
+arguments: ["param_name"]
+varname: param_name
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `parameter_enable` | `set_object_attribute` | 1 |
+| `_parameter_invisible` | `set_object_attribute` | 1 (Stored Only) |
+| `_parameter_order` | `set_object_attribute` | (設計に基づく) |
+| `_parameter_range` | `set_object_attribute` | [-100000, 100000] (Float用) |
+| `_parameter_type` | `set_object_attribute` | 0=Float, 3=blob(テキスト用) |
+| `_parameter_modmode` | `set_object_attribute` | 0 (None) |
+| `parameter_mappable` | `set_object_attribute` | 0 |
+| `_parameter_initial_enable` | `set_object_attribute` | 1 |
+| `_parameter_longname` | `set_object_attribute` | "param_name" |
+
+**pattr outlet 構造**:
+- outlet 0 (左): 値出力（autorestore、値変更時）
+- outlet 1 (中央): bindto 接続（UI オブジェクトを接続すると自動バインド）
+- outlet 2 (右): dumpout
+
+### live.object
+
+```
+obj_type: live.object
+varname: target_obj
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `_persistence` | `set_object_attribute` | 1 (Persistent Mapping) |
+
+**API**:
+- プロパティ取得: `get <property>` を左 inlet に送信
+- プロパティ設定: `set <property> <value>` を左 inlet に送信（`<property> <value>` ではない）
+- ターゲット設定: `id N` を右 inlet に送信
+
+### textedit
+
+```
+obj_type: textedit
+varname: param_name_display
+```
+
+生成後に設定:
+
+| アトリビュート | 設定方法 | 例 |
+|---|---|---|
+| `lines` | `set_object_attribute` | 1 (1行制限) |
+| `wordwrap` | `set_object_attribute` | 0 |
+| `textjustification` | `set_object_attribute` | 0=左, 1=中央, 2=右 |
+| `fontsize` | `set_object_attribute` | 12 |

@@ -72,22 +72,63 @@ Group related objects into functional sections:
 
 ## Patching Workflow
 
-パッチはセクション単位で段階的に構築する。全体を一度に作らず、**3フェーズ**で進める。
+パッチはセクション単位で段階的に構築する。全体を一度に作らず、**4フェーズ**で進める。
+
+### Phase 0: 設計（スキルのルールを設計制約として適用）
+
+実装を開始する前に、スキルのルールをプランの設計制約として組み込む。
+
+**⚠ Phase 0 を飛ばした場合**: 設計段階でルールを適用しないと、実装後に trigger の outlet 順序の間違い、UI オブジェクトの配置ミス（patching_rect で UI 優先配置 → 長距離・上向き接続の大量発生）、_parameter_order の依存チェーン不整合などが発覚し、パッチ全体の再構築が必要になる。
+
+1. **信号フロー設計**: 全セクションの依存関係を描き、上→下フローを確保
+   - patching_rect は接続構造優先で配置する（[Presentation Layout](reference/presentation-layout.md) の Dual-Mode Design 参照）
+   - UI オブジェクトは処理チェーンの近くに配置（presentation_rect で見た目は別途制御）
+2. **接続設計**: trigger の outlet 順序と下流の hot/cold inlet の整合性を設計
+   - [Execution Model](reference/execution-and-messaging.md) の Connection Design Flow に従う
+   - `pack` / `pak` に接続する trigger は、cold inlet → 右 outlet、hot inlet → 左 outlet
+3. **パラメータ復元順序設計**: `_parameter_order` を復元依存チェーン全体で設計
+   - cold inlet に接続するパラメータ → 小さい order（先に復元）
+   - hot inlet に接続するパラメータ → 大きい order（後に復元 → 発火）
+   - `_parameter_range` を設定するチェーン → 範囲内で値を復元するパラメータより先
+4. **アトリビュート計画**: 各オブジェクトに必要なアトリビュートを [MCP Notes](reference/mcp-notes.md) のテンプレートで事前に列挙
+
+5. **関連スキルの参照**: 作業内容に応じて以下のスキルをロードし、設計制約として適用する
+
+   | スキル | 条件 | 参照すべきルール |
+   |---|---|---|
+   | `m4l-techniques` | M4L デバイス開発時（常時） | live.observer パターン、pattr 永続化、namespace ルール、_parameter_order 設計 |
+   | `max-techniques` | poly~, pattr, signal 処理等 | pattr range 制限、cascading init |
+   | `max-resources` | オブジェクトの outlet/inlet 構造が不明な時 | リファレンスページで確認してから設計 |
+
+**Why Phase 0 が必要**: プランが承認された後にルールを適用しても、設計自体が間違っていれば大量の手戻りが発生する。
 
 ### Phase 1: セクション開発（各セクションのサイズ確定）
 
+**前提条件**: Phase 0 の設計が完了していること（信号フロー設計、接続設計、_parameter_order 設計、アトリビュート計画）。
+
 各セクションを独立して完成させる。セクション間の接続はこのフェーズでは行わない。
+
+**⚠ セクション単位を飛ばして全体を一括構築した場合**: Phase 8 検証（重複・交差・上向き検出）で全オブジェクト・全パッチコードを対象に確認が必要になる。セクション単位であれば検証対象はセクション内のオブジェクトのみで済むが、一括構築では変更のたびにパッチ全体の大量のオブジェクトを再確認することになり、トークン消費と作業量が爆発する。
 
 1. **セクションを計画**: パッチ全体を機能セクション（Input, Processing, Output 等）に分割
 2. **1セクションずつ構築**:
-   - オブジェクト追加 → セクション内接続 → 動作確認
+   - オブジェクト追加（Operation Checklists の「add_max_object の後」を実行）
+   - セクション内接続（Operation Checklists の「connect_max_objects の前」を実行）
    - `organize-patch`（セクション内モード）でレイアウト整理
+   - **Phase 8 検証を実行**（上向き接続・オブジェクト重複・パッチコード交差を検出・修正）
    - **セクションのサイズ（幅・高さ）が確定する**
 3. **次のセクションへ**: 現セクションが確定してから次に着手
 
 このフェーズ完了時点で、各セクションは内部レイアウトが完成し、サイズが固定される。
 
 ### Phase 2: セクション配置（セクション間の位置最適化）
+
+**前提条件**:
+- □ Phase 1 で全セクションの内部レイアウトが確定しているか？
+- □ 各セクションの Phase 8 検証（上向き接続・重複・交差）が完了しているか？
+→ 未完了なら Phase 2 に進まない
+
+**⚠ Phase 1 未完了で Phase 2 に進んだ場合**: セクション単位でまとめておけばグループとして移動するだけで済むが、セクションが未確定だと個々のオブジェクトの座標を1つずつ計算・移動することになる。セクションは簡易なグループ化であり、これを飛ばすとレイアウト作業の複雑さが爆発する。
 
 確定した各セクションを、セクション間接続を考慮して合理的な位置に配置する。
 
@@ -115,6 +156,13 @@ Group related objects into functional sections:
 
 ### Phase 3: セクション間接続
 
+**前提条件**:
+- □ Phase 2 でセクション配置が確定しているか？
+- □ 接続経路の予測で、patchcord が合理的な経路を取れる位置関係になっているか？
+→ 未完了なら Phase 3 に進まない
+
+**⚠ Phase 2 未完了で Phase 3 に進んだ場合**: セクション位置が確定していない状態で patchcord を接続すると、カオスなパッチコードが大量生産される。その状態でパッチコードの整理を試みても、より複雑なスパゲッティを生むだけで収束しない。
+
 セクション配置が確定した後、セクション間の patchcord を接続する。
 
 1. **セクション間接続を実行**: `connect_max_objects` でセクション間の patchcord を追加
@@ -123,9 +171,74 @@ Group related objects into functional sections:
 
 ### Why This Order Matters
 
+- Phase 0 で設計制約を組み込むため、実装段階での手戻りが最小化される
 - Phase 1 でセクションサイズが確定するため、Phase 2 で正確な配置計算ができる
 - Phase 2 でセクション位置が確定するため、Phase 3 で patchcord 経路が安定する
 - 後フェーズでの手戻りが最小化される
+
+## Operation Checklists
+
+各 MCP 操作の前後に実行すべき確認事項。スキルの原則を操作レベルで適用するためのチェックリスト。
+
+### add_max_object の後
+
+**⚠ このチェックリストを飛ばした場合**: 後工程での修正以前に、設定し忘れによるバグが大量発生する。パラメータ名がデフォルト（"live.numbox[1]"）のまま、presentation が 1 のまま、_parameter_initial_enable が 0 のまま等、原因特定に膨大な時間と労力を費やすのは Claude 自身。生成直後に確認すれば数秒で済む作業を、後から探すと何倍もかかる。
+
+1. `get_objects_in_patch` でオブジェクトのテキストを確認し、`@` 構文のアトリビュートが反映されているか検証
+2. ロジック用オブジェクト（trigger, prepend, route, zl, gate, live.object, live.path, pattr, pack, scale 等）は `set_object_attribute` で `presentation 0` を設定
+3. live.* UI オブジェクトの場合:
+   - `_parameter_longname` を varname に合わせて設定
+   - `_parameter_initial_enable 1` を設定
+   - `_parameter_initial` を設定
+   - `get_object_attribute` で `_parameter_type`, `_parameter_unitstyle`, `_parameter_range` が意図通りか確認
+4. live.text の場合: `text` / `texton` ラベルを設定
+5. live.comment の場合: `replace_object_text` でテキストを設定
+6. pattr の場合:
+   - `parameter_enable 1`, `_parameter_invisible 1`, `_parameter_modmode 0`, `parameter_mappable 0` を設定
+   - `_parameter_range` をデータに応じた範囲に設定（Float: `[-100000, 100000]` 等）
+   - `_parameter_type` をデータ型に応じて設定（Float: 0, blob: 3 等）
+   - `_parameter_initial_enable 1` を設定
+
+### connect_max_objects の前
+
+**⚠ このチェックリストを飛ばした場合**: outlet/inlet の役割を推測で接続し、動作しない接続を作成する。ユーザーに指摘されて切断→リファレンス確認→再接続のサイクルが発生し、1回の確認で済む作業が3回以上のやり取りになる。trigger の outlet 順序を間違えると、hot/cold の実行順序が逆転し、値が格納される前に pack が発火する等のロジック不具合が発生する。
+
+1. `get_object_io_info` で接続元の outlet 数と接続先の inlet 数を確認
+2. 接続先の inlet が hot (左) か cold (その他) かを確認（[Execution Model](reference/execution-and-messaging.md) 参照）
+3. `trigger` から接続する場合:
+   - 右→左の実行順序を確認
+   - cold inlet に接続する値を右側 outlet に配置（先に発火 → 格納）
+   - hot inlet に接続する値を左側 outlet に配置（最後に発火 → 処理開始）
+4. `pattr` から接続する場合:
+   - outlet 0 (左) = 値出力、outlet 1 (中央) = bindto（UIバインド）、outlet 2 (右) = dumpout
+   - 値を下流に送る場合は outlet 0、UI にバインドする場合は outlet 1
+5. **outlet/inlet の役割が不明なオブジェクトは、推測で接続せず `max-resources` スキルでリファレンスを必ず確認する**。推測による接続は手戻りの最大の原因となる
+
+### レイアウト変更の後（Phase 8 検証）
+
+**⚠ この検証を飛ばした場合**: 上向き接続、オブジェクト重複、パッチコードとオブジェクトの交差がユーザーの目視確認まで検出されない。全て座標データから機械的に検出可能な問題であり、ユーザーに指摘される前に自分で修正すべき問題。
+
+一連のレイアウト操作が完了した後に**必ず**実行する:
+
+1. `get_objects_in_patch` で全オブジェクトの矩形 (position + size) を取得
+2. `get_patchlines` で全パッチコードの start_point, end_point, midpoints を取得
+3. 以下を検出・修正:
+   - **上向き接続**: `start_point.y > end_point.y` かつミッドポイントなし → オブジェクト移動または U-shape ミッドポイント追加
+   - **オブジェクト重複**: 矩形同士の交差 → 位置調整
+   - **パッチコードとオブジェクトの交差**: セグメントがオブジェクト矩形を通過 → ミッドポイント追加またはオブジェクト移動
+   - **ミッドポイント付き接続**: セグメント単位で上向き区間がないか確認
+
+### _parameter_order の設計
+
+**⚠ 依存チェーンを考慮せず個別に order を設定した場合**: pack だけでなく、多くのオブジェクトの cold inlet に必要な値が代入されないままオブジェクトが動作（誤動作）する。メッセージの順序に起因するバグは原因が非常に分かりづらく、特定と修正に膨大な時間と労力を費やすことになる。_parameter_range が設定される前に値を復元すると、デフォルト範囲 [0, 127] でクランプされ、保存した値が失われる。
+
+パラメータを設定する前に、復元依存チェーン全体を設計する:
+
+1. `pack` / `pak` の hot/cold inlet 構造を特定
+2. cold inlet に接続するパラメータに小さい order を割り当て（先に復元 → 格納）
+3. hot inlet に接続するパラメータに大きい order を割り当て（後に復元 → 発火）
+4. `_parameter_range` を設定するチェーンを先に復元
+5. 独立パラメータは最後の order に配置
 
 ## Object Creation Best Practices
 
