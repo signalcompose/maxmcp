@@ -160,6 +160,8 @@ live.path                    live.path
 - Devices that read Live set state (track count, scene count) on load
 - Any device that accesses LOM properties during initialization
 
+3段階以上のカスケード初期化が必要な場合は、[Cascading Multi-Stage Initialization](../../max-techniques/reference/cascading-init.md) の汎用パターンを `live.thisdevice` + `---` namespace で適用する。
+
 ## Sources
 
 - https://leico.github.io/TechnicalNote/Live/knob-mapping

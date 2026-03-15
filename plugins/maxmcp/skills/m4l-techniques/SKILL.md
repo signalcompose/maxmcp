@@ -9,7 +9,7 @@ description: |
   - Handling pattr persistence issues in M4L context
   - Working with Push2 parameter mapping
   - Converting between Live levels and dBFS values
-invocation: user
+user-invocable: true
 ---
 
 # Max for Live Development Techniques
@@ -42,6 +42,17 @@ Reusable patterns for building production M4L devices with the Live Object Model
 
 See [LOM Applied Patterns Reference](reference/lom-patterns.md)
 
+### LOM Observer Patterns
+
+`live.observer` を使った監視・フィルタリングの実践パターン。
+
+**Key topics**:
+- `live.observer` の有効化・無効化パターン
+- `selected_parameter` フィルタチェーン
+- `canonical_parent` による自デバイスパラメータ除外
+
+See [LOM Observer Patterns Reference](reference/lom-observer-patterns.md)
+
 ### Namespaces & Parameter Persistence
 
 M4L-specific naming and state management patterns.
@@ -64,3 +75,17 @@ Practical tips for M4L device development.
 - Push2 Automapping Index for parameter display order
 
 See [Tips Reference](reference/tips.md)
+
+### Live Parameter Rules
+
+M4L デバイス固有のコーディングルール。Live パラメータシステムとの正しい連携方法。
+
+**Key topics**:
+- `live.observer` のアトリビュート設定方法と property メッセージ
+- `live.*` UI オブジェクトの `_parameter_unitstyle` 設定
+- `pattr` の `parameter_enable` と永続化設定
+- `live.dial` の表示要素制御（`showname` / `shownumber`）
+- パラメータ保存方式の選択（Live 直接管理 vs pattrstorage）
+- `_parameter_order` による復元順序の完全定義
+
+See [Live Parameter Rules Reference](reference/live-parameter-rules.md)

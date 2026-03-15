@@ -1,107 +1,6 @@
 # General Max/MSP Tips
 
-Proven patterns for safe and reliable patch behavior.
-
-## Hot Inlet / Cold Inlet
-
-### The Fundamental Rule
-
-Nearly all Max objects follow this convention:
-
-- **Leftmost inlet = Hot**: Receiving a value triggers immediate output
-- **All other inlets = Cold**: Receiving a value stores it internally without producing output
-
-The stored cold-inlet value is used the next time the hot inlet triggers.
-
-### Example: The + Object
-
-```
-  [hot]  [cold]
-    ↓      ↓
-    +  0
-    ↓
-  (sum)
-```
-
-- Send `5` to right inlet (cold): stores 5, no output
-- Send `3` to left inlet (hot): outputs `3 + 5 = 8`
-- Send `10` to left inlet (hot): outputs `10 + 5 = 15` (5 is still stored)
-
-### Why trigger Outputs Right-to-Left
-
-`trigger` (t) sends outputs from the rightmost outlet first, proceeding left. This is not arbitrary — it is designed to work with the hot/cold inlet convention:
-
-```
-t b -1
-│    │
-│    └→ + (right inlet = cold: stores -1, no output)
-└───→ int (left inlet = hot: triggers output through +)
-```
-
-1. Right outlet fires first → value reaches downstream cold inlets (stored, no output)
-2. Left outlet fires last → value reaches downstream hot inlets (triggers processing)
-3. Result: all values are in place when processing begins
-
-### Exceptions: All-Hot Objects
-
-Some objects intentionally make every inlet hot:
-
-| Object | Behavior |
-|--------|----------|
-| `pak` | Any inlet triggers list output (compare with `pack`: only left inlet is hot) |
-| `buddy` | Outputs only when all inlets have received values |
-
-### Practical Implications
-
-Understanding hot/cold is essential for:
-
-- **Correct trigger argument ordering**: Place the hot-inlet-bound output on the left
-- **Choosing pack vs pak**: `pack` when you want controlled triggering, `pak` when any change should trigger
-- **Debugging silent patches**: If nothing happens when you send a value, you're likely hitting a cold inlet
-
-## Constant Parameters with trigger
-
-### The Problem
-
-Many Max objects that store values are vulnerable to accidental modification:
-
-| Object | Risk |
-|---|---|
-| `int` / `float` | Right inlet overwrites stored value |
-| `message` | Clicking the box sends the message AND right outlet allows overwriting |
-| `button` / `bangbang` | Clicking in edit mode or stray connections can trigger unintended bangs |
-| `loadmess` | Only fires on patch load, not on demand |
-| `pack` / `pak` | Inlets accept new values, changing stored data |
-
-### The Solution: trigger
-
-`trigger` with typed arguments is the safest way to output constant values:
-
-```
-trigger i 440 f 0.5 b
-         │     │    └── bang
-         │     └── float 0.5 (always)
-         └── int 440 (always)
-```
-
-**Why trigger is safe**:
-- Arguments are fixed at creation — no inlet can change them
-- No clickable UI that could accidentally fire
-- No right inlet for value injection
-- Outputs are deterministic regardless of input (any input triggers the sequence)
-- Right-to-left output order is predictable
-
-**Usage pattern**:
-```
-bang / any message
-  ↓
-trigger 440 0.5 b
-  │      │    └── to envelope (bang)
-  │      └── to gain (*~) (0.5)
-  └── to oscillator (cycle~) (440)
-```
-
-**Type specifiers**: `i` (int), `f` (float), `b` (bang), `l` (list), `s` (symbol), or literal values.
+Proven patterns for safe and reliable patch behavior. For foundational concepts and safe messaging patterns see [Execution Model & Messaging](../../patch-guidelines/reference/execution-and-messaging.md).
 
 ## Sampling Rate Dependent Behavior
 
@@ -150,88 +49,6 @@ select                           → branch by rate
 - Any patch with user-controllable filter cutoff frequencies
 - Patches that may run at different sampling rates (e.g., shared patches, multi-interface setups)
 - Patches using `filtercoeff~`, `biquad~`, `svf~`, or other filter objects with frequency parameters
-
-## Message Manipulation Patterns
-
-### Avoid message Boxes
-
-`message` boxes have multiple risks:
-- Clicking the box in locked mode sends the message
-- Right inlet allows overwriting the stored value
-- Easy to trigger accidentally during editing
-
-Use `trigger` or dedicated objects instead.
-
-### Setting Values Without Output: prepend set
-
-To set an object's value without triggering output (equivalent to `set $1`), use `prepend set`:
-
-```
-incoming value
-  ↓
-prepend set
-  ↓
-number / flonum / message    → value is set, no output triggered
-```
-
-This is safer and more readable than using `message` with `set $1`.
-
-### Appending to Messages: append
-
-To add a value at the end of a message or list:
-
-```
-incoming value
-  ↓
-append hz
-  ↓
-→ "440 hz"
-```
-
-### Single-Value Messages: trigger
-
-For sending a specific constant value (e.g., `1`, `clear`), use `trigger` instead of `message`:
-
-```
-bang
-  ↓
-t 1         → always outputs 1
-```
-
-```
-bang
-  ↓
-t clear     → always outputs "clear"
-```
-
-**Why not message?** A `message` box with `1` can be clicked accidentally, and its value can be overwritten via the right inlet. `trigger` has neither problem.
-
-### List Storage: zl.reg
-
-To store and recall a list, use `zl.reg`:
-
-```
-list input
-  ↓
-zl.reg
-  ↓ (bang to recall)
-stored list output
-```
-
-**Why not message or coll?** `zl.reg` is purpose-built for list storage — no click risk, no file overhead.
-
-### Building Specific Lists: pack
-
-To construct a specific list from individual values:
-
-```
-pack 0 0. symbol
-  │   │    └── symbol inlet
-  │   └── float inlet
-  └── int inlet (triggers output)
-```
-
-`pack` outputs the list when the leftmost inlet receives a value. Use `pak` if any inlet should trigger output.
 
 ## Increment/Decrement Counter Pattern
 
@@ -289,127 +106,74 @@ Or use `live.numbox` with `_parameter_range` to enforce bounds automatically.
 
 ### The Problem
 
-Circular connections (A → B → C → A) cause infinite message loops. This commonly occurs in bidirectional sync patterns — for example, a numbox that both controls and reflects a LOM value.
+Circular connections (A → B → C → A) create infinite loops. This commonly occurs when:
+- Two parameters need bidirectional synchronization
+- A UI control both sends and receives from the same source
+- LOM observer output feeds back to the observed property
 
 ### The Pattern
 
 ```
-incoming value
+source A
   ↓
-change              ← only passes if value differs from last output
+change         ← only outputs when value differs from last output
   ↓
-(downstream processing)
-  ↓
-(feedback path back to incoming)
+process → destination B
+             ↓
+           change     ← breaks the loop on the return path
+             ↓
+           → source A
 ```
 
 ### How It Works
 
 `change` stores the last value it output. When a new value arrives:
-- If it differs from the stored value → output the value and update stored value
-- If it matches the stored value → suppress (no output), breaking the loop
+- **Different from stored**: Outputs the value and updates stored value
+- **Same as stored**: Suppresses the output (no message passes)
 
-### Initial Value: change -1
+This breaks infinite loops because the second traversal of the loop carries the same value, which `change` blocks.
 
-`change` defaults to storing `0` internally. If your expected initial value is `0`, the first legitimate `0` would be suppressed. Use `change -1` (or any value outside your expected range) to initialize:
+### Choosing the Initial Value
+
+引数なし `change` は使わない。常に初期値を明示する。
+
+| 条件 | 使用 | 理由 |
+|------|------|------|
+| 最初の `0` を通過させなくてよい | `change 0` | デフォルトと同じだが型を明示 |
+| 最初の `0` を通過させたい && 値が unsigned 確定 | `change -1` | `-1` は自然に発生しない |
 
 ```
-change -1           ← stored value starts at -1
-                    ← first input of 0 passes through (0 ≠ -1)
+change -1      ← initial stored value is -1, first 0 passes through
 ```
+
+### Practical Example: Bidirectional Sync
+
+```
+observer (external value)
+  ↓
+change -1              ← prevents feedback when we set the value
+  ↓
+number (display)
+  ↓
+change -1              ← prevents feedback when observer updates
+  ↓
+prepend set value
+  ↓
+setter (writes back)
+```
+
+Without `change`, setting the value triggers the observer, which updates the number, which sets the value again — infinite loop.
 
 ### When to Use
 
-- Bidirectional LOM sync (slider ↔ live.observer)
-- Feedback connections between related parameters
-- Any circular message path where values may echo
+- Bidirectional parameter binding (UI ↔ model)
+- Observer + setter feedback paths
+- Any circular signal flow where values stabilize after one round-trip
 - Counter patterns where the output feeds back to the input (as in the Increment/Decrement pattern above)
 
 ## Cascading Multi-Stage Initialization
 
-### The Problem
-
-Complex patches (especially standalone applications and installations) require multiple initialization steps that must execute in a specific order with timing gaps between them. For example: load configuration → read audio files → bind buffers → initialize parameters → start audio → start sequencer. Each step may need the previous step to complete before proceeding.
-
-### The Pattern
-
-```
-loadbang
-  ↓
-delay 10000                    ← wait for patch to fully load
-  ↓
-t b b
-│   │
-│   └→ s __Init_Step1         ← Step 1: e.g., set buffer names
-└───→ delay 1000
-        ↓
-        t b b
-        │   │
-        │   └→ s __Init_Step2 ← Step 2: e.g., read sample files
-        └───→ delay 1000
-                ↓
-                t b b
-                │   │
-                │   └→ s __Init_Step3  ← Step 3: e.g., bind buffers
-                └───→ delay 1000
-                        ↓
-                        ...   ← continue chaining
-```
-
-### How It Works
-
-Each stage follows the same `delay → t b b` building block:
-
-1. `delay N` waits for the previous step to complete (N varies by step complexity)
-2. `t b b` splits into two paths (right-to-left execution):
-   - **Right outlet**: `send` broadcasts a bang to receivers for this step's work
-   - **Left outlet**: triggers the next `delay` in the chain
-
-Receivers anywhere in the patch respond to the broadcast:
-
-```
-r __Init_Step1               r __Init_Step2
-  ↓                            ↓
-(set buffer names)           (read sample files)
-```
-
-### Key Design Decisions
-
-**Why delay between steps?**
-Some operations (file I/O, network requests, DSP setup) are asynchronous. A fixed delay ensures each step has time to complete before the next begins. Typical values: 1000ms for file operations, 5000-10000ms for network/audio setup.
-
-**Why send/receive instead of direct connections?**
-The broadcast pattern decouples the initialization chain from the work it triggers. Receivers can be placed anywhere in the patch hierarchy, and steps can be reordered or added without rewiring.
-
-**Why loadbang + delay instead of immediate execution?**
-The initial delay (e.g., `delay 10000`) ensures the entire patch is fully loaded before initialization begins. This is critical for standalone applications where subpatchers and externals may still be loading.
-
-### Manual Triggers
-
-Add `textbutton` objects connected to each `send` for manual re-triggering during development:
-
-```
-textbutton "Step 1"  →  s __Init_Step1
-textbutton "Step 2"  →  s __Init_Step2
-```
-
-This allows testing individual steps without restarting the entire sequence.
-
-### When to Use
-
-- Standalone Max applications with complex startup requirements
-- Installation patches that must initialize hardware, audio, and network in order
-- Any patch with multiple asynchronous setup operations that depend on each other
-- Patches that fetch data from external servers before playback
-
-### Comparison with M4L Two-Stage Init
-
-| Aspect | Cascading Chain | M4L Two-Stage |
-|--------|----------------|---------------|
-| Trigger | `loadbang` | `live.thisdevice` |
-| Stages | Unlimited (chain as needed) | Typically 2 (immediate + delayed) |
-| Namespace | Global (`__Master_*` or similar) | Device-scoped (`---`) |
-| Use case | Standalone apps, installations | M4L devices in Live |
+→ [cascading-init.md](cascading-init.md) に独立ドキュメントとして移動。
 
 ## closebang Cleanup Pattern
 
@@ -656,7 +420,7 @@ Adjust the `sprintf` format for different naming:
 
 ### Initialization Integration
 
-Combine with the Cascading Multi-Stage Initialization pattern:
+Combine with the [Cascading Multi-Stage Initialization](cascading-init.md) pattern:
 
 ```
 r __Init_Step1 (SetBufferName)
@@ -676,73 +440,6 @@ random N → + 1 → ...         ← trigger random load
 - Drum machines with randomized sample selection
 - Granular synthesis with numbered grain files
 - Any patch that manages a numbered collection of audio files
-
-## change Object for Feedback Loop Prevention
-
-### The Problem
-
-Circular connections (A → B → C → A) create infinite loops. This commonly occurs when:
-- Two parameters need bidirectional synchronization
-- A UI control both sends and receives from the same source
-- LOM observer output feeds back to the observed property
-
-### The Pattern
-
-```
-source A
-  ↓
-change         ← only outputs when value differs from last output
-  ↓
-process → destination B
-             ↓
-           change     ← breaks the loop on the return path
-             ↓
-           → source A
-```
-
-### How It Works
-
-`change` stores the last value it output. When a new value arrives:
-- **Different from stored**: Outputs the value and updates stored value
-- **Same as stored**: Suppresses the output (no message passes)
-
-This breaks infinite loops because the second traversal of the loop carries the same value, which `change` blocks.
-
-### Initializing with change -1
-
-By default, `change` stores `0` as its initial value. This means the first `0` sent through it will be suppressed (it matches the stored default). If your counter or parameter starts at 0, this is a problem.
-
-**Solution**: Initialize with a value that will never naturally occur:
-
-```
-change -1      ← initial stored value is -1
-```
-
-Now the first `0` passes through because `-1 ≠ 0`.
-
-### Practical Example: Bidirectional Sync
-
-```
-observer (external value)
-  ↓
-change -1              ← prevents feedback when we set the value
-  ↓
-number (display)
-  ↓
-change -1              ← prevents feedback when observer updates
-  ↓
-prepend set value
-  ↓
-setter (writes back)
-```
-
-Without `change`, setting the value triggers the observer, which updates the number, which sets the value again — infinite loop.
-
-### When to Use
-
-- Bidirectional parameter binding (UI ↔ model)
-- Observer + setter feedback paths
-- Any circular signal flow where values stabilize after one round-trip
 
 ## dac~ / adc~ Consolidation
 

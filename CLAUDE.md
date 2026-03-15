@@ -172,11 +172,24 @@ When performing Max/MSP patch operations via MCP tools, **always load the releva
 | Skill | Condition | Command |
 |-------|-----------|---------|
 | **patch-guidelines** | Always load when operating on Max patches | `/maxmcp:patch-guidelines` |
+| **organize-patch** | Load when organizing or tidying up patch layout | `/maxmcp:organize-patch` |
 | **max-techniques** | Load when implementing Max/MSP features (poly~, pattr, signal processing, etc.) | `/maxmcp:max-techniques` |
 | **m4l-techniques** | Load only when working on Max for Live devices | `/maxmcp:m4l-techniques` |
 | **max-resources** | Load as needed when looking up object references or examples | `/maxmcp:max-resources` |
 
 **Priority**: patch-guidelines is mandatory for all patch operations. Other skills are loaded based on the task context.
+
+**Skill combinations by scenario**:
+
+| Scenario | Skills to load |
+|----------|---------------|
+| Basic Max patch creation | patch-guidelines |
+| Max patch with poly~, pattr, bpatcher | patch-guidelines + max-techniques |
+| Max for Live device | patch-guidelines + max-techniques + m4l-techniques |
+| Patch layout cleanup | patch-guidelines + organize-patch |
+| Object reference lookup | max-resources (standalone, no prerequisites) |
+
+**Note**: M4L work requires max-techniques as a prerequisite — pattr basics, hot/cold inlet model, and messaging patterns in max-techniques are foundational knowledge that m4l-techniques builds upon.
 
 ## Claude Code Plugin Marketplace
 
@@ -207,6 +220,20 @@ Provides:
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### organize-patch
+
+Organize and tidy up Max/MSP patch layout.
+
+```bash
+/maxmcp:organize-patch
+```
+
+Provides:
+- 8-phase patch layout organization workflow
+- Object sizing, repositioning, patchcord routing
+- Section detection and header placement
+- Overlap and crossing verification
 
 #### max-techniques
 
@@ -269,6 +296,8 @@ plugins/
     │   ├── max-techniques/
     │   │   ├── SKILL.md
     │   │   └── reference/        # poly~, bpatcher, pattr, tips
+    │   ├── organize-patch/
+    │   │   └── SKILL.md
     │   ├── m4l-techniques/
     │   │   ├── SKILL.md
     │   │   └── reference/        # LOM, namespaces, M4L tips

@@ -5,9 +5,10 @@ description: |
   - Working with poly~ for polyphonic or parallel processing
   - Using bpatcher for modular patch design
   - Managing parameters with pattr/pattrstorage
-  - Needing safe constant parameter patterns
+  - Building audio signal chains or MIDI processing logic
   - Handling sampling rate dependent behavior
-invocation: user
+  - Multi-stage initialization patterns (loadbang, delay chains)
+user-invocable: true
 ---
 
 # Max/MSP Implementation Techniques
@@ -16,18 +17,29 @@ Practical techniques and patterns for building robust Max/MSP patches, covering 
 
 ## Categories
 
-### poly~ & bpatcher
+### poly~ Techniques
 
-Modular patch architecture using `poly~` for voice/instance management and `bpatcher` for reusable UI components.
+Practical techniques for `poly~` voice management and multi-instance communication.
 
 **Key topics**:
-- `poly~` voice management (`target`, `thispoly~`, `#0`)
-- Instance-specific messaging via `forward`/`receive` with `sprintf`
-- `bpatcher` embedding, arguments, and presentation mode
-- Combining `bpatcher` + `poly~` for per-voice UI
+- Voice subpatcher template (adsr~ + thispoly~ mute pattern)
+- Instance-specific messaging via `thispoly~` + `sprintf` + `forward`
+- Communication hierarchy (global / instance-scoped / per-voice)
+- Argument forwarding with transformation
 - `mc.poly~` caveats
 
-See [poly~ & bpatcher Reference](reference/poly-bpatcher.md)
+See [poly~ Techniques Reference](reference/poly-techniques.md)
+
+### bpatcher Techniques
+
+Reusable component patterns with `bpatcher`.
+
+**Key topics**:
+- Dynamic `send`/`receive` names via arguments
+- Argument inheritance in nested bpatchers
+- Combining `bpatcher` + `poly~` for per-voice UI
+
+See [bpatcher Techniques Reference](reference/bpatcher-techniques.md)
 
 ### pattr & Parameter Management
 
@@ -47,11 +59,22 @@ See [pattr & Parameters Reference](reference/pattr-parameters.md)
 Proven patterns for safe and reliable patch behavior.
 
 **Key topics**:
-- `trigger` as the safest constant parameter source
 - Sampling rate detection with `dspstate~` to avoid Nyquist issues
-- Avoiding `message` boxes — use `trigger`, `prepend`, `append` instead
-- `prepend set` for setting values without output
-- `zl.reg` for safe list storage
-- `pack` / `pak` for constructing specific lists
+- Increment/decrement counter pattern
+- `change` for feedback loop prevention
+- `closebang` cleanup, output safety chain
+- Normalized parameter interface, numbered sample file loading
 
 See [Tips Reference](reference/tips.md)
+
+### Cascading Multi-Stage Initialization
+
+Sequential initialization pattern using chained `delay` → `trigger` → `send` for standalone apps and installations.
+
+**Key topics**:
+- Multi-stage `delay → t b b → send` building block
+- Staircase layout rules
+- M4L variant comparison
+
+See [Cascading Init Reference](reference/cascading-init.md)
+

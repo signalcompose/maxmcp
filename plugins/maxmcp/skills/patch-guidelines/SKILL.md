@@ -4,11 +4,13 @@ description: |
   Guidelines for creating Max/MSP patches with MaxMCP. Use this skill when:
   - Creating new Max patches via MaxMCP
   - Adding Max objects with add_max_object
-  - Connecting objects with connect_max_objects
+  - Connecting objects with connect_max_objects or managing patchcords
   - Planning patch layout and organization
   - Building audio/MIDI processing patches
+  - Designing presentation mode UI (panels, colors, object visibility)
+  - Setting varnames or naming conventions for Max objects
   - Asking about MaxMCP patch creation best practices
-invocation: user
+user-invocable: true
 ---
 
 # MaxMCP Patch Creation Guidelines
@@ -139,13 +141,39 @@ For complex patches, use subpatchers (p object):
 
 ## Reference Documentation
 
-For detailed guidelines, see:
+### Execution Model & Messaging Patterns (MUST READ)
+
+Max の実行モデル（hot/cold inlet）と安全なメッセージ出力パターン。全てのパッチ作業の前提知識。
+
+**Key topics**:
+- Hot (leftmost) vs cold (other) inlets — Max の基本実行モデル
+- Why `trigger` outputs right-to-left
+- `pack` vs `pak` (controlled vs any-inlet triggering)
+- Avoiding `message` boxes — use `trigger`, `prepend`, `append` instead
+- `trigger` as the safest constant parameter source
+- `zl.reg` for safe list storage, `pack` / `pak` for list construction
+
+See [Execution Model & Messaging Reference](reference/execution-and-messaging.md)
+
+### Object Text Conventions (MUST READ)
+
+オブジェクトテキストの記述規則と効率的なコーディングパターン。
+
+**Key topics**:
+- Use abbreviations (`trigger` → `t`, `int` → `i`, etc.)
+- Explicit type via arguments (`scale 0. 1.` not `scale 0 1`)
+- `scale` exponent argument for integrated curve mapping (replacing `pow` + `scale`)
+- Multiplication filter pattern (`*`) as a compact alternative to `gate + i`
+
+See [Object Text Conventions Reference](reference/object-text-conventions.md)
+
+### Layout & Visual Design
+
 - [Layout Rules](reference/layout-rules.md) - Detailed positioning and spacing rules
-- [Architecture Patterns](reference/architecture-patterns.md) - Common subpatcher and signal flow patterns
+- [MCP Notes](reference/mcp-notes.md) - MCP tool-specific notes (attribute setting, presentation workarounds)
 - [Naming Conventions](reference/naming-conventions.md) - Varname and object naming standards
 - [Presentation Layout](reference/presentation-layout.md) - Dual-mode design: patching vs presentation positioning
 - [Visual Design](reference/visual-design.md) - Panel backgrounds, color palettes, border styling
-- [Object Internals](reference/object-internals.md) - Internal specifications (maxclass vs display differences)
 - [JavaScript Guide](reference/javascript-guide.md) - v8/v8ui scripting recommendations
 
 ## MCP Tools Quick Reference
