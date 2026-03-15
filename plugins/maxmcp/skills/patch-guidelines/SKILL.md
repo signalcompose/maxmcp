@@ -62,13 +62,43 @@ Align objects to a consistent grid:
 - **Vertical spacing**: 40-60 pixels between rows
 - **Section gaps**: 80-100 pixels between logical sections
 
-### 4. Logical Grouping
+### 4. Section Organization
 
-Group related objects together:
+Group related objects into functional sections:
 - **Input section**: Top area for external inputs (adc~, midiin, etc.)
 - **Processing section**: Middle area for signal processing
 - **Control section**: Parameters, UI elements
 - **Output section**: Bottom area for outputs (dac~, midiout, etc.)
+
+## Patching Workflow
+
+パッチはセクション単位で段階的に構築する。全体を一度に作らず、1つのセクションを完成させてから次へ進む。
+
+### Section-by-Section Approach
+
+1. **セクションを計画**: パッチ全体を機能セクション（Input, Processing, Output 等）に分割
+2. **1セクションずつ構築**: オブジェクト追加 → 接続 → 動作確認を1セクションずつ実行
+3. **次のセクションへ進む**: 現セクションが完成してから次のセクションに着手
+4. **セクション完了後に整理**: organize-patch による整理は、一連のセクション作業が完了した後に実施
+
+### Downstream Shift Rule
+
+セクションの高さが変わった場合、**下流にある全オブジェクトをブロック移動**してセクション間ギャップを維持する:
+
+- **セクションが伸びた場合**: 増加分だけ下流の全オブジェクトの Y 座標を加算
+- **セクションが縮んだ場合**: 減少分だけ下流の全オブジェクトの Y 座標を減算（詰める）
+- セクション間の 80-100px ギャップを常に維持する
+- 下流セクションのオブジェクト間の相対位置は変えない（セクションごとブロック移動）
+
+```
+[Section A]          ← 高さが変化（伸縮）
+      ↓
+  +80-100px gap      ← 常に維持
+      ↓
+[Section B]          ← 変化分だけ上下に移動
+      ↓
+[Section C]          ← 同様に移動
+```
 
 ## Object Creation Best Practices
 
