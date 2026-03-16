@@ -72,7 +72,7 @@ t b i
                                                            ↓
                                                          * 左inlet (hot) → N * result
                                                            ↓
-                                                         sel 0
+                                                         route 0
                                                            outlet 0 (=0): 自デバイス → 破棄
                                                            outlet 1 (≠0): 外部パラメータ → prepend id → learn_gate
 ```
