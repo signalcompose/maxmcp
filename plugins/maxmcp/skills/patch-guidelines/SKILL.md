@@ -72,7 +72,7 @@ Group related objects into functional sections:
 
 ## Patching Workflow
 
-パッチはセクション単位で段階的に構築する。全体を一度に作らず、**4フェーズ**で進める。
+パッチはセクション単位で段階的に構築する。全体を一度に作らず、**5フェーズ**で進める。
 
 ### Phase 0: 設計（スキルのルールを設計制約として適用）
 
@@ -169,11 +169,65 @@ Group related objects into functional sections:
 2. **midpoints 設定**: 必要に応じて `set_patchline_midpoints` で経路を最適化
 3. **最終検証**: `organize-patch`（Phase 8 検証）で重複・交差がないか確認
 
+### Phase 4: 完成検証
+
+**前提条件**:
+- □ Phase 3 でセクション間接続が完了しているか？
+- □ Phase 3 の最終検証（Phase 8: 重複・交差）が完了しているか？
+→ 未完了なら Phase 4 に進まない
+
+**⚠ Phase 4 を飛ばした場合**: 生成時のチェックリスト（add_max_object の後）は個々のオブジェクトを対象とするため、パッチ全体での一貫性（ペア間の設定整合、_parameter_order の依存チェーン整合）は検出できない。これらの問題はユーザーが実際に保存・復元を試すまで発覚せず、原因の特定が極めて困難になる。
+
+パッチ全体を対象とした一括検証を行う。
+
+#### 4-1. パラメータ設定の一括検証
+
+全 live.* UI オブジェクトと全 pattr の設定を `get_object_attribute` で読み戻し、以下を確認:
+
+**live.* UI オブジェクト**:
+- `_parameter_initial_enable` が 1 か
+- `_parameter_initial` が設定されているか
+- `_parameter_type` と `_parameter_unitstyle` の整合性（Float(0) → Float(1)）
+
+**pattr**:
+- `parameter_enable 1`, `_parameter_invisible 1`, `_parameter_modmode 0`, `parameter_mappable 0` が設定されているか
+- `_parameter_initial_enable` が 1 か
+- `_parameter_range` がデータ型に応じた適切な範囲か
+
+#### 4-2. ペア/グループ整合性チェック
+
+対になるオブジェクト、同一グループのオブジェクトが同じ設定パターンを持つか確認:
+
+- **min/max ペア**: `_parameter_type`, `_parameter_unitstyle`, `_parameter_initial_enable`, `_parameter_range` が一致するか
+- **pattr グループ**: `parameter_enable`, `_parameter_invisible`, `_parameter_modmode`, `parameter_mappable` が同じパターンか
+- **設定の非対称を検出した場合**: 意図的な差異でない限り、設定漏れとして修正
+
+#### 4-3. `_parameter_order` の読み戻し検証
+
+全パラメータの `_parameter_order` を `get_object_attribute` で読み戻し、以下を検証:
+
+1. **order の連番確認**: 抜け・重複がないか
+2. **依存チェーンとの照合**:
+   - cold inlet に接続するパラメータが、同じオブジェクトの hot inlet に接続するパラメータより小さい order を持つか
+   - `_parameter_range` を設定するチェーン（pattr → pack → prepend → UI）が、範囲内で値を復元する UI オブジェクトより先か
+   - `scale` / `pak` / `pack` 等の複数 inlet オブジェクトで、hot inlet (0) に接続するパラメータが最後に復元されるか
+3. **問題を検出した場合**: order を修正し、再度読み戻して確認
+
+#### 4-4. レイアウト最終検証（Phase 8）
+
+パッチ全体を対象とした最終レイアウト検証:
+- 上向き接続の検出
+- オブジェクト重複の検出
+- パッチコードとオブジェクトの交差検出
+
+（Phase 1 の各セクションで実施済みの Phase 8 検証を、パッチ全体で再度実行）
+
 ### Why This Order Matters
 
 - Phase 0 で設計制約を組み込むため、実装段階での手戻りが最小化される
 - Phase 1 でセクションサイズが確定するため、Phase 2 で正確な配置計算ができる
 - Phase 2 でセクション位置が確定するため、Phase 3 で patchcord 経路が安定する
+- Phase 4 でパッチ全体の一貫性を検証するため、設定漏れや順序ずれが出荷前に検出される
 - 後フェーズでの手戻りが最小化される
 
 ## Operation Checklists
@@ -235,10 +289,12 @@ Group related objects into functional sections:
 パラメータを設定する前に、復元依存チェーン全体を設計する:
 
 1. `pack` / `pak` の hot/cold inlet 構造を特定
-2. cold inlet に接続するパラメータに小さい order を割り当て（先に復元 → 格納）
-3. hot inlet に接続するパラメータに大きい order を割り当て（後に復元 → 発火）
-4. `_parameter_range` を設定するチェーンを先に復元
-5. 独立パラメータは最後の order に配置
+2. `scale` 等の複数 inlet オブジェクトで、hot inlet (0) と cold inlet の依存関係を特定
+3. cold inlet に接続するパラメータに小さい order を割り当て（先に復元 → 格納）
+4. hot inlet に接続するパラメータに大きい order を割り当て（後に復元 → 発火）
+5. `_parameter_range` を設定するチェーンを先に復元
+6. 独立パラメータは最後の order に配置
+7. **設定後の読み戻し検証**: 全パラメータの `_parameter_order` を `get_object_attribute` で読み戻し、依存チェーンとの整合性を確認。Phase 4（完成検証）でも再検証する
 
 ## Object Creation Best Practices
 

@@ -158,8 +158,8 @@ Live Set (.als)
 | 4 | range_max | pak_display_range cold inlet に先に格納 |
 | 5 | range_min | pak_display_range hot inlet → 発火 → scaled_display の `_parameter_range` 設定 |
 | 6 | scaled_display | 正しい `_parameter_range` 内で値を復元 |
-| 7 | control_dial | 独立（範囲依存なし） |
-| 8 | curve_n | 独立 |
+| 7 | curve_n | scale inlet 5 (cold) に先に格納 |
+| 8 | control_dial | scale inlet 0 (hot) → 発火 → target_obj |
 | 9 | learn_toggle | 独立 |
 
 **注意**:
