@@ -8,6 +8,37 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 **Architecture**: Claude Code ↔ stdio ↔ Node.js Bridge ↔ WebSocket ↔ maxmcp.mxo ↔ Max/MSP Patches
 
+## セッション開始時の必須アクション
+
+**CRITICAL: C++ コードやスキルドキュメントの作業を開始する前に、利用可能なツールを確認し活用すること。**
+
+### ステップ1: MCP ツール確認
+
+作業内容に応じて以下のツールを活用する:
+
+| ツール | 用途 | 活用場面 |
+|--------|------|----------|
+| **Serena** | シンボルベースのコードナビゲーション | C++ 実装・リファクタ・バグ修正時。`activate_project` → `get_symbols_overview` → `find_symbol` で構造を把握してから着手 |
+| **Context7** | 依存ライブラリの最新ドキュメント参照 | libwebsockets, nlohmann/json, Google Test 等の API を確認する必要がある時 |
+
+### ステップ2: 作業対象の把握
+
+- **C++ コード作業**: 対象ファイルの `get_symbols_overview` でシンボル構造を確認。Grep/Read だけで力技で調べず、Serena のシンボル検索・参照追跡を活用する
+- **スキルドキュメント作業**: 対象スキルの SKILL.md と reference/ を確認してから編集
+- **ビルド・テスト**: 下記の Build & Deploy セクション参照
+
+### やってはいけないこと
+
+- Serena が利用可能なのに Grep/Read だけでコード構造を調査する
+- 依存ライブラリの API を記憶に頼って使用する（Context7 で最新ドキュメントを確認する）
+- シンボルの参照箇所を手動検索する（`find_referencing_symbols` を使う）
+
+### なぜこれが重要か
+
+1. **Serena はシンボル単位の正確な操作を提供する**: Grep/Read による文字列検索では、同名の変数やコメント内の一致を拾ってしまう。Serena の `find_symbol` / `find_referencing_symbols` はセマンティックな解析に基づくため、リファクタリング時の影響範囲を正確に特定できる
+2. **Context7 は最新の API 仕様を保証する**: libwebsockets や nlohmann/json の API は知識カットオフ以降に変更されている可能性がある。記憶に頼ると非推奨 API の使用やシグネチャの不一致を招く
+3. **ツール未活用は手戻りの原因になる**: 力技の調査は見落としが発生しやすく、後工程でのバグや修正漏れにつながる
+
 ## Build & Deploy
 
 ```bash
