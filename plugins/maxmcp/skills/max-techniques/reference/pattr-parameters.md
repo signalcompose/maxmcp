@@ -10,8 +10,15 @@ State persistence, parameter control, and initialization patterns using `pattr`,
 
 **Binding modes**:
 - **By scripting name**: Set `@bindto <scripting_name>` to link to a named UI object
-- **Direct connection**: Connect `pattr` outlet to a UI object's inlet — `pattr` mirrors the object's value
+- **Direct connection** (recommended): Connect `pattr` outlet 1 (bindto outlet) to a UI object's inlet via patchcord — `pattr` mirrors the object's value
 - **Standalone**: `pattr <name>` stores a value without binding to UI
+
+**Prefer patchcord connection over `@bindto`**: `@bindto` creates an invisible connection that is hard to trace when reading the patch. A patchcord makes the binding visually explicit.
+
+```
+Avoid: pattr param_name @bindto param_name_display  ← invisible
+Prefer: pattr param_name outlet 1 → textedit inlet 0  ← visible patchcord
+```
 
 ### pattrstorage
 
@@ -218,6 +225,31 @@ pattrstorage myApp @greedy 1
 | Preset management | Use `pattrstorage` with named `pattr` objects |
 | Remote parameter control | Use `pattr @invisible 1 @bindto sub::param` (read + write pair) |
 | Capture all parameters | Use `pattrstorage @greedy 1` |
+
+## Parameter Grid Layout
+
+When managing many parameters with `pattrstorage`, organize `pattr` groups in a column grid:
+
+```
+Column 1 (x≈1607)    Column 2 (x≈1973)    Column 3 (x≈2348)    Column 4 (x≈2685)
+──────────────────    ──────────────────    ──────────────────    ──────────────────
+  pattr (binding)       pattr (binding)       pattr (binding)       pattr (binding)
+  prepend "set"         prepend "set"         prepend "set"         prepend "set"
+  number (UI)           number (UI)           number (UI)           number (UI)
+  comment (label)       comment (label)       comment (label)       comment (label)
+  ↓                     ↓                     ↓                     ↓
+  pattr (binding)       pattr (binding)       pattr (binding)       pattr (binding)
+  ...                   ...                   ...                   ...
+```
+
+**Structure**: Each column contains vertically stacked `pattr` → `prepend` → `number` → `comment` groups. A single `pattrstorage` object (placed separately) binds all `pattr` objects.
+
+**Layout rules**:
+- Columns spaced ~340-370px apart
+- Each parameter group: `pattr` (y) → `prepend` (y+30) → `number` (y+60)
+- `comment` labels placed beside `number` objects for identification
+- Multiple rows per column, with ~150px vertical spacing between parameter groups
+- `pattrstorage` placed in the processing section, separate from the parameter grid
 
 ## Sources
 

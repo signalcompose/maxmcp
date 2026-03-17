@@ -107,18 +107,26 @@ Access Max/MSP built-in resources directly from Claude Code:
 ## Reference Documentation
 
 ### patch-guidelines
+- [Execution & Messaging](skills/patch-guidelines/reference/execution-and-messaging.md) - Hot/cold inlets, messaging patterns
+- [Object Text Conventions](skills/patch-guidelines/reference/object-text-conventions.md) - Abbreviations, type safety
 - [Layout Rules](skills/patch-guidelines/reference/layout-rules.md) - Detailed positioning guidelines
 - [Naming Conventions](skills/patch-guidelines/reference/naming-conventions.md) - Object naming standards
 - [JavaScript Guide](skills/patch-guidelines/reference/javascript-guide.md) - v8/v8ui scripting
+- [MCP Notes](skills/patch-guidelines/reference/mcp-notes.md) - MCP tool usage notes
 
 ### max-techniques
-- [poly~ & bpatcher](skills/max-techniques/reference/poly-bpatcher.md) - Voice management and modular design
+- [poly~ Techniques](skills/max-techniques/reference/poly-techniques.md) - Voice management and parallel processing
+- [bpatcher Techniques](skills/max-techniques/reference/bpatcher-techniques.md) - Reusable component patterns
 - [pattr & Parameters](skills/max-techniques/reference/pattr-parameters.md) - State persistence and parameter control
-- [Tips](skills/max-techniques/reference/tips.md) - Constant parameters and sampling rate handling
+- [Cascading Init](skills/max-techniques/reference/cascading-init.md) - Multi-stage initialization
+- [Tips](skills/max-techniques/reference/tips.md) - Sampling rate handling and feedback loop prevention
 
 ### m4l-techniques
 - [Live Object Model](skills/m4l-techniques/reference/live-object-model.md) - LOM path/id/object/observer pipeline
+- [LOM Patterns](skills/m4l-techniques/reference/lom-patterns.md) - Dynamic path building patterns
+- [LOM Observer Patterns](skills/m4l-techniques/reference/lom-observer-patterns.md) - Property monitoring patterns
 - [Namespaces & Parameters](skills/m4l-techniques/reference/namespace-parameters.md) - Device scoping and pattr persistence
+- [Live Parameter Rules](skills/m4l-techniques/reference/live-parameter-rules.md) - Parameter type and range constraints
 - [Tips](skills/m4l-techniques/reference/tips.md) - Controller mapping, dBFS values, Push2 layout
 
 ### max-resources

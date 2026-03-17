@@ -8,6 +8,37 @@ MaxMCP is a native C++ external object for Max/MSP that implements an MCP (Model
 
 **Architecture**: Claude Code ↔ stdio ↔ Node.js Bridge ↔ WebSocket ↔ maxmcp.mxo ↔ Max/MSP Patches
 
+## セッション開始時の必須アクション
+
+**CRITICAL: C++ コードやスキルドキュメントの作業を開始する前に、利用可能なツールを確認し活用すること。**
+
+### ステップ1: MCP ツール確認
+
+作業内容に応じて以下のツールを活用する:
+
+| ツール | 用途 | 活用場面 |
+|--------|------|----------|
+| **Serena** | シンボルベースのコードナビゲーション | C++ 実装・リファクタ・バグ修正時。`activate_project` → `get_symbols_overview` → `find_symbol` で構造を把握してから着手 |
+| **Context7** | 依存ライブラリの最新ドキュメント参照 | libwebsockets, nlohmann/json, Google Test 等の API を確認する必要がある時 |
+
+### ステップ2: 作業対象の把握
+
+- **C++ コード作業**: 対象ファイルの `get_symbols_overview` でシンボル構造を確認。Grep/Read だけで力技で調べず、Serena のシンボル検索・参照追跡を活用する
+- **スキルドキュメント作業**: 対象スキルの SKILL.md と reference/ を確認してから編集
+- **ビルド・テスト**: 下記の Build & Deploy セクション参照
+
+### やってはいけないこと
+
+- Serena が利用可能なのに Grep/Read だけでコード構造を調査する
+- 依存ライブラリの API を記憶に頼って使用する（Context7 で最新ドキュメントを確認する）
+- シンボルの参照箇所を手動検索する（`find_referencing_symbols` を使う）
+
+### なぜこれが重要か
+
+1. **Serena はシンボル単位の正確な操作を提供する**: Grep/Read による文字列検索では、同名の変数やコメント内の一致を拾ってしまう。Serena の `find_symbol` / `find_referencing_symbols` はセマンティックな解析に基づくため、リファクタリング時の影響範囲を正確に特定できる
+2. **Context7 は最新の API 仕様を保証する**: libwebsockets や nlohmann/json の API は知識カットオフ以降に変更されている可能性がある。記憶に頼ると非推奨 API の使用やシグネチャの不一致を招く
+3. **ツール未活用は手戻りの原因になる**: 力技の調査は見落としが発生しやすく、後工程でのバグや修正漏れにつながる
+
 ## Build & Deploy
 
 ```bash
@@ -172,11 +203,24 @@ When performing Max/MSP patch operations via MCP tools, **always load the releva
 | Skill | Condition | Command |
 |-------|-----------|---------|
 | **patch-guidelines** | Always load when operating on Max patches | `/maxmcp:patch-guidelines` |
+| **organize-patch** | Load when organizing or tidying up patch layout | `/maxmcp:organize-patch` |
 | **max-techniques** | Load when implementing Max/MSP features (poly~, pattr, signal processing, etc.) | `/maxmcp:max-techniques` |
 | **m4l-techniques** | Load only when working on Max for Live devices | `/maxmcp:m4l-techniques` |
 | **max-resources** | Load as needed when looking up object references or examples | `/maxmcp:max-resources` |
 
 **Priority**: patch-guidelines is mandatory for all patch operations. Other skills are loaded based on the task context.
+
+**Skill combinations by scenario**:
+
+| Scenario | Skills to load |
+|----------|---------------|
+| Basic Max patch creation | patch-guidelines |
+| Max patch with poly~, pattr, bpatcher | patch-guidelines + max-techniques |
+| Max for Live device | patch-guidelines + max-techniques + m4l-techniques |
+| Patch layout cleanup | patch-guidelines + organize-patch |
+| Object reference lookup | max-resources (standalone, no prerequisites) |
+
+**Note**: M4L work requires max-techniques as a prerequisite — pattr basics, hot/cold inlet model, and messaging patterns in max-techniques are foundational knowledge that m4l-techniques builds upon.
 
 ## Claude Code Plugin Marketplace
 
@@ -203,10 +247,26 @@ Guidelines for creating well-organized Max patches.
 ```
 
 Provides:
+- Execution model (hot/cold inlets) and safe messaging patterns
+- Object text conventions (abbreviations, type safety)
 - Layout rules for object positioning
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### organize-patch
+
+Organize and tidy up Max/MSP patch layout.
+
+```bash
+/maxmcp:organize-patch
+```
+
+Provides:
+- 8-phase patch layout organization workflow
+- Object sizing, repositioning, patchcord routing
+- Section detection and header placement
+- Overlap and crossing verification
 
 #### max-techniques
 
@@ -217,9 +277,10 @@ Max/MSP implementation techniques and best practices.
 ```
 
 Provides:
-- poly~ & bpatcher architecture patterns
+- poly~ voice management and bpatcher component patterns
 - pattr/pattrstorage parameter management
-- Constant parameter safety, sampling rate handling
+- Cascading multi-stage initialization
+- Sampling rate handling, feedback loop prevention
 
 #### m4l-techniques
 
@@ -269,6 +330,8 @@ plugins/
     │   ├── max-techniques/
     │   │   ├── SKILL.md
     │   │   └── reference/        # poly~, bpatcher, pattr, tips
+    │   ├── organize-patch/
+    │   │   └── SKILL.md
     │   ├── m4l-techniques/
     │   │   ├── SKILL.md
     │   │   └── reference/        # LOM, namespaces, M4L tips

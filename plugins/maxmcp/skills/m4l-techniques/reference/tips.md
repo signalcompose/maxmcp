@@ -111,6 +111,12 @@ Index 15:   Crossover 3-4
 
 **Tip**: Use gaps strategically to group related parameters visually on the Push2 display.
 
+## live.banks によるパラメータバンク定義
+
+UI 系の M4L デバイスには `live.banks` オブジェクトを含める。`live.banks` はデバイスのパラメータをバンク単位でグループ化し、Push やコントローラ上での表示レイアウトを定義する。
+
+**注意**: パラメータの配置は `live.banks` 専用の UI エディタで設定する。メッセージによる動的な構成も可能だが、実行時にバンク構成を変更する特別な理由がない限り、UI エディタで静的に設定する。
+
 ## Two-Stage Initialization (live.thisdevice + delay)
 
 ### The Problem
@@ -159,6 +165,8 @@ live.path                    live.path
 - Devices with `live.observer` that need stable IDs
 - Devices that read Live set state (track count, scene count) on load
 - Any device that accesses LOM properties during initialization
+
+3段階以上のカスケード初期化が必要な場合は、[Cascading Multi-Stage Initialization](../../max-techniques/reference/cascading-init.md) の汎用パターンを `live.thisdevice` + `---` namespace で適用する。
 
 ## Sources
 

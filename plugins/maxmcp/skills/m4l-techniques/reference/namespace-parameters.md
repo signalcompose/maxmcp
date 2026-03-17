@@ -102,32 +102,7 @@ The exact cause is undocumented, but the blob type reliably persists values in t
 
 ## selected_parameter Monitoring
 
-### The Problem
-
-Observing `live_set view selected_parameter` with `live.observer` produces unreliable output:
-
-1. Selecting non-parameter objects outputs `id 0` (should be silent)
-2. Selecting M4L device parameters outputs multiple IDs in rapid succession
-
-### Filtering Pattern
-
-```
-live.observer @property selected_parameter
-  ↓
-route id              → strip "id" prefix, filter id 0
-  ↓
-change                → suppress duplicate values
-  ↓
-thresh 0              → collect rapid outputs into a single list
-  ↓
-zl.ecils 1            → extract LAST element (the correct ID)
-  ↓
-prepend id            → restore "id N" format
-  ↓
-(output: reliable parameter ID)
-```
-
-**Key insight**: When multiple IDs fire in rapid succession, the **last** one is always the correct value.
+`live_set view selected_parameter` を `live.observer` で監視する場合、バースト出力や不正データのフィルタリングが必要。詳細なフィルタチェーンは [LOM Applied Patterns](lom-observer-patterns.md#selected_parameter-フィルタチェーン) を参照。
 
 ## Quick Reference
 
@@ -138,7 +113,7 @@ prepend id            → restore "id N" format
 | Both device + instance isolation | Use `---#0_` prefix |
 | Store pattr values persistently | Do NOT use `---` in pattr name |
 | Unbound pattr in bpatcher loses values | Change type to blob |
-| selected_parameter gives wrong IDs | Filter with thresh + zl.ecils |
+| selected_parameter gives wrong IDs | [フィルタチェーン](lom-observer-patterns.md#selected_parameter-フィルタチェーン) |
 
 ## Sources
 
