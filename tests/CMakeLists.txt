@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.19)
 # Disable Universal Binary for tests (use native arch only)
 set(CMAKE_OSX_ARCHITECTURES "${CMAKE_HOST_SYSTEM_PROCESSOR}" CACHE STRING "Test architecture" FORCE)
 
+# Enable Objective-C++ for screenshot tools (.mm files)
+enable_language(OBJCXX)
+
 # Find Google Test (system-installed or via package manager)
 find_package(GTest REQUIRED)
 include(GoogleTest)
@@ -80,6 +83,7 @@ set(TOOL_SOURCES
     ../src/tools/state_tools.cpp
     ../src/tools/hierarchy_tools.cpp
     ../src/tools/utility_tools.cpp
+    ../src/tools/screenshot_tools.mm
     ../src/utils/patch_helpers.cpp
     ../src/mcp_server.cpp
 )
