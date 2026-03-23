@@ -18,6 +18,7 @@
 #include "tools/object_tools.h"
 #include "tools/patch_tools.h"
 #include "tools/state_tools.h"
+#include "tools/screenshot_tools.h"
 #include "tools/tool_common.h"
 #include "tools/utility_tools.h"
 
@@ -92,6 +93,7 @@ void MCPServer::stop() {
  * - StateTools (3 tools)
  * - HierarchyTools (2 tools)
  * - UtilityTools (2 tools)
+ * - ScreenshotTools (1 tool)
  *
  * @return JSON array of all tool schemas
  */
@@ -105,6 +107,7 @@ static json get_all_tool_schemas() {
     auto state_schemas = StateTools::get_tool_schemas();
     auto hierarchy_schemas = HierarchyTools::get_tool_schemas();
     auto utility_schemas = UtilityTools::get_tool_schemas();
+    auto screenshot_schemas = ScreenshotTools::get_tool_schemas();
 
     // Merge all schemas
     for (const auto& schema : patch_schemas) {
@@ -123,6 +126,9 @@ static json get_all_tool_schemas() {
         all_tools.push_back(schema);
     }
     for (const auto& schema : utility_schemas) {
+        all_tools.push_back(schema);
+    }
+    for (const auto& schema : screenshot_schemas) {
         all_tools.push_back(schema);
     }
 
@@ -201,19 +207,31 @@ json MCPServer::handle_request(const json& req) {
                     {"error", result["error"]}};
         }
 
-        // Return result as text content for MCP
+        // Build content blocks for MCP response
+        json content = json::array();
+
+        // If result contains _image, add image content block
+        if (result.contains("_image")) {
+            content.push_back({{"type", "image"},
+                               {"data", result["_image"]["data"]},
+                               {"mimeType", result["_image"]["mimeType"]}});
+        }
+
+        // Add text content block
         std::string result_text;
         if (result.contains("result")) {
             result_text = result["result"].dump();
         } else {
-            result_text = result.dump();
+            // Exclude _image from text output
+            json text_result = result;
+            text_result.erase("_image");
+            result_text = text_result.dump();
         }
+        content.push_back({{"type", "text"}, {"text", result_text}});
 
         return {{"jsonrpc", "2.0"},
                 {"id", req.contains("id") ? req["id"] : nullptr},
-                {"result",
-                 {{"content", json::array({{{"type", "text"}, {"text", result_text}}})},
-                  {"isError", false}}}};
+                {"result", {{"content", content}, {"isError", false}}}};
 
     } else if (method == "notifications/initialized") {
         // Handle notifications/initialized - no response required
@@ -273,6 +291,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
     // Try UtilityTools (get_console_log, get_avoid_rect_position)
     result = UtilityTools::execute(tool, params);
+    if (!result.is_null()) {
+        return result;
+    }
+
+    // Try ScreenshotTools (get_patcher_screenshot)
+    result = ScreenshotTools::execute(tool, params);
     if (!result.is_null()) {
         return result;
     }

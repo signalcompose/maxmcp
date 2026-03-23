@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Export compile commands for clang-tidy and other tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Enable Objective-C++ for screenshot tools (.mm files)
+enable_language(OBJCXX)
+
 # macOS Architecture
 # arm64 only: unified build includes libwebsockets which is arm64-only via Homebrew
 if(APPLE)
@@ -77,6 +80,8 @@ set(TOOLS_SRC
     src/tools/hierarchy_tools.h
     src/tools/utility_tools.cpp
     src/tools/utility_tools.h
+    src/tools/screenshot_tools.mm
+    src/tools/screenshot_tools.h
 )
 
 # Source files (unified object with @mode attribute)
@@ -118,6 +123,8 @@ target_link_libraries(
     PRIVATE
     nlohmann_json::nlohmann_json
     websockets_shared
+    "-framework AppKit"
+    "-framework CoreGraphics"
 )
 
 # Set architecture to arm64 only (libwebsockets native dependency)

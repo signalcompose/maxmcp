@@ -8,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 27 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -21,7 +21,7 @@ MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural lan
 | Connection Operations | 4 | Create, remove, and manage patchcords |
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
-| Utilities | 2 | Console logging and positioning |
+| Utilities | 3 | Console logging, positioning, and screenshots |
 
 ---
 
@@ -689,6 +689,40 @@ Find an empty position for placing new objects.
   }
 }
 ```
+
+### `get_patcher_screenshot`
+
+Capture a screenshot of the entire patcher content as a PNG image. The capture includes all objects even if they are outside the current window view.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true},
+  "max_width": {"type": "number", "required": false, "description": "Maximum image width in pixels (default: 4096)"},
+  "max_height": {"type": "number", "required": false, "description": "Maximum image height in pixels (default: 4096)"}
+}
+```
+
+**Response**:
+
+Returns an MCP image content block (base64-encoded PNG) along with metadata:
+```json
+{
+  "patch_id": "synth_a7f2",
+  "width": 1200,
+  "height": 800,
+  "content_width": 1200.0,
+  "content_height": 800.0,
+  "format": "png"
+}
+```
+
+**Notes**:
+- The patcher window is temporarily resized to show all content, then restored
+- Uses macOS CoreGraphics API (`CGWindowListCreateImage`) for capture
+- Screen recording permission may be required on macOS
+- Images exceeding `max_width`/`max_height` are scaled down proportionally
+- Uses 30-second timeout (heavy operation)
 
 ---
 

@@ -14,6 +14,7 @@
 #include "tools/hierarchy_tools.h"
 #include "tools/object_tools.h"
 #include "tools/patch_tools.h"
+#include "tools/screenshot_tools.h"
 #include "tools/state_tools.h"
 #include "tools/tool_common.h"
 #include "tools/utility_tools.h"
@@ -86,18 +87,28 @@ TEST_F(ToolSchemaTest, UtilityToolsSchemaCount) {
         << "UtilityTools should have 2 tools (get_console_log, get_avoid_rect)";
 }
 
+TEST_F(ToolSchemaTest, ScreenshotToolsSchemaCount) {
+    auto schemas = ScreenshotTools::get_tool_schemas();
+    ASSERT_EQ(schemas.size(), 1)
+        << "ScreenshotTools should have 1 tool (get_patcher_screenshot)";
+}
+
 TEST_F(ToolSchemaTest, TotalToolCount) {
-    size_t total =
-        PatchTools::get_tool_schemas().size() + ObjectTools::get_tool_schemas().size() +
-        ConnectionTools::get_tool_schemas().size() + StateTools::get_tool_schemas().size() +
-        HierarchyTools::get_tool_schemas().size() + UtilityTools::get_tool_schemas().size();
-    EXPECT_EQ(total, 26) << "Total tool count should be 26";
+    size_t total = PatchTools::get_tool_schemas().size() +
+                   ObjectTools::get_tool_schemas().size() +
+                   ConnectionTools::get_tool_schemas().size() +
+                   StateTools::get_tool_schemas().size() +
+                   HierarchyTools::get_tool_schemas().size() +
+                   UtilityTools::get_tool_schemas().size() +
+                   ScreenshotTools::get_tool_schemas().size();
+    EXPECT_EQ(total, 27) << "Total tool count should be 27";
 }
 
 TEST_F(ToolSchemaTest, AllSchemasHaveRequiredFields) {
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
                     ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas(),
+                    ScreenshotTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -110,7 +121,8 @@ TEST_F(ToolSchemaTest, AllToolNamesAreUnique) {
     std::set<std::string> names;
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
                     ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas(),
+                    ScreenshotTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -125,7 +137,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
     std::set<std::string> names;
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
                     ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas(),
+                    ScreenshotTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -144,7 +157,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
         "get_subpatchers",      "get_console_log",         "get_avoid_rect_position",
         "get_patchlines",       "set_patchline_midpoints", "replace_object_text",
         "assign_varnames",
-        "get_object_value"};
+        "get_object_value",
+        "get_patcher_screenshot"};
 
     for (const auto& name : expected) {
         EXPECT_TRUE(names.count(name)) << "Missing expected tool: " << name;
@@ -154,7 +168,8 @@ TEST_F(ToolSchemaTest, ExpectedToolNamesPresent) {
 TEST_F(ToolSchemaTest, InputSchemaHasPropertiesField) {
     auto modules = {PatchTools::get_tool_schemas(),      ObjectTools::get_tool_schemas(),
                     ConnectionTools::get_tool_schemas(), StateTools::get_tool_schemas(),
-                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas()};
+                    HierarchyTools::get_tool_schemas(),  UtilityTools::get_tool_schemas(),
+                    ScreenshotTools::get_tool_schemas()};
 
     for (const auto& schemas : modules) {
         for (const auto& schema : schemas) {
@@ -239,7 +254,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 26) << "tools/list should return all 26 tools";
+    EXPECT_EQ(tools.size(), 27) << "tools/list should return all 27 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {
@@ -345,6 +360,7 @@ TEST_F(TestModeExecuteTest, UnknownToolReturnsNull) {
     EXPECT_TRUE(StateTools::execute("nonexistent", json::object()).is_null());
     EXPECT_TRUE(HierarchyTools::execute("nonexistent", json::object()).is_null());
     EXPECT_TRUE(UtilityTools::execute("nonexistent", json::object()).is_null());
+    EXPECT_TRUE(ScreenshotTools::execute("nonexistent", json::object()).is_null());
 }
 
 // ============================================================================
@@ -426,4 +442,21 @@ TEST_F(UtilityToolsTest, GetAvoidRectReturnsTestModeError) {
     auto result = UtilityTools::execute("get_avoid_rect_position", json::object());
     ASSERT_TRUE(result.contains("error"));
     EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
+}
+
+// ============================================================================
+// Screenshot Tools Tests (returns test_mode_error in test mode)
+// ============================================================================
+
+class ScreenshotToolsTest : public ::testing::Test {};
+
+TEST_F(ScreenshotToolsTest, GetPatcherScreenshotReturnsTestModeError) {
+    auto result = ScreenshotTools::execute("get_patcher_screenshot", json::object());
+    ASSERT_TRUE(result.contains("error"));
+    EXPECT_EQ(result["error"]["code"], ToolCommon::ErrorCode::INTERNAL_ERROR);
+}
+
+TEST_F(ScreenshotToolsTest, UnknownToolReturnsNull) {
+    auto result = ScreenshotTools::execute("unknown_tool", json::object());
+    EXPECT_TRUE(result.is_null());
 }

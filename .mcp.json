@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "maxmcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/jhorikawa/Documents/Max 9/Packages/MaxMCP/support/bridge/websocket-mcp-bridge.js",
+        "ws://localhost:7400"
+      ]
+    }
+  }
+}
