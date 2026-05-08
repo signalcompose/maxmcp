@@ -144,16 +144,14 @@ In hierarchical patches (top-level → subpatchers → poly~ voices), parameters
 
 ### The Pattern
 
+```mermaid
+flowchart TD
+  read["pattr @invisible 1<br/>@bindto sub_synth::comp_threshold<br/>(read: monitors value)"] -- "value 変更通知" --> prep["prepend set"]
+  prep -- "'set V'" --> nbox["number<br/>(displays current value)"]
+  nbox -- "ユーザーが値変更" --> write["pattr @invisible 1<br/>@bindto sub_synth::comp_threshold<br/>(write: sends changes back)"]
 ```
-// Top-level patch — "Remote UI" section
-pattr @invisible 1 @bindto sub_synth::comp_threshold   ← read: monitors value
-  ↓
-prepend set
-  ↓
-number                                                   ← displays current value
-  ↓
-pattr @invisible 1 @bindto sub_synth::comp_threshold   ← write: sends changes back
-```
+
+> Top-level patch の "Remote UI" セクション。同じ `@bindto` を持つ 2 つの pattr で双方向同期を実現。
 
 ### How It Works
 

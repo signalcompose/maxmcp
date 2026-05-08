@@ -18,25 +18,21 @@ Filter cutoff frequencies that exceed the Nyquist frequency (half the sampling r
 
 ### Adaptive Filter Pattern
 
-```
-dspstate~
-  ↓ (outlet 1: sampling rate)
-/ 2                              → Nyquist frequency
-  ↓
-clip 20 20000                    → safety clamp
-  ↓
-filtercoeff~ / biquad~           → use as max cutoff
+```mermaid
+flowchart TD
+  ds["dspstate~"] -- "out 1: sampling rate" --> div["/ 2"]
+  div -- "Nyquist frequency" --> clip["clip 20 20000<br/>(safety clamp)"]
+  clip -- "max cutoff" --> filt["filtercoeff~ / biquad~"]
 ```
 
 **Practical implementation**:
 
-```
-dspstate~
-  ↓ (outlet 1)
-select                           → branch by rate
-  ├── 44100 → 20000 (safe max)
-  ├── 48000 → 24000
-  └── default → 20000 (conservative fallback)
+```mermaid
+flowchart TD
+  ds["dspstate~"] -- "out 1: sampling rate" --> sel["select 44100 48000"]
+  sel -- "out 0 (= 44100)" --> v44["20000<br/>(safe max)"]
+  sel -- "out 1 (= 48000)" --> v48["24000"]
+  sel -- "out 2 (no match, default)" --> vd["20000<br/>(conservative fallback)"]
 ```
 
 **Rule of thumb**:
@@ -58,15 +54,17 @@ A common UI need: two buttons (up/down or left/right) that adjust a shared count
 
 ### The Pattern
 
-```
-[button -]          [button +]
-    ↓                   ↓
-  t b -1             t b 1
-  │    │             │    │
-  │    └──→  +  0 ←──┘    │
-  └──→ int 0 ←────────────┘
-         ↓
-    live.numbox (or number)
+```mermaid
+flowchart TD
+  bm["button -"] --> tm["t b -1"]
+  bp["button +"] --> tp["t b 1"]
+  tm -- "out 1 (-1, fires first)<br/>→ in 1 (cold, store offset)" --> add["+ 0"]
+  tp -- "out 1 (1, fires first)<br/>→ in 1 (cold, store offset)" --> add
+  tm -- "out 0 (bang, fires second)<br/>→ in 0 (hot)" --> i["int 0"]
+  tp -- "out 0 (bang, fires second)<br/>→ in 0 (hot)" --> i
+  i -- "out 0: stored value<br/>→ in 0 (hot, adds offset)" --> add
+  add -- "sum" --> nbox["live.numbox<br/>(or number)"]
+  add -- "sum<br/>→ in 1 (cold, store as new value)" --> i
 ```
 
 ### How It Works (Hot/Cold in Action)
@@ -92,12 +90,10 @@ Both `t b -1` and `t b 1` share the same `int` and `+` objects. This works becau
 
 Combine with `clip` or `live.numbox` range to prevent overflow:
 
-```
-+ 0
-  ↓
-clip 0 7          ← constrain to valid range
-  ↓
-number
+```mermaid
+flowchart TD
+  add["+ 0"] -- "sum" --> clip["clip 0 7<br/>(constrain to valid range)"]
+  clip --> nbox["number"]
 ```
 
 Or use `live.numbox` with `_parameter_range` to enforce bounds automatically.
@@ -113,16 +109,13 @@ Circular connections (A → B → C → A) create infinite loops. This commonly 
 
 ### The Pattern
 
-```
-source A
-  ↓
-change         ← only outputs when value differs from last output
-  ↓
-process → destination B
-             ↓
-           change     ← breaks the loop on the return path
-             ↓
-           → source A
+```mermaid
+flowchart TD
+  srcA["source A"] --> chg1["change<br/>(only outputs when value<br/>differs from last output)"]
+  chg1 --> proc["process"]
+  proc --> dstB["destination B"]
+  dstB --> chg2["change<br/>(breaks the loop on<br/>the return path)"]
+  chg2 -.-> srcA
 ```
 
 ### How It Works
@@ -148,18 +141,13 @@ change -1      ← initial stored value is -1, first 0 passes through
 
 ### Practical Example: Bidirectional Sync
 
-```
-observer (external value)
-  ↓
-change -1              ← prevents feedback when we set the value
-  ↓
-number (display)
-  ↓
-change -1              ← prevents feedback when observer updates
-  ↓
-prepend set value
-  ↓
-setter (writes back)
+```mermaid
+flowchart TD
+  obs["observer<br/>(external value)"] --> chg1["change -1<br/>(prevents feedback when<br/>we set the value)"]
+  chg1 --> nbox["number<br/>(display)"]
+  nbox --> chg2["change -1<br/>(prevents feedback when<br/>observer updates)"]
+  chg2 --> prep["prepend set value"]
+  prep -- "'set value V'" --> setter["setter<br/>(writes back)"]
 ```
 
 Without `change`, setting the value triggers the observer, which updates the number, which sets the value again — infinite loop.
@@ -183,12 +171,13 @@ When a patch closes, active audio and held MIDI notes persist momentarily, causi
 
 ### The Pattern
 
-```
-closebang                    closebang
-  ↓                            ↓
-t stop                       flush
-  ↓                            ↓
-dac~                         (MIDI output)
+```mermaid
+flowchart TD
+  cb1["closebang"] -- "bang on close" --> tstop["t stop"]
+  tstop -- "'stop'" --> dac["dac~"]
+
+  cb2["closebang"] -- "bang on close" --> flush["flush"]
+  flush -- "note-off all" --> midi["MIDI output"]
 ```
 
 ### closebang vs loadbang
@@ -213,14 +202,15 @@ dac~                         (MIDI output)
 
 Use `trigger` to sequence multiple cleanup operations:
 
+```mermaid
+flowchart TD
+  cb["closebang"] -- "bang on close" --> tr["t stop stop b"]
+  tr -- "out 2 (b, fires first)" --> flush["flush<br/>(MIDI cleanup)"]
+  tr -- "out 1 (stop, fires second)" --> seq["seq<br/>(stop sequencer)"]
+  tr -- "out 0 (stop, fires last)" --> dac["dac~<br/>(stop audio last)"]
 ```
-closebang
-  ↓
-t stop stop b
-│     │    └→ flush (MIDI cleanup)
-│     └────→ seq (stop sequencer)
-└──────────→ dac~ (stop audio last)
-```
+
+> `trigger` の出力順は **right→left**(out 2 → out 1 → out 0)。MIDI flush を最初に、audio 停止を最後にすることで、note-off メッセージが出力に届く時間を確保する。
 
 **Order matters**: Stop audio last to allow MIDI note-offs to reach the output cleanly.
 
@@ -240,22 +230,21 @@ Audio processing chains can produce unexpected level spikes, DC offset, or clipp
 
 ### The Pattern
 
-```
-signal source
-  ↓
-omx.comp~ (or other processing)
-  ↓
-*~ 1.              ← gain stage (linear multiplier)
-  ↓
-limi~ @dcblock 1 @lookahead 100   ← output protection
-  ↓
-outlet
+```mermaid
+flowchart TD
+  src["signal source"] --> proc["omx.comp~<br/>(or other processing)"]
+  proc --> mul["*~ 1.<br/>(gain stage, linear multiplier)"]
+  mul --> limi["limi~ @dcblock 1 @lookahead 100<br/>(output protection)"]
+  limi --> out["outlet"]
 ```
 
 The gain value comes from a dB-to-linear conversion:
 
-```
-pattr gain → number → gen db2level → *~
+```mermaid
+flowchart LR
+  pg["pattr gain"] --> n["number"]
+  n -- "dB value" --> gen["gen db2level"]
+  gen -- "linear multiplier" --> mul["*~"]
 ```
 
 ### How It Works
@@ -279,11 +268,18 @@ Placing the limiter after gain ensures the output never clips regardless of gain
 
 For stereo output, duplicate the chain for each channel:
 
+```mermaid
+flowchart TD
+  mix["mc.mixdown~"] --> unpack["mc.unpack~"]
+  unpack -- "L channel" --> mulL["*~"]
+  mulL --> limiL["limi~<br/>@dcblock 1 @lookahead 100"]
+  limiL --> outL["outlet (L)"]
+  unpack -- "R channel" --> mulR["*~"]
+  mulR --> limiR["limi~<br/>@dcblock 1 @lookahead 100"]
+  limiR --> outR["outlet (R)"]
 ```
-mc.mixdown~ → mc.unpack~
-  ├── L: *~ → limi~ @dcblock 1 @lookahead 100 → outlet
-  └── R: *~ → limi~ @dcblock 1 @lookahead 100 → outlet
-```
+
+> 両チャンネルの `*~` は同じ `gen db2level` 出力を共有する。
 
 Both channels share the same gain source (`gen db2level` output).
 
@@ -302,16 +298,17 @@ Audio effect objects (e.g., `omx.comp~`) accept parameters in different ranges (
 
 ### The Pattern
 
-```
-pattr comp_threshold          pattr comp_attack
-  ↓                             ↓
-number (0-100)                number (0-100)
-  ↓                             ↓
-scale 0 100 0 100             scale 0 100 0 150
-  ↓                             ↓
-prepend agcThreshold          prepend attack
-  ↓                             ↓
-omx.comp~  ←←←←←←←←←←←←←←←←←←┘
+```mermaid
+flowchart TD
+  pt["pattr comp_threshold"] --> nt["number<br/>(0-100)"]
+  nt --> st["scale 0 100 0 100"]
+  st --> prept["prepend agcThreshold"]
+  prept -- "'agcThreshold V'" --> comp["omx.comp~"]
+
+  pa["pattr comp_attack"] --> na["number<br/>(0-100)"]
+  na --> sa["scale 0 100 0 150"]
+  sa --> prepa["prepend attack"]
+  prepa -- "'attack V'" --> comp
 ```
 
 ### How It Works
@@ -350,18 +347,13 @@ This clamping is essential — without it, values from `pattr` recall or externa
 
 For parameters that need non-linear mapping (e.g., logarithmic frequency):
 
-```
-pattr frequency
-  ↓
-number (0-100)
-  ↓
-scale 0 100 0. 1.         ← normalize to 0-1
-  ↓
-expr pow($f1, 3.) * 19980 + 20   ← cubic curve: 20Hz-20kHz
-  ↓
-prepend cutoff
-  ↓
-target effect
+```mermaid
+flowchart TD
+  pf["pattr frequency"] --> nf["number<br/>(0-100)"]
+  nf --> sf["scale 0 100 0. 1.<br/>(normalize to 0-1)"]
+  sf --> expr["expr pow($f1, 3.) * 19980 + 20<br/>(cubic curve: 20Hz-20kHz)"]
+  expr --> prep["prepend cutoff"]
+  prep -- "'cutoff Hz'" --> target["target effect"]
 ```
 
 ### When to Use
@@ -378,18 +370,18 @@ Sample-based instruments need to load one file from a set of numbered audio file
 
 ### The Pattern
 
-```
-bang (trigger load)
-  ↓
-random N → + 1            ← 1-based random index
-  ↓
-zl.reg (stored prefix)    ← file name prefix (e.g., "Piano")
-  ↓
-sprintf %s_%02d.wav       ← formats "Piano_01.wav"
-  ↓
-t l l
-├── prepend read → append 0 -1 → buffer~    ← load file (range: full)
-└── prepend name → buffer~                   ← set buffer name (for waveform~ etc.)
+```mermaid
+flowchart TD
+  trig["bang (trigger load)"] --> rnd["random N"]
+  rnd -- "0 to N-1" --> add["+ 1"]
+  add -- "1-based index" --> zlreg["zl.reg<br/>(stored prefix, e.g. 'Piano')"]
+  zlreg -- "list 'Piano N'" --> sp["sprintf %s_%02d.wav"]
+  sp -- "'Piano_01.wav'" --> tll["t l l"]
+  tll -- "out 1 (l, fires first)" --> prep_r["prepend read"]
+  prep_r --> ap["append 0 -1"]
+  ap -- "'read Piano_01.wav 0 -1'" --> buf1["buffer~<br/>(load file, range: full)"]
+  tll -- "out 0 (l, fires second)" --> prep_n["prepend name"]
+  prep_n -- "'name Piano_01.wav'" --> buf2["buffer~<br/>(set buffer name)"]
 ```
 
 ### How It Works
@@ -422,16 +414,14 @@ Adjust the `sprintf` format for different naming:
 
 Combine with the [Cascading Multi-Stage Initialization](cascading-init.md) pattern:
 
-```
-r __Init_Step1 (SetBufferName)
-  ↓
-t <prefix>                    ← set the prefix
-  ↓
-zl.reg                        ← stored for later use
+```mermaid
+flowchart TD
+  r1["r __Init_Step1<br/>(SetBufferName)"] -- "bang" --> tp["t &lt;prefix&gt;<br/>(set the prefix)"]
+  tp -- "'Piano'" --> zr["zl.reg<br/>(stored for later use)"]
 
-r __Init_Step2 (ReadSampleFile)
-  ↓
-random N → + 1 → ...         ← trigger random load
+  r2["r __Init_Step2<br/>(ReadSampleFile)"] -- "bang" --> rnd["random N"]
+  rnd --> add["+ 1"]
+  add -- "trigger random load" --> next["..."]
 ```
 
 ### When to Use

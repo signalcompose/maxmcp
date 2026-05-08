@@ -403,16 +403,17 @@ t(x=369) t(x=393) t(x=417) ... t(x=561)   ← same Y
 
 ### Routing Decision Flowchart
 
-```
-Is outlet X == inlet X?
-  ├─ YES → No midpoints needed (straight vertical line)
-  └─ NO → Is dx small (< 30px) and dy large (> 40px)?
-       ├─ YES → Acceptable as diagonal (no midpoints needed)
-       └─ NO → Can objects be repositioned?
-            ├─ YES → Move objects to align X, then straight line
-            └─ NO → Is it a feedback (upward) connection?
-                 ├─ YES → U-Shape (4 midpoints)
-                 └─ NO → L-Shape (2 midpoints)
+```mermaid
+flowchart TD
+  q1{"Is outlet X == inlet X?"}
+  q1 -- "YES" --> a1["No midpoints needed<br/>(straight vertical line)"]
+  q1 -- "NO" --> q2{"Is dx small (&lt; 30px)<br/>and dy large (&gt; 40px)?"}
+  q2 -- "YES" --> a2["Acceptable as diagonal<br/>(no midpoints needed)"]
+  q2 -- "NO" --> q3{"Can objects<br/>be repositioned?"}
+  q3 -- "YES" --> a3["Move objects to align X,<br/>then straight line"]
+  q3 -- "NO" --> q4{"Is it a feedback<br/>(upward) connection?"}
+  q4 -- "YES" --> a4["U-Shape (4 midpoints)"]
+  q4 -- "NO" --> a5["L-Shape (2 midpoints)"]
 ```
 
 ### Avoid Crossings

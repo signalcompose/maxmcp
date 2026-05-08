@@ -128,20 +128,24 @@ FM synthesis requires:
 
 ### Structure
 
-```
-[flonum: carrier_freq]  [flonum: mod_ratio]  [flonum: mod_depth]
-         │                     │                     │
-         │              [*: ratio_mult]────────────┐│
-         │                     │                   ││
-         └──────┬──────────────┘                   ││
-                │                                  ││
-         [cycle~: mod_osc]─────────────[*~: mod_scale]
-                │
-         [+~: freq_mod]────────[cycle~: carrier]
-                                      │
-                               [*~: output_gain]
-                                      │
-                               [ezdac~: dac]
+```mermaid
+flowchart TD
+  cf["flonum: carrier_freq"]
+  mr["flonum: mod_ratio"]
+  md["flonum: mod_depth"]
+
+  cf -- "→ in 0 (hot)" --> rm["*: ratio_mult"]
+  mr -- "→ in 1 (cold)" --> rm
+  rm --> mosc["cycle~: mod_osc"]
+
+  mosc -- "→ in 0 (signal)" --> ms["*~: mod_scale"]
+  md -- "→ in 1 (depth)" --> ms
+
+  cf -- "→ in 0 (carrier freq)" --> fmod["+~: freq_mod"]
+  ms -- "→ in 1 (modulation)" --> fmod
+  fmod --> car["cycle~: carrier"]
+  car --> og["*~: output_gain"]
+  og --> dac["ezdac~: dac"]
 ```
 
 ### MCP Implementation

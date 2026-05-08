@@ -10,27 +10,18 @@ Complex patches (especially standalone applications and installations) require m
 
 ## The Pattern
 
-```
-loadbang
-  ↓
-delay 10000                    ← wait for patch to fully load
-  ↓
-t b b
-│   │
-│   └→ s __Init_Step1         ← Step 1: e.g., set buffer names
-└───→ delay 1000
-        ↓
-        t b b
-        │   │
-        │   └→ s __Init_Step2 ← Step 2: e.g., read sample files
-        └───→ delay 1000
-                ↓
-                t b b
-                │   │
-                │   └→ s __Init_Step3  ← Step 3: e.g., bind buffers
-                └───→ delay 1000
-                        ↓
-                        ...   ← continue chaining
+```mermaid
+flowchart TD
+  lb["loadbang"] --> d0["delay 10000"]
+  d0 -- "wait for patch<br/>to fully load" --> t0["t b b"]
+  t0 -- "out 1 (fires first)" --> s1["s __Init_Step1<br/>(e.g., set buffer names)"]
+  t0 -- "out 0 (fires second)" --> d1["delay 1000"]
+  d1 --> t1["t b b"]
+  t1 -- "out 1 (fires first)" --> s2["s __Init_Step2<br/>(e.g., read sample files)"]
+  t1 -- "out 0 (fires second)" --> d2["delay 1000"]
+  d2 --> t2["t b b"]
+  t2 -- "out 1 (fires first)" --> s3["s __Init_Step3<br/>(e.g., bind buffers)"]
+  t2 -- "out 0 (fires second)" --> dN["delay 1000<br/>... (continue chaining)"]
 ```
 
 ## How It Works
@@ -44,10 +35,10 @@ Each stage follows the same `delay → t b b` building block:
 
 Receivers anywhere in the patch respond to the broadcast:
 
-```
-r __Init_Step1               r __Init_Step2
-  ↓                            ↓
-(set buffer names)           (read sample files)
+```mermaid
+flowchart TD
+  r1["r __Init_Step1"] -- "bang" --> w1["set buffer names"]
+  r2["r __Init_Step2"] -- "bang" --> w2["read sample files"]
 ```
 
 ## Key Design Decisions

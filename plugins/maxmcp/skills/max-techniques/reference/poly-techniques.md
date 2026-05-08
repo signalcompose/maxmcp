@@ -6,20 +6,17 @@
 
 ポリフォニックボイスの標準構造:
 
-```
-in                          ← Data from parent poly~
-  ↓
-zl / trigger                ← Parse & branch incoming data
-  ↓
-unpack                      ← Extract parameters (pitch, velocity, duration, etc.)
-  ├─→ adsr~ + thispoly~    ← Envelope generator + voice management (left column)
-  └─→ route                ← Parameter demux for per-voice routing (center)
-       ↓
-wave~ / cycle~ / play~      ← Sound source (right column)
-  ↓
-*~ or times~                ← Apply envelope as gain
-  ↓
-out~ × 2                   ← Stereo output to parent
+```mermaid
+flowchart TD
+  in_["in<br/>(Data from parent poly~)"] --> zlt["zl / trigger<br/>(Parse & branch)"]
+  zlt --> unp["unpack<br/>(pitch, velocity, duration, etc.)"]
+  unp --> adsr["adsr~ + thispoly~<br/>(envelope + voice management,<br/>left column)"]
+  unp --> rt["route<br/>(parameter demux for<br/>per-voice routing, center)"]
+  rt --> src["wave~ / cycle~ / play~<br/>(sound source, right column)"]
+  src --> mul["*~ or times~"]
+  adsr -- "envelope" --> mul
+  mul --> outL["out~ (L)"]
+  mul --> outR["out~ (R)"]
 ```
 
 **Key conventions**:
@@ -36,28 +33,23 @@ out~ × 2                   ← Stereo output to parent
 
 サブパッチャー内:
 
+```mermaid
+flowchart TD
+  lb["loadbang"] -- "bang → in 0" --> tp["thispoly~"]
+  tp -- "out 0: instance number<br/>(1, 2, …)" --> sp["sprintf 'voice_%d_pitch'"]
+  sp -- "'voice_1_pitch' / 'voice_2_pitch' / …" --> prep["prepend set"]
+  prep -- "'set voice_N_pitch'" --> rcv["receive<br/>(dynamically named)"]
 ```
-loadbang
-  ↓
-thispoly~ (bang → outputs instance number)
-  ↓
-sprintf "voice_%d_pitch"    → generates "voice_1_pitch", "voice_2_pitch", etc.
-  ↓
-prepend set
-  ↓
-receive (dynamically named)
-```
+
+> `thispoly~` の outlet 0 が Instance Index、outlet 1 が Mute Flag、outlet 2 が Total voice count。`bang` を受けて outlet 0 から instance number を出力する。
 
 オーディオ信号の場合は `send~`/`receive~` + `set` message:
 
-```
-thispoly~
-  ↓
-sprintf "voice_%d_signal"
-  ↓
-prepend set
-  ↓
-receive~ (dynamically named via set message)
+```mermaid
+flowchart TD
+  tp["thispoly~"] -- "out 0: instance number" --> sp["sprintf 'voice_%d_signal'"]
+  sp -- "'voice_N_signal'" --> prep["prepend set"]
+  prep -- "'set voice_N_signal'" --> rcv["receive~<br/>(dynamically named via set message)"]
 ```
 
 親パッチからは `forward` で送信:

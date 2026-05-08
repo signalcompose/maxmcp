@@ -129,16 +129,25 @@ replace_object_text new_text="scale 0. 1. 0. 1. 1. @classic 0"
 
 **パターン**:
 
-```
-誤（gate パターン, 4オブジェクト）:
-  N → i 右inlet (保存) ... 後で bang → i 左inlet (recall) → gate inlet 1
-  flag → t b i → gate inlet 0 (制御) → bang → i (recall)
+**❌ 誤 (gate パターン、4 オブジェクト):**
 
-正（乗算パターン, 1オブジェクト）:
-  N → * 右inlet (cold: 保存)
-  flag (0/1) → * 左inlet (hot) → N * flag
-    flag=1 → N を通過
-    flag=0 → 0 を出力（遮断）
+```mermaid
+flowchart TD
+  n["N"] -- "→ in 1 (cold, 保存)" --> i["i"]
+  bang["bang"] -- "→ in 0 (hot, recall)" --> i
+  i -- "stored value<br/>→ in 1 (data)" --> g["gate"]
+  flag["flag"] --> tbi["t b i"]
+  tbi -- "out 1 (i, fires first)<br/>→ in 0 (制御)" --> g
+  tbi -- "out 0 (b, fires second)" --> i
+```
+
+**✅ 正 (乗算パターン、1 オブジェクト):**
+
+```mermaid
+flowchart TD
+  n["N"] -- "→ in 1 (cold, 保存)" --> mul["*"]
+  flag["flag (0/1)"] -- "→ in 0 (hot)" --> mul
+  mul -- "N * flag<br/>(flag=1: N を通過)<br/>(flag=0: 0 を出力 = 遮断)" --> out["next"]
 ```
 
 **フラグの生成**: flag (0/1) には論理演算の結果がよく使われる。`!=`, `==`, `>`, `<` 等の比較演算子や `sel` の一致/非一致出力が直接 flag として機能する。

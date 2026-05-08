@@ -4,12 +4,13 @@ The Live Object Model provides programmatic access to Ableton Live's internal st
 
 ## Overview
 
-```
-live.path         → resolves a path string to an object ID
-     ↓ id
-live.object       → read/write properties, call functions
-live.observer     → monitor property changes in real-time
-```
+| Object | 役割 | 主な入力 | 主な出力 |
+|---|---|---|---|
+| `live.path` | path 文字列を object id に解決 | `path <path>` メッセージ または `bang` | out 0: path 文字列 / **out 1: id N** |
+| `live.object` | target id に対してプロパティの読み書き・メソッド呼び出し | in 1 (cold): `id N` / in 0 (hot): `set <prop> <val>` / `get <prop>` / `call <method>` | out 0: result list (`<prop> <values…>`) |
+| `live.observer` | target id の指定 property を実時間で監視 | in 1 (cold): `id N` / in 0 (hot): `property <name>` | out 0: 変更通知 (値 または `id N`) |
+
+**ワークフロー**: `live.path` で path を id に解決 → その id を `live.object` (操作) または `live.observer` (監視) の in 1 に渡す。
 
 ## Step 1: Path Navigation with live.path
 
@@ -77,13 +78,13 @@ The left outlet outputs the resolved ID (e.g., `id 3`). If the path is invalid, 
 
 Build paths dynamically using `pak` or `sprintf`:
 
+```mermaid
+flowchart TD
+  num["number (track index)"] -- "→ in 4 (track index)" --> pak["pak path live_set tracks 0"]
+  pak -- "list 'path live_set tracks N'" --> lpath["live.path"]
 ```
-number (track index)
-  ↓
-pak path live_set tracks 0
-  ↓
-live.path
-```
+
+> `pak` は全 inlet hot のため、track index の更新で即発火する。複雑なパスを構築する場合は [LOM Patterns: Dynamic Path Construction](lom-patterns.md#dynamic-path-construction-pak--zljoin) 参照。
 
 This allows selecting different tracks/clips/parameters based on user input.
 
@@ -111,12 +112,10 @@ IDs are assigned in the order `live.path` accesses them. They are **not persiste
 
 Send the ID to `live.object`'s **right inlet** first, then send commands to the **left inlet**:
 
-```
-live.path
-  ↓ (id)
-live.object (right inlet)    ← set target
-  ↑ (left inlet)
-messages: get, set, call     ← send commands
+```mermaid
+flowchart TD
+  lp["live.path"] -- "out 1: id N<br/>→ in 1 (cold, target 設定)" --> lo["live.object"]
+  cmd["get / set / call message"] -- "→ in 0 (hot, コマンド)" --> lo
 ```
 
 ### Commands
@@ -139,12 +138,10 @@ set value 0.85    → set the parameter to 0.85
 
 **For UI synchronization**, connect a `live.slider` or `live.dial`:
 
-```
-live.slider (0.0 - 1.0)
-  ↓
-prepend set value
-  ↓
-live.object
+```mermaid
+flowchart TD
+  ls["live.slider (0.0 - 1.0)"] -- "float value" --> prep["prepend set value"]
+  prep -- "'set value 0.85'" --> lo["live.object"]
 ```
 
 #### call — Invoke Functions
@@ -173,12 +170,13 @@ Use this to explore what's available for a given LOM object.
 
 ### Setup
 
+```mermaid
+flowchart TD
+  lp["live.path"] -- "out 1: id N<br/>→ in 1 (cold, target 設定)" --> lobs["live.observer<br/>@property value"]
+  lobs -- "out 0: 値が変化したとき出力" --> dn["next (UI / logic)"]
 ```
-live.path
-  ↓ (id)
-live.observer @property value (right inlet)
-  ↓ (left outlet: updated value whenever it changes)
-```
+
+> `@property value` のような `@` 構文は本オブジェクトでは信頼性が不明確。実装時は `zl.reg property value` パターンで設定することを [live-parameter-rules.md](live-parameter-rules.md) で推奨している。
 
 ### Why Not Use metro?
 
@@ -192,12 +190,18 @@ Polling with `metro` introduces latency and wastes CPU. `live.observer` is event
 
 ### Bidirectional Sync Pattern
 
+```mermaid
+flowchart LR
+  lp["live.path"] -- "id" --> lo["live.object<br/>(set value)"]
+  lp -- "id" --> lobs["live.observer<br/>(monitor changes)"]
+  ls["live.slider<br/>(display)"] -- "user move:<br/>'set value V' → in 0" --> lo
+  lobs -- "Live 側の変更:<br/>value V → set" --> ls
 ```
-live.path → id
-             ↓
-live.object ←──── live.slider ←──── live.observer
-  (set value)      (display)         (monitor changes)
-```
+
+1. ユーザーが slider を動かす → `live.object` が Live のパラメータをセット
+2. Live 側で外部からパラメータが変化 → `live.observer` が検知 → slider を更新
+
+**注意**: フィードバックループに注意。slider 更新が `live.object` の再発火を招かないよう、`change` オブジェクトまたは gate を挟んで重複発火を防ぐ。
 
 1. User moves slider → `live.object` sets the Live parameter
 2. Live parameter changes externally → `live.observer` detects → updates slider

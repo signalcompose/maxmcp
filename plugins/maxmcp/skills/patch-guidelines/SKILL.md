@@ -32,12 +32,10 @@ Before creating a patch, verify:
 
 Always follow the **top-to-bottom, left-to-right** signal flow convention:
 
-```
-[Input Sources]     ← Top of patch
-      ↓
-[Processing]        ← Middle
-      ↓
-[Output/Display]    ← Bottom of patch
+```mermaid
+flowchart TD
+  src["Input Sources<br/>(Top of patch)"] --> proc["Processing<br/>(Middle)"]
+  proc --> out["Output / Display<br/>(Bottom of patch)"]
 ```
 
 ### 2. Object Placement Strategy
@@ -142,14 +140,20 @@ Group related objects into functional sections:
 
 **配置パターン**:
 
-```
-直列配置（順次依存）:        並列配置（合流型依存）:
+**直列配置(順次依存):**
 
-[Section A]                 [Section A]  [Section B]
-  +80-100px gap                  ↓            ↓
-[Section B]                    ← 合流 →
-  +80-100px gap              [Section C]
-[Section C]
+```mermaid
+flowchart TD
+  a["Section A"] -- "+80-100px gap" --> b["Section B"]
+  b -- "+80-100px gap" --> c["Section C"]
+```
+
+**並列配置(合流型依存):**
+
+```mermaid
+flowchart TD
+  a["Section A"] --> c["Section C"]
+  b["Section B"] --> c
 ```
 
 - **直列**: A → B → C のように順次依存する場合、縦に配置
@@ -350,7 +354,7 @@ Group related objects into functional sections:
    - **pattr は第一引数で varname が強制上書きされる**: `add_max_object` の戻り値の varname を確認してから後続操作を実施（例: `pattr param_min` を作ると `varname=param_min` になる、リクエストした varname は破棄される）
 
 7. **LOM 系オブジェクト（live.path / live.object / live.observer / live.thisdevice）の場合**:
-   - 🔴 [m4l-techniques の MUST 参照ルール](../../m4l-techniques/SKILL.md) に従い、関連 reference を **Read で先に取得** してから接続設計に入る
+   - 🔴 [m4l-techniques の MUST 参照ルール](../m4l-techniques/SKILL.md) に従い、関連 reference を **Read で先に取得** してから接続設計に入る
    - `live.path` / `live.observer` を追加した場合、起動トリガ経路（loadbang / live.thisdevice / sel bang 等）が Phase 0 設計に含まれているか即座に確認。なければ Phase 0 に戻る
    - 出力フォーマットが reference に明記されていない property を扱う場合、**`print <varname>_probe` を同時に追加し、Phase 5 で実機確認する旨をメモ**
    - 自デバイスのパラメータ操作を伴う場合（Learn 系）、`live.thisdevice` + `canonical_parent` フィルタ計画があるか Phase 0 設計と照合

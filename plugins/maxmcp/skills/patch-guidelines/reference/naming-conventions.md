@@ -227,20 +227,18 @@ For complex data transformations within a patch, place `comment` objects at key 
 
 **Example — note data reordering**:
 
-```
-in 1
-  ↓          comment: "(int) note\n(int) velocity"
-swap
-  ↓          comment: "(int) velocity\n(int) note"
-unpack 0 0
+```mermaid
+flowchart TD
+  in_["in 1"] -- "list:<br/>(int) note<br/>(int) velocity" --> swap["swap"]
+  swap -- "list:<br/>(int) velocity<br/>(int) note" --> up["unpack 0 0"]
 ```
 
 **Example — calculation annotation**:
 
-```
-pak 0. 0.    comment: "duration = end - start"
-  ↓
-* 1.         comment: "speed * duration"
+```mermaid
+flowchart TD
+  pak["pak 0. 0."] -- "duration = end - start" --> mul["* 1."]
+  mul -- "speed * duration" --> next["next"]
 ```
 
 **When to add intermediate comments**:
