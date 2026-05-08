@@ -624,8 +624,15 @@ json get_tool_schemas() {
                     {"attribute", {{"type", "string"}, {"description", "Attribute name to set"}}},
                     {"value", {
                         {"description",
-                            "Attribute value (number, string, or array). "
-                            "e.g. 440, \"hello\", [100, 200, 300, 50]"}
+                            "Attribute value. Pass numbers as JSON numbers, strings as JSON strings, "
+                            "and multi-value attributes (patching_rect, bgcolor, etc.) as JSON arrays "
+                            "of numbers WITHOUT surrounding quotes. "
+                            "e.g. 440, \"hello\", [100, 200, 300, 50]"},
+                        {"oneOf", json::array({
+                            json{{"type", "number"}},
+                            json{{"type", "string"}},
+                            json{{"type", "array"}, {"items", json{{"type", "number"}}}}
+                        })}
                     }}
                 }},
                 {"required", json::array({"patch_id", "varname", "attribute", "value"})}
