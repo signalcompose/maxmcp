@@ -3,6 +3,59 @@
 `live.observer` を使った監視・フィルタリングの実践パターン。
 [LOM Applied Patterns](lom-patterns.md) の補足として、observer 固有の制御パターンをまとめる。
 
+## 🔴 必読: 適用漏れ防止のためのアンチパターン
+
+以下は Claude が頻繁に犯す誤実装。**「直感で組んだ接続」が以下に該当しないか必ずチェックする**。該当する場合は本ドキュメントの正規パターンに置き換える。
+
+### ❌ Anti-pattern 1: live.path を live.observer に直結（トリガなし）
+
+```
+live.path live_set view → live.observer  // ← 動かない
+```
+
+**症状**: Learn ボタンを押しても何も起きない。observer 出力が一切発火しない。「id の処理が無視されている」ように見える。
+
+**根本原因**: `live.path` は load 時に自動出力**しない**。明示的な `bang` または `path` メッセージを受けるまで沈黙する。
+
+**正解**: 後述「live.observer の有効化・無効化パターン」の `t b b` を使用し、enable bang のたびに `live.path` を発火させる。
+
+### ❌ Anti-pattern 2: observer 出力を route id でそのまま下流に渡す
+
+```
+live.observer → route id → t_capture → ...  // ← 重複・バーストで誤動作
+```
+
+**症状**: パラメータ選択するたびに複数回処理が走る。同じパラメータを選び直しても再アサインされる。Learn が意図せず連続発火する。
+
+**根本原因**: `selected_parameter` 等は連続通知やバースト出力が発生する。
+
+**正解**: 後述「selected_parameter フィルタチェーン」の `change 0 → thresh 0 → zl.ecils 1` を必ず通す。
+
+### ❌ Anti-pattern 3: 出力フォーマットを推測して route 設計
+
+```
+// "たぶん id N が来るはず" と推測して
+live.observer → route id → ...
+```
+
+**症状**: 構文的には正しいが route のどの分岐にもマッチせず黙って消える。デバッグ困難。
+
+**根本原因**: property の型により出力形式が異なる。reference に書かれていない property は実機確認が必須。
+
+**正解**: 構築直後に `print obs_probe` を一時挿入し、`get_console_log` で実形式確認 → 確認した形式に合わせて route 設計。これは [patch-guidelines](../../patch-guidelines/SKILL.md) Phase 5 で必須実行。
+
+### ❌ Anti-pattern 4: 自デバイス除外フィルタなしで Learn を構築
+
+```
+live.observer (selected_parameter) → そのまま target に set id
+```
+
+**症状**: control_dial / curve_n 等の自デバイスパラメータを誤ってターゲットにできてしまう。フィードバックループや無限ループ。
+
+**正解**: 後述「自デバイスパラメータの除外（canonical_parent チェック）」を必ず組み込む。
+
+---
+
 ## live.observer の有効化・無効化パターン
 
 `live.observer` の有効化・無効化は、右インレット（id 設定）で制御する。`id 0` を送ると監視が停止する。

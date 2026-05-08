@@ -13,6 +13,38 @@ live.observer     → monitor property changes in real-time
 
 ## Step 1: Path Navigation with live.path
 
+### 🔴 重要: live.path は load 時に自動出力しない
+
+`live.path` は **明示的なトリガ（`bang` または `path` メッセージ）を受けるまで沈黙する**。
+load 直後に id が必要な場合、起動経路を必ず設計する。
+
+#### ❌ Anti-pattern: 直結
+
+```
+live.path live_set view → live.observer  // ← live.path が発火しない
+```
+
+#### ✅ 正解: トリガ経由
+
+```
+loadbang → live.path live_set view → live.observer  // 起動時に1回発火
+```
+
+または selection 監視のように繰り返し発火が必要な場合:
+
+```
+sel 1 (learn enable) → t b b → zl.reg "path live_set view" → live.path → live.observer inlet 1
+                              → zl.reg "property selected_parameter" → live.observer inlet 0
+```
+
+詳細は [LOM Observer Patterns](lom-observer-patterns.md) 参照。
+
+#### 同様にトリガが必要なオブジェクト
+
+- `live.object` → set/get/call は明示的メッセージで駆動（自動 get なし）
+- `pattr`（autorestore=0）→ 復元時に明示的バンが必要
+- `live.thisdevice` → デバイスロード時に bang 発火（this_device id 取得の起点）
+
 ### Path Syntax
 
 Live objects are accessed using hierarchical paths based on the LOM structure:

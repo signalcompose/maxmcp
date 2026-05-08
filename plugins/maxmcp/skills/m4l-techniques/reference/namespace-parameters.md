@@ -2,6 +2,59 @@
 
 Max for Live introduces device-level scoping and parameter persistence behaviors that differ from standard Max. Understanding these differences is critical for building reliable M4L devices.
 
+## 🔴 必読: アンチパターン
+
+以下は namespace / pattr 永続化で**症状から原因に辿り着くのが極めて困難**な誤実装。`pattr` を追加する前に必ず確認。
+
+### ❌ Anti-pattern 1: pattr 名に `---` プレフィックスを使う
+
+```
+pattr ---volume    // ← セッション間で値が消える
+```
+
+**症状**: Live Set を保存して再ロードすると pattr の値がデフォルトに戻る。Live セッション内では動作する（ロード前の値は保持）。
+
+**根本原因**: `---` は load のたびに別の ID に置換される（例: `042volume` → 次は `057volume`）。保存データのキーが一致しなくなる。
+
+**正解**: pattr 名から `---` を取り除く。各デバイスインスタンスは pattr システムが自動的に分離する。
+
+```
+pattr volume       // ← 正常に永続化される
+```
+
+### ❌ Anti-pattern 2: bpatcher 内の unbound pattr で Float 型を使う
+
+```
+// bpatcher 内 (引数 namespace 使用)
+pattr #1_internal_state    // UI バインドなし
+// _parameter_type: 0 (Float) ← セッション間で値が消える
+```
+
+**症状**: bpatcher 内の状態保存用 pattr の値が再ロードで 0 にリセットされる。同じ pattr が main patcher にあると正常動作する。
+
+**根本原因**: 未文書化（Cycling '74 にも明記なし）。bpatcher + 引数 namespace + UI 未バインド + Float 型の組み合わせで発現。
+
+**正解**: `_parameter_type` を `3` (blob) に変更。
+
+```
+pattr #1_internal_state
+// _parameter_type: 3 (blob) ← 値が永続化される
+```
+
+### ❌ Anti-pattern 3: `selected_parameter` の出力フォーマットを推測
+
+```
+live.observer (selected_parameter) → t i → ...   // ← フォーマット推測
+```
+
+**症状**: route / unpack の分岐に該当せず、observer 出力が黙って消える。Learn が機能しない。
+
+**根本原因**: `selected_parameter` の出力は `id N` 形式だが、バースト発火・重複通知が発生する。フィルタチェーンを通さないと正しく処理できない。
+
+**正解**: [LOM Observer Patterns](lom-observer-patterns.md) の `change 0 → thresh 0 → zl.ecils 1` フィルタチェーンを必ず通す。
+
+---
+
 ## Namespace Prefixes: `---` vs `#0`
 
 ### `---` (Three Dashes) — Device-Wide Scope

@@ -2,6 +2,92 @@
 
 Max の実行モデル（hot/cold inlet）と、安全なメッセージ出力パターン。
 
+## 🔴 必読: 適用漏れ防止のためのアンチパターン（message ボックス禁止系）
+
+以下は Claude が頻繁に犯す誤実装。**`add_max_object obj_type="message"` を使う前に、必ず以下のディシジョンツリーで判定する**。
+
+### Decision Tree: 固定値を出力したい時、何を使うか
+
+```
+[出力したい内容は？]
+        │
+        ├── 単一の固定値 (例: 1, 0, "clear", "bang")
+        │     → t <値>             (例: t 1, t 0, t clear)
+        │
+        ├── プレフィックス付き固定メッセージ (例: "id 0", "set value 0.85")
+        │     → prepend <prefix>   (例: prepend id, prepend set value)
+        │       + 上流から値 (または bang) を流す
+        │
+        ├── 共通プレフィックスを持つ複数の固定メッセージ
+        │   (例: "get min", "get max", "get name")
+        │     → t b b b → 各サブ t (キーワード) → 共通 prepend (prefix)
+        │     詳細は「Multiple Commands with Shared Prefix」セクション参照
+        │
+        ├── 複数引数の固定メッセージ (例: "property selected_parameter")
+        │     → zl.reg <値1> <値2> ...
+        │       (引数で初期値保持、bang で出力)
+        │
+        ├── リスト構築 (動的引数)
+        │     → pack / pak (Section 「Building Specific Lists」参照)
+        │
+        └── 動的に変わるテキスト/メッセージ (ユーザー入力等)
+              → message ボックス可（ただし右 inlet に注意）
+```
+
+### ❌ Anti-pattern 1: 固定値を message ボックスで出力
+
+```
+message "property selected_parameter" → live.observer  // ← 禁止
+message "id 0" → live.observer                          // ← 禁止
+message "0" → live.numbox                                // ← 禁止
+```
+
+**症状**: 編集中にクリックして誤発火、右 inlet 経由で値が上書きされる、パッチコードを引っ掛けて意図しない発火。
+
+**正解（上記の例の置換）**:
+
+| ❌ message | ✅ 正解 |
+|---|---|
+| `message "0"` | `t 0` |
+| `message "1"` | `t 1` |
+| `message "id 0"` | bang → `prepend id` (0 を bang から prepend で構築) または `zl.reg id 0` |
+| `message "property selected_parameter"` | `zl.reg property selected_parameter` |
+| `message "set value 0.85"` (固定値) | `t 0.85 → prepend set value` |
+| `message "set value $1"` (動的値) | `prepend set value`（上流から $1 を流す）|
+
+### ❌ Anti-pattern 2: 共通 prefix の固定メッセージを複製
+
+```
+message "get min" ──┐
+message "get max" ──┼─→ live.object   // ← prefix "get" を3回複製
+message "get name" ─┘
+```
+
+**症状**: prefix を変更したい時に複数箇所修正が必要、メッセージ数が増えるとレイアウトが崩れる。
+
+**正解**: trigger + 共通 prepend パターン (本ファイル「Multiple Commands with Shared Prefix」参照)
+
+```
+bang
+  ↓
+t b b b
+  ↓     ↓     ↓
+t name t max t min
+  ↓     ↓     ↓
+  └── prepend get ──→ live.object
+```
+
+### ❌ Anti-pattern 3: live.observer の有効化を message で書く
+
+```
+sel 1 outlet 0 → message "property selected_parameter" → live.observer
+                                                          // ← message 禁止
+```
+
+**正解**: lom-observer-patterns.md の正規パターン (`t b b → zl.reg property selected_parameter` + `t b b → zl.reg path live_set view → live.path`)。
+
+---
+
 ## Hot Inlet / Cold Inlet
 
 The fundamental execution model of Max objects. Understanding this convention is essential for correct patch design.

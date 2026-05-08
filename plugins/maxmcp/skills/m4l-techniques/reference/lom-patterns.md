@@ -3,6 +3,64 @@
 Reusable patterns for working with the Live Object Model in production Max for Live devices.
 These patterns assume familiarity with the LOM pipeline covered in [Live Object Model Reference](live-object-model.md).
 
+## 🔴 必読: アンチパターン
+
+以下は LOM 関連で頻発する誤実装。**`live.object` / `live.path` / `live.text` を含むパッチを設計する前に必ず確認**。
+
+### ❌ Anti-pattern 1: 固定 LOM メッセージを `message` ボックスで送る
+
+```
+message "call fire" → live.object        // ← 禁止
+message "set value 0.85" → live.object   // ← 禁止
+message "get min" → live.object          // ← 禁止
+```
+
+**症状**: 編集中にクリックして誤発火（クリップが意図せず再生される、パラメータが意図せず変更される）。右 inlet からの上書きでメッセージ内容が破壊される。
+
+**正解**:
+
+| ❌ message | ✅ 正解 |
+|---|---|
+| `message "call fire"` | `t fire → prepend call` |
+| `message "set value 0.85"` (固定) | `t 0.85 → prepend set value` |
+| `message "set value $1"` (動的) | `prepend set value`（上流から $1 を流す） |
+| `message "get min"`、`message "get max"` 等の複数 | `t b b b → t name / t max / t min → prepend get` |
+
+詳細は本ファイル末尾の "Why Not Use message?" セクション、および [execution-and-messaging.md](../../patch-guidelines/reference/execution-and-messaging.md) の Decision Tree 参照。
+
+### ❌ Anti-pattern 2: `live.observer` の出力する list 内 `id` トークンを未処理
+
+```
+live.observer (tracks property) → zl.len  // ← "id 1 id 2 id 3" を 6 と数える
+```
+
+**症状**: トラック数のカウントが実数の 2 倍になる。
+
+**正解**: `zl.filter id` で `id` トークンを除去してから `zl.len`。詳細は本ファイル「Dynamic Range via LOM List Counting」セクション。
+
+### ❌ Anti-pattern 3: `live.text` で LOM メソッドを呼ぶのに toggle mode を使う
+
+```
+live.text @mode 1 (toggle) → t fire → prepend call → live.object
+                                                       // ← OFF 時にも発火
+```
+
+**症状**: ボタンを離した時にも `call fire` が走り、クリップが二重発火する。
+
+**正解**: 一度きりのメソッド呼び出しは `mode 0` (button mode = momentary)。詳細は本ファイル「live.text Button Mode + call Method」セクション。
+
+### ❌ Anti-pattern 4: `live.path` 動的構築で `t b l` を省略
+
+```
+pak tracks 0 → zl.join (左inlet 直接) → ... // ← 左inlet が hot で発火、右inlet 未格納のまま
+```
+
+**症状**: 動的パスが正しく組み立たらない。タイミングにより毎回異なる結果。
+
+**正解**: `t b l` で右 inlet (cold) → 左 inlet (hot) の順序を保証。詳細は本ファイル「Dynamic Path Construction」セクション。
+
+---
+
 ## Dynamic Path Construction (pak + zl.join)
 
 ### The Problem

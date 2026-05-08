@@ -1,5 +1,9 @@
 # Cascading Multi-Stage Initialization
 
+> **M4L デバイスを構築する場合**: LOM (`live.path` / `live.observer` / `live.object`) を含む M4L デバイスは、`live.thisdevice` を起点とした初期化が必須。詳細と必読ルールは [m4l-techniques/SKILL.md](../../m4l-techniques/SKILL.md) の「🔴 MUST: LOM を使う M4L デバイスは `live.thisdevice` 必須」セクション、および [m4l-techniques/reference/tips.md](../../m4l-techniques/reference/tips.md) の Two-Stage Initialization を参照。
+
+このドキュメントは **3 段階以上の汎用カスケード初期化パターン**(M4L 非依存も含む)を扱う。
+
 ## The Problem
 
 Complex patches (especially standalone applications and installations) require multiple initialization steps that must execute in a specific order with timing gaps between them. For example: load configuration → read audio files → bind buffers → initialize parameters → start audio → start sequencer. Each step may need the previous step to complete before proceeding.

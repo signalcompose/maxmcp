@@ -112,6 +112,7 @@ Group related objects into functional sections:
 
 1. **セクションを計画**: パッチ全体を機能セクション（Input, Processing, Output 等）に分割
 2. **1セクションずつ構築**:
+   - 🔴 **そのセクションで使う LOM/特殊オブジェクトの reference を `Read` で先に取得**（m4l-techniques の MUST 参照ルール）。会話履歴が長くても、各セクション開始時に必ず再 Read する
    - オブジェクト追加（Operation Checklists の「add_max_object の後」を実行）
    - セクション内接続（Operation Checklists の「connect_max_objects の前」を実行）
    - `organize-patch`（セクション内モード）でレイアウト整理
@@ -222,23 +223,117 @@ Group related objects into functional sections:
 
 （Phase 1 の各セクションで実施済みの Phase 8 検証を、パッチ全体で再度実行）
 
+### Phase 5: 実信号検証（Empirical Verification）
+
+**前提条件**:
+- □ Phase 4 完成検証完了
+- □ 全パラメータ・接続の構造的検証完了
+→ 未完了なら Phase 5 に進まない
+
+**⚠ Phase 5 を飛ばした場合**: 構造的に正しくても **初期化トリガ漏れ** や **応答フォーマット推測ミス** で動作しないパッチが「完成」として報告される。典型例:
+- `live.path` を `live.observer` に直結したが load 時に発火せず、observer が永久に沈黙
+- `live.observer` の出力形式を推測して `route` 設計したが、実形式が異なり全分岐に該当せず黙って消える
+- `pattr` (autorestore=0) で初期値が入らず、依存する UI が初期表示できない
+
+これらは構造検査では検出不可能で、ユーザーが Live にロードして初めて発覚する。原因特定に膨大な時間を要する。
+
+#### 5-1. 初期化チェーンの存在確認
+
+`get_objects_in_patch` で以下のオブジェクトの存在を確認し、各々に起動経路があるかチェック:
+
+| オブジェクト | 起動経路に必須なもの |
+|---|---|
+| `live.path` | `loadbang` / `live.thisdevice` / sel outlet bang のいずれか |
+| `live.observer` | inlet 1 への id 供給 + inlet 0 への property 設定の両方 |
+| `live.thisdevice` | （自身が起点なので不要、ただし下流チェーンが繋がっているか確認） |
+| `pattr` (autorestore=0) | 明示的な復元バン |
+| `loadmess` / `loadbang` | 出力先が処理開始の起点になっているか |
+
+不足していれば Phase 0 設計に戻し、起動経路を追加してから Phase 5 を再実行。
+
+#### 5-2. プローブによる出力形式実証確認
+
+**データ形式が「reference に明記されていない」または「推測に基づく」箇所には必ず `print` プローブを一時挿入する**。
+
+挿入対象:
+- `live.observer` outlet 0 直後（property 値の実フォーマット確認）
+- `live.object` outlet 0 直後（get 応答の実フォーマット確認）
+- 複雑な `route` の前後（分岐が意図通りか）
+- `zl.ecils` / `unpack` 等の list 操作後
+
+検証手順:
+1. `add_max_object` で `print <varname>_probe` を挿入し、対象 outlet と接続
+2. **ユーザーに実機トリガを依頼**（「Learn ボタンを押してください」「Live のパラメータを動かしてください」等）
+3. `get_console_log` で実出力を取得
+4. 取得形式が下流の `route` / `unpack` 設計と一致するか照合
+5. 不一致なら Phase 0 設計を修正して再構築
+6. 検証完了後、プローブを削除（または `comment` に確認済み形式をメモ）
+
+#### 5-3. 検証結果のドキュメント化
+
+確認した出力形式・トリガ仕様を `comment` オブジェクトでパッチ内に記録:
+
+```
+// observer (selected_parameter) outputs: "id N" (id 0 = no selection, verified 2026-05-08)
+// route id passes N. sel 0 filters zero.
+// live.path needs bang from t_capture to refire on each Learn enable.
+```
+
+これにより次回の作業時（または別の Claude セッション）で再推測が不要になる。
+
+#### Phase 5 完了基準
+
+- [ ] 5-1 の起動経路チェック全項目クリア
+- [ ] 5-2 で推測に基づいていた出力形式を全て `print` で実証確認
+- [ ] 5-3 でパッチ内に動作仕様を comment で残した
+- [ ] プローブを全て削除（または無効化）
+
 ### Why This Order Matters
 
 - Phase 0 で設計制約を組み込むため、実装段階での手戻りが最小化される
 - Phase 1 でセクションサイズが確定するため、Phase 2 で正確な配置計算ができる
 - Phase 2 でセクション位置が確定するため、Phase 3 で patchcord 経路が安定する
-- Phase 4 でパッチ全体の一貫性を検証するため、設定漏れや順序ずれが出荷前に検出される
+- Phase 4 でパッチ全体の構造的一貫性を検証するため、設定漏れや順序ずれが出荷前に検出される
+- **Phase 5 でデータが実際に流れることを実証するため、初期化漏れや形式推測ミスが Live ロード前に検出される**
 - 後フェーズでの手戻りが最小化される
 
 ## Operation Checklists
 
 各 MCP 操作の前後に実行すべき確認事項。スキルの原則を操作レベルで適用するためのチェックリスト。
 
+### add_max_object の前（事前ルール）
+
+**🔴 obj_type には省略形を渡す（[Object Text Conventions](reference/object-text-conventions.md) Section 1）**:
+
+| 違反 | 正解 |
+|---|---|
+| `obj_type="trigger"` | `obj_type="t"` |
+| `obj_type="select"` | `obj_type="sel"` |
+| `obj_type="bangbang"` | `obj_type="b"` |
+| `obj_type="int"` | `obj_type="i"` |
+| `obj_type="float"` | `obj_type="f"` |
+| `obj_type="send"` | `obj_type="s"` |
+| `obj_type="receive"` | `obj_type="r"` |
+
+**🔴 `obj_type="message"` は固定値で使わない**:
+固定値は `obj_type="t"` / `prepend` / `zl.reg` のいずれかを使う。判定は [Execution Model & Messaging](reference/execution-and-messaging.md) 冒頭の Decision Tree に従う。
+
+**🔴 Float コンテキストでは引数を Float リテラルに**:
+- `pak`, `pack`, `scale`, `+`, `-`, `*`, `/`, `pow`, `expr`, `change` 等で Float を扱う場合、引数 `[0., 0.]` のように `.` を必ず付ける
+- 違反例: `obj_type="pak", arguments=[0, 0]` → text が `"pak 0 0"` になり Int モード化
+
 ### add_max_object の後
 
 **⚠ このチェックリストを飛ばした場合**: 後工程での修正以前に、設定し忘れによるバグが大量発生する。パラメータ名がデフォルト（"live.numbox[1]"）のまま、presentation が 1 のまま、_parameter_initial_enable が 0 のまま等、原因特定に膨大な時間と労力を費やすのは Claude 自身。生成直後に確認すれば数秒で済む作業を、後から探すと何倍もかかる。
 
-1. `get_objects_in_patch` でオブジェクトのテキストを確認し、`@` 構文のアトリビュートが反映されているか検証
+1. `get_objects_in_patch` でオブジェクトのテキストを確認し、以下を機械的に検証:
+   - `@` 構文のアトリビュートが反映されているか
+   - **text に `trigger ` / `select ` / `bangbang` / `bangbang ` / 単独の `int ` / 単独の `float ` / `send ` / `receive ` が含まれていないか** → 含まれていれば `replace_object_text` で省略形に修正（例: `trigger b b b b l` → `t b b b b l`）
+   - **maxclass が `message` のオブジェクトが新規追加されていないか** → 追加されている場合、固定値か動的構築か判定:
+     - 固定値の場合: [Execution Model & Messaging](reference/execution-and-messaging.md) 冒頭の Decision Tree に従って `t` / `prepend` / `zl.reg` に置換（`remove_max_object` + `add_max_object` で再構築）
+     - 動的構築（ユーザー入力をそのまま流す等）の場合: 容認するが、その理由を `comment` で残す
+   - **Float コンテキストの `pak 0 0` / `pack 0 0` / `scale 0 1 ...` のような Int モード引数がないか** → あれば `replace_object_text` で `pak 0. 0.` 等に修正
+   - **pattr の場合、第一引数で varname が強制上書きされていないか** → `pattr <name>` で生成すると varname が `<name>` になる。後続の `set_object_attribute` は実 varname を使う必要がある
 2. ロジック用オブジェクト（trigger, prepend, route, zl, gate, live.object, live.path, pattr, pack, scale 等）は `set_object_attribute` で `presentation 0` を設定
 3. live.* UI オブジェクトの場合:
    - `_parameter_longname` を varname に合わせて設定
@@ -252,6 +347,13 @@ Group related objects into functional sections:
    - `_parameter_range` をデータに応じた範囲に設定（Float: `[-100000, 100000]` 等）
    - `_parameter_type` をデータ型に応じて設定（Float: 0, blob: 3 等）
    - `_parameter_initial_enable 1` を設定
+   - **pattr は第一引数で varname が強制上書きされる**: `add_max_object` の戻り値の varname を確認してから後続操作を実施（例: `pattr param_min` を作ると `varname=param_min` になる、リクエストした varname は破棄される）
+
+7. **LOM 系オブジェクト（live.path / live.object / live.observer / live.thisdevice）の場合**:
+   - 🔴 [m4l-techniques の MUST 参照ルール](../../m4l-techniques/SKILL.md) に従い、関連 reference を **Read で先に取得** してから接続設計に入る
+   - `live.path` / `live.observer` を追加した場合、起動トリガ経路（loadbang / live.thisdevice / sel bang 等）が Phase 0 設計に含まれているか即座に確認。なければ Phase 0 に戻る
+   - 出力フォーマットが reference に明記されていない property を扱う場合、**`print <varname>_probe` を同時に追加し、Phase 5 で実機確認する旨をメモ**
+   - 自デバイスのパラメータ操作を伴う場合（Learn 系）、`live.thisdevice` + `canonical_parent` フィルタ計画があるか Phase 0 設計と照合
 
 ### connect_max_objects の前
 

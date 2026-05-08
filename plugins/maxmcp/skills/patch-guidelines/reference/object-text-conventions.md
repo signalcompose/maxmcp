@@ -2,6 +2,73 @@
 
 Max オブジェクトテキストの記述規則と効率的なコーディングパターン。可読性、コンパクトさ、型安全性を確保する。
 
+## 🔴 必読: 適用漏れ防止のためのアンチパターン
+
+以下は Claude が頻繁に犯す誤実装。**`add_max_object` の前後で必ず以下に該当しないかチェックする**。該当する場合は即座に修正する。
+
+### ❌ Anti-pattern 1: 省略形未使用
+
+```
+add_max_object obj_type="trigger"  // ← 全名で生成される
+add_max_object obj_type="select"   // ← 全名で生成される
+add_max_object obj_type="bangbang" // ← 全名で生成される
+```
+
+**症状**: パッチが冗長になりレイアウトが崩れる。`trigger b b b b l` で 100px+ の幅を取る。
+
+**正解**: `obj_type` には省略形を直接渡す。
+
+```
+add_max_object obj_type="t"        // → "t b b b b l" (40px)
+add_max_object obj_type="sel"      // → "sel 1 0"
+add_max_object obj_type="b"        // → "b"
+add_max_object obj_type="i"        // → "i"
+add_max_object obj_type="f"        // → "f"
+add_max_object obj_type="s"        // → "s name"
+add_max_object obj_type="r"        // → "r name"
+```
+
+省略形対応表は Section 1 を参照。**省略形を持つオブジェクトは省略形必須**。
+
+### ❌ Anti-pattern 2: 引数の型未明示
+
+```
+add_max_object obj_type="pack" arguments=[0, 0]      // → "pack 0 0" (Int モード)
+add_max_object obj_type="pak" arguments=[0, 0]       // → "pak 0 0"
+add_max_object obj_type="scale" arguments=[0, 1, 0, 1, 1]  // → Int モード
+```
+
+**症状**: Float 値を扱う文脈で Int モードのオブジェクトを使うと、小数点以下が切り捨てられる。range_min/max が常に整数になる、scale 出力が階段状になる等。
+
+**正解**: Float コンテキストでは引数を Float リテラル化:
+
+```
+add_max_object obj_type="pak" arguments=[0., 0.]  // → "pak 0. 0."
+add_max_object obj_type="scale" arguments=[0., 1., 0., 1., 1.]
+```
+
+または `replace_object_text` で text 直書き:
+
+```
+replace_object_text new_text="pak 0. 0."
+replace_object_text new_text="scale 0. 1. 0. 1. 1. @classic 0"
+```
+
+詳細は Section 2 を参照。
+
+### ❌ Anti-pattern 3: 生成後のテキスト未確認
+
+`add_max_object` 後に `get_objects_in_patch` で text を読み戻さず、「指定通り生成された」と仮定して進める。
+
+**症状**:
+- `obj_type="trigger"` で生成されたが text が `"trigger b b b b l"` （省略されていない）→ 後で気付くと修正コスト大
+- `pak 0 0` のまま放置 → Float が切り捨てられる
+- `pattr param_min` で **varname が param_min に強制上書き** されたことに気付かず、後続の `set_object_attribute(varname="pattr_param_min")` が失敗する（実例: 本セッションで発生）
+
+**正解**: `add_max_object` 直後に必ず `get_objects_in_patch` で text を確認。違反があれば `replace_object_text` で即座に修正。
+
+---
+
 ## 1. 省略形の使用
 
 **ルール**: 省略形があるオブジェクトは省略形を使用する。
