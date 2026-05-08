@@ -4,28 +4,13 @@ This guide describes how to recreate a Max patch from examples using MaxMCP tool
 
 ## Overview
 
-```
-Example Patch (.maxpat)
-        │
-        ▼
-   Parse JSON
-   (boxes, lines)
-        │
-        ▼
-   Plan Layout
-   (apply patch-guidelines)
-        │
-        ▼
-   Create Objects
-   (add_max_object)
-        │
-        ▼
-   Connect Objects
-   (connect_max_objects)
-        │
-        ▼
-   Set Attributes
-   (set_object_attribute)
+```mermaid
+flowchart TD
+  ex["Example Patch (.maxpat)"] --> parse["Parse JSON<br/>(boxes, lines)"]
+  parse --> plan["Plan Layout<br/>(apply patch-guidelines)"]
+  plan --> create["Create Objects<br/>(add_max_object)"]
+  create --> conn["Connect Objects<br/>(connect_max_objects)"]
+  conn --> attr["Set Attributes<br/>(set_object_attribute)"]
 ```
 
 ## Step 1: Load Example Patch
@@ -87,9 +72,9 @@ Apply `patch-guidelines` rules:
 Planned layout:
 ```
 [cycle~ 440]     y=100  varname: osc_main
-      │
+      |
    [*~ 0.5]      y=150  varname: gain_main
-      │
+      |
    [ezdac~]      y=200  varname: dac_out
 ```
 

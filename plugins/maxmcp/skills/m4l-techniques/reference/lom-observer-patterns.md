@@ -3,18 +3,77 @@
 `live.observer` を使った監視・フィルタリングの実践パターン。
 [LOM Applied Patterns](lom-patterns.md) の補足として、observer 固有の制御パターンをまとめる。
 
+## 🔴 必読: 適用漏れ防止のためのアンチパターン
+
+以下は Claude が頻繁に犯す誤実装。**「直感で組んだ接続」が以下に該当しないか必ずチェックする**。該当する場合は本ドキュメントの正規パターンに置き換える。
+
+### ❌ Anti-pattern 1: live.path を live.observer に直結（トリガなし）
+
+```
+live.path live_set view → live.observer  // ← 動かない
+```
+
+**症状**: Learn ボタンを押しても何も起きない。observer 出力が一切発火しない。「id の処理が無視されている」ように見える。
+
+**根本原因**: `live.path` は load 時に自動出力**しない**。明示的な `bang` または `path` メッセージを受けるまで沈黙する。
+
+**正解**: 後述「live.observer の有効化・無効化パターン」の `t b b` を使用し、enable bang のたびに `live.path` を発火させる。
+
+### ❌ Anti-pattern 2: observer 出力を route id でそのまま下流に渡す
+
+```
+live.observer → route id → t_capture → ...  // ← 重複・バーストで誤動作
+```
+
+**症状**: パラメータ選択するたびに複数回処理が走る。同じパラメータを選び直しても再アサインされる。Learn が意図せず連続発火する。
+
+**根本原因**: `selected_parameter` 等は連続通知やバースト出力が発生する。
+
+**正解**: 後述「selected_parameter フィルタチェーン」の `change 0 → thresh 0 → zl.ecils 1` を必ず通す。
+
+### ❌ Anti-pattern 3: 出力フォーマットを推測して route 設計
+
+```
+// "たぶん id N が来るはず" と推測して
+live.observer → route id → ...
+```
+
+**症状**: 構文的には正しいが route のどの分岐にもマッチせず黙って消える。デバッグ困難。
+
+**根本原因**: property の型により出力形式が異なる。reference に書かれていない property は実機確認が必須。
+
+**正解**: 構築直後に `print obs_probe` を一時挿入し、`get_console_log` で実形式確認 → 確認した形式に合わせて route 設計。これは [patch-guidelines](../../patch-guidelines/SKILL.md) Phase 5 で必須実行。
+
+### ❌ Anti-pattern 4: 自デバイス除外フィルタなしで Learn を構築
+
+```
+live.observer (selected_parameter) → そのまま target に set id
+```
+
+**症状**: control_dial / curve_n 等の自デバイスパラメータを誤ってターゲットにできてしまう。フィードバックループや無限ループ。
+
+**正解**: 後述「自デバイスパラメータの除外（canonical_parent チェック）」を必ず組み込む。
+
+---
+
 ## live.observer の有効化・無効化パターン
 
 `live.observer` の有効化・無効化は、右インレット（id 設定）で制御する。`id 0` を送ると監視が停止する。
 
 `live.observer` は右インレットに `id N` を受け取ると監視対象を設定し、`id 0` を受け取ると監視を解除する。`sel` の非一致アウトレットから `0` を `prepend id` 経由で送ることで、シンプルに制御できる。
 
-```
-learn_toggle → sel 1
-  ├→ outlet 0 (一致=1): 有効化チェーン
-  │   t b b → zl.reg property selected_parameter → observer inlet 0
-  │         → zl.reg path live_set view → live.path → observer inlet 1
-  └→ outlet 1 (非一致=0): prepend id → observer inlet 1 (id 0 で無効化)
+```mermaid
+flowchart TD
+  toggle["learn_toggle"] --> sel["sel 1"]
+  sel -- "out 0 (一致 = 1, 有効化)" --> tbb["t b b"]
+  tbb -- "out 1 (fires first)" --> zr_path["zl.reg path live_set view"]
+  zr_path --> lpath["live.path"]
+  lpath -- "out 1: id of view<br/>→ in 1 (cold, target 設定)" --> obs["live.observer"]
+  tbb -- "out 0 (fires second)" --> zr_prop["zl.reg property selected_parameter"]
+  zr_prop -- "→ in 0 (hot, 監視開始)" --> obs
+
+  sel -- "out 1 (非一致 = 0, 無効化)" --> prep_id["prepend id"]
+  prep_id -- "'id 0'<br/>→ in 1 (cold, target 解除)" --> obs
 ```
 
 **有効化**: `sel 1` の outlet 0 が bang を出力し、`property` と `id` の両方を設定
@@ -57,25 +116,28 @@ live.thisdevice → zl.reg "path live_set this_device" → live.path → route i
 
 **フィルタチェーン** (zl.ecils と prepend id の間に挿入):
 
+```mermaid
+flowchart TD
+  ecils["zl.ecils"] -- "out 1: int N (param id)" --> tbi["t b i"]
+
+  tbi -- "out 1 (i, fires first)<br/>int N" --> tii["t i i"]
+  tii -- "out 1 (i, fires first)<br/>int N → in 0" --> prep_id["prepend id"]
+  prep_id -- "'id N' → in 1 (cold, target set)" --> lobj["live.object"]
+  tii -- "out 0 (i, fires second)<br/>int N → in 1 (cold, store)" --> mul["*"]
+
+  tbi -- "out 0 (b, fires second)<br/>bang" --> zlreg["zl.reg<br/>'get canonical_parent'"]
+  zlreg -- "'get canonical_parent'<br/>→ in 0 (hot)" --> lobj
+  lobj -- "list: 'canonical_parent id M'" --> route_cp["route canonical_parent"]
+  route_cp -- "'id M'" --> route_id["route id"]
+  route_id -- "int M (parent id)" --> neq["!= this_device_id"]
+  neq -- "0 (= 自デバイス)<br/>or 1 (≠ 外部)" --> mul
+  mul -- "out 0: int (N or 0)<br/>→ in 0 (hot)" --> route0["route 0"]
+  route0 -- "out 0 (= 0): 自デバイス → 破棄" --> drop["(discard)"]
+  route0 -- "out 1 (≠ 0): 外部パラメータ" --> prep_id2["prepend id"]
+  prep_id2 --> gate["learn_gate"]
 ```
-zl.ecils outlet 1 → N
-  ↓
-t b i
-  outlet 1 (1st): N → t i i
-  │                     outlet 1 (1st): N → prepend id → live.object 右inlet (ターゲット設定)
-  │                     outlet 0 (2nd): N → * 右inlet (保存)
-  outlet 0 (2nd): bang → zl.reg "get canonical_parent" → live.object 左inlet
-                                                           ↓ canonical_parent id M
-                                                         route canonical_parent → route id → M
-                                                           ↓
-                                                         != this_device_id → 0(同一) / 1(異なる)
-                                                           ↓
-                                                         * 左inlet (hot) → N * result
-                                                           ↓
-                                                         route 0
-                                                           outlet 0 (=0): 自デバイス → 破棄
-                                                           outlet 1 (≠0): 外部パラメータ → prepend id → learn_gate
-```
+
+> 乗算フィルタの仕組み: `!=` の結果 (0 or 1) と保存済みの N を `*` で乗算 → 自デバイス時は `N * 0 = 0`、外部時は `N * 1 = N`。`route 0` で `0` を破棄、それ以外を learn 経路に通すことで自デバイス除外を実現。
 
 **ポイント**:
 - `canonical_parent` は `live.object` の `get canonical_parent` で取得する（`live.path goto` ではない）

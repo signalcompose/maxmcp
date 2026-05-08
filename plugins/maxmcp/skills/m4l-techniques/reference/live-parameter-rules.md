@@ -2,21 +2,71 @@
 
 Max for Live デバイス固有のコーディングルール。Live パラメータシステム、live.* オブジェクト、LOM 操作に関する規則。
 
+## 🔴 必読: 全 Section に共通するアンチパターン
+
+各 Section の規則を**読み飛ばすと発生する典型的な誤実装**:
+
+| 違反 | Section | 症状 |
+|---|---|---|
+| `live.observer` の property を `message "property X"` で設定 | 1 | 編集中の誤クリック、右 inlet からの上書き、起動タイミング不明確 |
+| `_parameter_unitstyle` を未設定（Float なのに 0 のまま） | 2 | UI で小数点以下が表示されず、操作精度が見えない |
+| `pattr` の `parameter_enable` を未設定 | 3 | Live Set 保存時に値が永続化されない |
+| `_parameter_invisible` を `2` (Hidden) にする | 3 | プリセット保存対象から除外されて値が失われる |
+| Live 直接管理と pattrstorage を混在 | 5 | 復元順序の不整合、recall 時の不整合 |
+| `_parameter_order` を未設定（デフォルト 0 のまま） | 6 | 復元順が不定、`_parameter_range` 設定前に値復元されてクランプされる |
+
+すべての Section を**まず読み**、上記違反を起こさないよう設計に組み込む。
+
+---
+
 ## 1. live.observer の property 設定
 
-**ルール**: `live.observer` の property は `@property` アトリビュート構文ではなく、初期化時にメッセージで設定する。
+### 🔴 ルール: `zl.reg` を使う、`message` ボックスは禁止
 
-**理由**: `property` は `live.observer` の `<objarglist>` 定義であり `<attributelist>` にないため、`@property` 構文の信頼性が不明確。メッセージで送ることで、設定タイミングを明示的に制御できる。
+`live.observer` の property は **必ず `zl.reg property <name>` パターンで設定**する。`@property` アトリビュート構文も `message "property <name>"` も使わない。
+
+**✅ 正解:**
+
+```mermaid
+flowchart TD
+  sel["sel 1"] -- "out 0 (Learn ON)" --> tbb["t b b"]
+  tbb -- "out 1 (fires first)" --> zr_path["zl.reg path live_set view"]
+  zr_path -- "'path live_set view'" --> lpath["live.path"]
+  lpath -- "out 1: id of view<br/>→ in 1 (cold, target 設定)" --> obs["live.observer"]
+  tbb -- "out 0 (fires second)" --> zr_prop["zl.reg property selected_parameter"]
+  zr_prop -- "'property selected_parameter'<br/>→ in 0 (hot, 監視開始)" --> obs
+```
+
+> `trigger` の出力順は **right→left** (out 1 が先発火)。先に path 解決して target id を `live.observer` の in 1 (cold) に設定し、その後で property メッセージを in 0 (hot) に送る。順序を逆にすると target 未設定で property が発火し、無効な観測になる。
+
+**❌ 禁止 (1): `@property`**
+
+```
+add_max_object obj_type="live.observer" → 自動生成で @property を含めない
+```
+
+**❌ 禁止 (2): `message` ボックス**
+
+```
+sel 1 outlet 0 → message "property selected_parameter" → observer inlet 0
+                  ↑ 編集中クリックで誤発火、右 inlet 上書き、起動タイミング不明確
+```
+
+**`@property` を禁じる理由**: `property` は `live.observer` の `<objarglist>` 定義（生成時引数）であり `<attributelist>`（アトリビュート）にないため、`@property` 構文の信頼性が不明確。
+
+**`message` を禁じる理由**: 固定値の message ボックスは [execution-and-messaging.md](../../patch-guidelines/reference/execution-and-messaging.md) のアンチパターン参照。`zl.reg` で同等の機能をより安全に実現できる。
 
 **パターン**:
 - id 設定（右インレット）の後に `property <name>` メッセージを左インレットに送る
 - これにより監視開始のタイミングが明示的になる
 
+```mermaid
+flowchart TD
+  lp["live.path"] -- "out 1: id N<br/>→ in 1 (cold, target 設定)" --> obs["live.observer"]
+  zr["zl.reg property selected_parameter"] -- "→ in 0 (hot, 監視開始)" --> obs
 ```
-live.path → id N → observer 右inlet
-                     ↓ (id 設定完了)
-zl.reg property selected_parameter → observer 左inlet
-```
+
+> 順序が重要: `in 1 (cold)` で id を先に確定させてから `in 0 (hot)` に property メッセージを送る。順序を逆にすると target 未設定で property が発火し、無効な観測になる。
 
 **一般的な `@` アトリビュート設定との違い**: `@` 構文は Max 全般で有効なオブジェクト生成時のアトリビュート指定方法（Jitter 等でも多用）。`live.observer` の `property` が特殊なケースであり、`@` 構文自体は信頼性のある標準機能。詳細は patch-guidelines の [MCP Notes](../../patch-guidelines/reference/mcp-notes.md) を参照
 
@@ -95,7 +145,7 @@ zl.reg property selected_parameter → observer 左inlet
 
 ```
 Live Set (.als)
-  └→ 各パラメータを直接保存（live.* は自動、pattr は parameter_enable=1）
+  \-- 各パラメータを直接保存 (live.* は自動、pattr は parameter_enable=1)
 ```
 
 - live.dial / live.numbox / live.text → Live が自動保存
@@ -108,8 +158,8 @@ Live Set (.als)
 
 ```
 Live Set (.als)
-  └→ pattrstorage の状態を保存（現在のプリセット番号、各プリセットの内容）
-       └→ pattrstorage が各 pattr / autopattr の値を管理
+  \-- pattrstorage の状態を保存 (現在のプリセット番号、各プリセットの内容)
+        \-- pattrstorage が各 pattr / autopattr の値を管理
 ```
 
 - pattrstorage (greedy) + autopattr で全パラメータを管理
@@ -131,32 +181,38 @@ Live Set (.als)
 
 **ルール**: デバイス内の**全パラメータ**に `_parameter_order` を明示的に設定する。デフォルト（0）に任せない。
 
-**理由**: Live のパラメータ復元はデフォルト（`_parameter_order = 0`）では順序が不定。`pack` / `pak` の hot/cold inlet 構造や `_parameter_range` の依存関係により、復元順序が誤ると値がクランプされたり、downstream のチェーンが不完全に発火する。
+**理由**: Live のパラメータ復元はデフォルト（`_parameter_order = 0`）では順序が不定。`pack` / `pak` の発火構造や `_parameter_range` の依存関係により、復元順序が誤ると値がクランプされたり、downstream のチェーンが不完全に発火する。
 
 **順序設計の原則**:
 
-1. **cold inlet に接続するパラメータを先に復元** — `pack` / `pak` の cold inlet（右inlet）に値を格納してから、hot inlet（左inlet）で発火させる
-2. **`_parameter_range` を設定するチェーンを先に** — `_parameter_range` が正しく設定された後に、その範囲内で値を復元する
-3. **downstream の依存を考慮** — あるパラメータの復元が別のパラメータの `_parameter_range` を設定する場合、設定側を先にする
-4. **独立パラメータは最後に** — 範囲依存がないパラメータは後方の order に配置
+1. **`pack` を介する依存**: `pack` は inlet 0 のみ hot、他は cold。cold inlet に接続するパラメータを低 order、hot inlet (inlet 0) に接続するパラメータを高 order にすると、hot 受信時に全 cold 値が揃った状態で発火する。
+2. **`pak` を介する依存**: `pak` は全 inlet が hot で、各 inlet 受信のたびに発火する。cold/hot のロジックは適用できないため、**チェーンの最終状態を確定させるパラメータを最高 order** に置く。それより前の order での発火は中間状態として許容され、最高 order の発火時点で全 inlet が正しい値で揃う。
+3. **`_parameter_range` 供給 → 受領の順**: あるパラメータの復元が別の UI/pattr の `_parameter_range` を設定する場合、設定側 (供給) を低 order、受領側を高 order に置く。受領側が復元される時点で範囲が確定していないと値がクランプされる。
+4. **独立パラメータは最後に** — 範囲・発火依存がないパラメータは後方の order に配置
 
 **設定例** (ParameterMapper):
 
-```
-依存チェーン:
-  param_min (cold) → pack → _parameter_range → range_min / range_max
-  param_max (hot)  ↗                              ↓
-                                            range_max (cold) → pak → _parameter_range → scaled_display
-                                            range_min (hot)  ↗
+```mermaid
+flowchart LR
+  pmin["param_min<br/>(order 1)"] -- "→ in 1 (cold)" --> pack["pack"]
+  pmax["param_max<br/>(order 2)"] -- "→ in 0 (hot, 発火)" --> pack
+  pack -- "_parameter_range" --> nbox["numbox<br/>(range_min, range_max)"]
+
+  rmax["range_max<br/>(order 4, 中間発火)"] --> pak["pak"]
+  rmin["range_min<br/>(order 5, 最終発火 → 確定)"] --> pak
+  pak -- "_parameter_range" --> sdisp["scaled_display<br/>(order 6)"]
+
+  nbox -. "値が次段の<br/>_parameter_range 入力に" .-> rmax
+  nbox -. " " .-> rmin
 ```
 
 | order | 対象 | 理由 |
 |---|---|---|
-| 1 | param_min | pack cold inlet に先に格納 |
-| 2 | param_max | pack hot inlet → 発火 → numbox の `_parameter_range` 設定 |
+| 1 | param_min | pack cold inlet (inlet 1) に先に格納 |
+| 2 | param_max | pack hot inlet (inlet 0) → 発火 → numbox の `_parameter_range` 設定 |
 | 3 | param_name | パラメータ名表示（独立だが pattr グループとして早期復元） |
-| 4 | range_max | pak_display_range cold inlet に先に格納 |
-| 5 | range_min | pak_display_range hot inlet → 発火 → scaled_display の `_parameter_range` 設定 |
+| 4 | range_max | pak の一方 inlet を先に更新（中間発火するが許容） |
+| 5 | range_min | pak の他方 inlet を更新 → 最終発火で scaled_display の `_parameter_range` 確定 |
 | 6 | scaled_display | 正しい `_parameter_range` 内で値を復元 |
 | 7 | curve_n | scale inlet 5 (cold) に先に格納 |
 | 8 | control_dial | scale inlet 0 (hot) → 発火 → target_obj |

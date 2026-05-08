@@ -9,8 +9,8 @@ Patterns for styling Max/MSP device presentation views using panels, colors, and
 Use two overlapping `panel` objects to create a sense of depth:
 
 ```
-panel (outer)   →  Full bleed background, no rounded corners
-  └→ panel (inner)  →  Inset area, rounded corners, semi-transparent
+panel (outer)                (Full bleed background, no rounded corners)
+  \-- panel (inner)          (Inset area, rounded corners, semi-transparent)
 ```
 
 ### Outer Panel (Background)
@@ -110,15 +110,15 @@ Elements are distinguished purely by background color differences rather than dr
 Place decorative/informational elements in a corner, outside the main interaction area:
 
 ```
-┌──────────────────────────────────┐
-│  ┌─────────────────────┐        │
-│  │                     │        │
-│  │  Interactive area   │        │
-│  │                     │        │
-│  │                     │   [i]  │  ← info button
-│  │                     │  [logo]│  ← brand logo
-│  └─────────────────────┘        │
-└──────────────────────────────────┘
++----------------------------------+
+|  +---------------------+         |
+|  |                     |         |
+|  |  Interactive area   |         |
+|  |                     |         |
+|  |                     |  [i]    |  (info button)
+|  |                     |  [logo] |  (brand logo)
+|  +---------------------+         |
++----------------------------------+
 ```
 
 ### Implementation

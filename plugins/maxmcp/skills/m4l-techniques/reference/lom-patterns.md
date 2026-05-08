@@ -3,6 +3,64 @@
 Reusable patterns for working with the Live Object Model in production Max for Live devices.
 These patterns assume familiarity with the LOM pipeline covered in [Live Object Model Reference](live-object-model.md).
 
+## 🔴 必読: アンチパターン
+
+以下は LOM 関連で頻発する誤実装。**`live.object` / `live.path` / `live.text` を含むパッチを設計する前に必ず確認**。
+
+### ❌ Anti-pattern 1: 固定 LOM メッセージを `message` ボックスで送る
+
+```
+message "call fire" → live.object        // ← 禁止
+message "set value 0.85" → live.object   // ← 禁止
+message "get min" → live.object          // ← 禁止
+```
+
+**症状**: 編集中にクリックして誤発火（クリップが意図せず再生される、パラメータが意図せず変更される）。右 inlet からの上書きでメッセージ内容が破壊される。
+
+**正解**:
+
+| ❌ message | ✅ 正解 |
+|---|---|
+| `message "call fire"` | `t fire → prepend call` |
+| `message "set value 0.85"` (固定) | `t 0.85 → prepend set value` |
+| `message "set value $1"` (動的) | `prepend set value`（上流から $1 を流す） |
+| `message "get min"`、`message "get max"` 等の複数 | `t b b b → t name / t max / t min → prepend get` |
+
+詳細は本ファイル末尾の "Why Not Use message?" セクション、および [execution-and-messaging.md](../../patch-guidelines/reference/execution-and-messaging.md) の Decision Tree 参照。
+
+### ❌ Anti-pattern 2: `live.observer` の出力する list 内 `id` トークンを未処理
+
+```
+live.observer (tracks property) → zl.len  // ← "id 1 id 2 id 3" を 6 と数える
+```
+
+**症状**: トラック数のカウントが実数の 2 倍になる。
+
+**正解**: `zl.filter id` で `id` トークンを除去してから `zl.len`。詳細は本ファイル「Dynamic Range via LOM List Counting」セクション。
+
+### ❌ Anti-pattern 3: `live.text` で LOM メソッドを呼ぶのに toggle mode を使う
+
+```
+live.text @mode 1 (toggle) → t fire → prepend call → live.object
+                                                       // ← OFF 時にも発火
+```
+
+**症状**: ボタンを離した時にも `call fire` が走り、クリップが二重発火する。
+
+**正解**: 一度きりのメソッド呼び出しは `mode 0` (button mode = momentary)。詳細は本ファイル「live.text Button Mode + call Method」セクション。
+
+### ❌ Anti-pattern 4: `live.path` 動的構築で `t b l` を省略
+
+```
+pak tracks 0 → zl.join (左inlet 直接) → ... // ← 左inlet が hot で発火、右inlet 未格納のまま
+```
+
+**症状**: 動的パスが正しく組み立たらない。タイミングにより毎回異なる結果。
+
+**正解**: `t b l` で右 inlet (cold) → 左 inlet (hot) の順序を保証。詳細は本ファイル「Dynamic Path Construction」セクション。
+
+---
+
 ## Dynamic Path Construction (pak + zl.join)
 
 ### The Problem
@@ -11,35 +69,41 @@ Building LOM paths like `live_set tracks N clip_slots M` where N and M change at
 
 ### The Pattern
 
+```mermaid
+flowchart TD
+  track["track number"] -- "→ in 1" --> pak_t["pak tracks 0"]
+  scene["scene number"] -- "→ in 1" --> pak_c["pak clip_slots 0"]
+  pak_t -- "out 0: list 'tracks N'<br/>→ in 0 LEFT/hot (head & trigger)" --> zlj["zl.join"]
+  pak_c -- "out 0: list 'clip_slots M'" --> tbl["t b l"]
+  tbl -- "out 1 (l): list<br/>→ in 1 RIGHT/cold (tail store)" --> zlj
+  tbl -- "out 0 (b): bang<br/>→ in 0 LEFT/hot (trigger)" --> zlj
+  zlj -- "list 'tracks N clip_slots M'" --> prep["prepend path live_set"]
+  prep --> lp["live.path"]
 ```
-[track number]      [scene number]
-  ↓                   ↓
-pak tracks 0        pak clip_slots 0
-                      ↓
-                    t b l
-                    │   │
-                    │   └→ zl.join (right inlet: store list)
-                    └───→ zl.join (left inlet: bang triggers join)
-                           ↓
-                         prepend path live_set
-                           ↓
-                         live.path
-```
+
+> mermaid flowchart には inlet/outlet を第一級ポートとして表現する記法がないため、エッジラベルで `out N → in M (hot/cold)` を明記している。
 
 ### How It Works
 
-1. `pak tracks N` creates the list `tracks 2` (pak triggers on any inlet change)
-2. `pak clip_slots M` creates `clip_slots 3`
-3. `t b l` separates the output into two steps:
-   - First (right→left): the list `clip_slots 3` goes to `zl.join`'s right inlet (cold — stored, no output)
-   - Then: bang goes to `zl.join`'s left inlet (hot — triggers join with the stored tracks list)
-4. `zl.join` combines both lists: `tracks 2 clip_slots 3`
-5. `prepend path live_set` creates: `path live_set tracks 2 clip_slots 3`
-6. `live.path` resolves the full path to an object ID
+`zl.join` のセマンティクス: in 0 (左) は hot で head 兼トリガ、in 1 (右) は cold で tail を格納。新しい head が来ると即発火、bang が来ると保存済み head + tail で発火する。
+
+1. `pak tracks N` は `tracks N` を生成 (`pak` は全 inlet hot のため、in 1 への新値で発火)
+2. `pak clip_slots M` は `clip_slots M` を生成
+3. **track 更新時**: `pak tracks 0` 出力 → `zl.join` in 0 → 新 head として保存しつつ即発火 → `tracks N clip_slots LAST_M`
+4. **scene 更新時**: `pak clip_slots 0` 出力 → `t b l` で順序分離
+   - `t b l` out 1 (l): `clip_slots M` を `zl.join` in 1 (cold) に格納
+   - `t b l` out 0 (b): bang を `zl.join` in 0 (hot) に送信 → 保存済み head (`tracks LAST_N`) と新 tail で発火 → `tracks LAST_N clip_slots M`
+5. `prepend path live_set` で `path live_set tracks N clip_slots M` を生成
+6. `live.path` がフルパスを解決して ID を出力
 
 ### Key Insight
 
-The `t b l` ordering is critical. Without it, `zl.join` might fire before both parts are ready. The trigger ensures the clip_slots list is stored (cold inlet) before the bang triggers the join (hot inlet).
+`zl.join` の in 0 (左/hot) には **2 経路から入力**が来る:
+
+- `pak tracks 0` 出力 (list) — 新 head の格納と即発火を兼ねる
+- `t b l` out 0 (bang) — 保存済み head と新 tail で発火させる
+
+`t b l` の順序が critical な理由: bang を送る前に tail (`clip_slots`) を in 1 (cold) に格納する必要がある。`trigger` の出力順序は **right → left** (右の outlet が先) なので、`t b l` で l (右出力) が先に in 1 を更新し、b (左出力) が後で in 0 を発火させる。
 
 ### Generalization
 
@@ -61,33 +125,22 @@ A `live.numbox` for track/scene selection needs its range to match the actual nu
 
 ### The Pattern
 
+```mermaid
+flowchart TD
+  init["init signal<br/>(e.g. r ---lb2)"] --> packp["pack path live_set"]
+  packp -- "list 'path live_set'" --> ttl["t tracks l<br/>(or: t scenes l)"]
+  ttl -- "out 1 (l, fires first)<br/>list 'path live_set'<br/>→ in 0" --> lpath["live.path"]
+  ttl -- "out 0 (tracks, fires second)<br/>symbol 'tracks'" --> prep_prop["prepend property"]
+  prep_prop -- "'property tracks'" --> obs["live.observer<br/>(monitors 'tracks' property)"]
+  obs -- "list: 'id 1 id 2 id 3 …'" --> zlf["zl.filter id"]
+  zlf -- "list: '1 2 3 …'" --> zll["zl.len"]
+  zll -- "count N" --> minus["- 1"]
+  minus -- "N-1 (0-based max)<br/>→ in 1" --> pak_r["pak 0 N"]
+  pak_r -- "list '0 N-1'" --> prep_pr["prepend _parameter_range"]
+  prep_pr -- "'_parameter_range 0 N-1'" --> nbox["live.numbox<br/>(range updated)"]
 ```
-(init signal, e.g. r ---lb2)
-  ↓
-pack path live_set
-  ↓
-live.path → (outlet 0: path string, outlet 1: id)
-  ↓
-t tracks l              ← or: t scenes l
-│        │
-│        └→ live.path (right inlet: observe path)
-│
-├→ prepend property
-│    ↓
-│  live.observer        ← monitors "tracks" property
-│    ↓
-│  zl.filter id         ← remove "id" tokens from list
-│    ↓
-│  zl.len               ← count remaining items
-│    ↓
-│  - 1                  ← convert to 0-based max index
-│    ↓
-│  pak 0 N              ← [min, max] range pair
-│    ↓
-│  prepend _parameter_range
-│    ↓
-│  live.numbox          ← range updated dynamically
-```
+
+> `live.path` の outlet 0 は path 文字列、outlet 1 は ID。本図では `prepend property → live.observer` の経路に焦点を当てている (id 出力は監視対象オブジェクトの解決に使われる)。
 
 ### How It Works
 
@@ -107,13 +160,16 @@ t tracks l              ← or: t scenes l
 
 When the range shrinks (e.g., a track is deleted), the current value might exceed the new maximum. Use `t 0 l` after `prepend _parameter_range` to:
 
+```mermaid
+flowchart TD
+  prep["prepend _parameter_range"] --> tbl["t 0 l"]
+  tbl -- "out 1 (l, fires first)<br/>'_parameter_range 0 N-1'" --> nbox["live.numbox<br/>(set new range)"]
+  tbl -- "out 0 (0, fires second)<br/>int 0" --> nbox2["live.numbox<br/>(reset value to 0)"]
 ```
-prepend _parameter_range
-  ↓
-t 0 l
-│   └→ live.numbox (set new range via _parameter_range)
-└───→ live.numbox (reset value to 0)
-```
+
+`trigger` の出力順は **right→left**。l (out 1) で先に新 range を適用し、その後 0 (out 0) で値を 0 にリセットすることで、新 range 内に値が収まることを保証する。
+
+> 図中の `live.numbox` は同一オブジェクト(2 種類のメッセージを同じ inlet で受ける)。
 
 This ensures the value is always within the valid range.
 
@@ -125,23 +181,18 @@ When navigating clips from a Max device, the user has no visual indication in Li
 
 ### The Pattern
 
-```
-(initialization: r ---lb1)
-  ↓
-pack path live_set view
-  ↓
-live.path
-  ↓ (outlet 1: id of live_set view)
-  → live.object (right inlet: set target)
+```mermaid
+flowchart TD
+  init["initialization<br/>(r ---lb1)"] --> packv["pack path live_set view"]
+  packv -- "'path live_set view'" --> lpv["live.path<br/>(resolves view)"]
+  lpv -- "out 1: id of live_set view<br/>→ in 1 (cold, set target)" --> lobj["live.object<br/>(target = view)"]
 
-(clip navigation result)
-  ↓
-live.path (resolves clip_slot path)
-  ↓ (outlet 1: clip_slot id)
-  → prepend set highlighted_clip_slot
-     ↓
-     live.object (left inlet: set property)
+  clip["clip navigation result"] --> lpc["live.path<br/>(resolves clip_slot path)"]
+  lpc -- "out 1: clip_slot id" --> prep["prepend set highlighted_clip_slot"]
+  prep -- "'set highlighted_clip_slot id N'<br/>→ in 0 (hot)" --> lobj
 ```
+
+> `live.object` の右 inlet (in 1) は対象 ID 設定 (cold)、左 inlet (in 0) はプロパティ操作メッセージ (hot)。初期化で view の id を target に固定し、navigation 時に左 inlet に `set highlighted_clip_slot id N` を送ることで Live UI が反応する。
 
 ### How It Works
 
@@ -166,14 +217,11 @@ Triggering a LOM method (like firing a clip) from a UI button requires convertin
 
 ### The Pattern
 
-```
-live.text @mode 0       ← button mode (momentary)
-  ↓ (bang on press)
-t fire                  ← convert bang to method name symbol
-  ↓
-prepend call            ← create "call fire" message
-  ↓
-live.object             ← executes the method on the target object
+```mermaid
+flowchart TD
+  lt["live.text @mode 0<br/>(button mode, momentary)"] -- "bang on press" --> tfire["t fire"]
+  tfire -- "symbol 'fire'" --> prep["prepend call"]
+  prep -- "'call fire'" --> lo["live.object<br/>(executes method on target)"]
 ```
 
 ### live.text Attributes

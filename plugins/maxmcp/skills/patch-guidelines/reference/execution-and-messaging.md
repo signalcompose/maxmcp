@@ -2,6 +2,85 @@
 
 Max の実行モデル（hot/cold inlet）と、安全なメッセージ出力パターン。
 
+## 🔴 必読: 適用漏れ防止のためのアンチパターン（message ボックス禁止系）
+
+以下は Claude が頻繁に犯す誤実装。**`add_max_object obj_type="message"` を使う前に、必ず以下のディシジョンツリーで判定する**。
+
+### Decision Tree: 固定値を出力したい時、何を使うか
+
+```mermaid
+flowchart TD
+  q["出力したい内容は?"] --> a1["単一の固定値<br/>(例: 1, 0, 'clear', 'bang')"]
+  q --> a2["プレフィックス付き固定メッセージ<br/>(例: 'id 0', 'set value 0.85')"]
+  q --> a3["共通プレフィックスを持つ<br/>複数の固定メッセージ<br/>(例: 'get min', 'get max', 'get name')"]
+  q --> a4["複数引数の固定メッセージ<br/>(例: 'property selected_parameter')"]
+  q --> a5["リスト構築 (動的引数)"]
+  q --> a6["動的に変わるテキスト/メッセージ<br/>(ユーザー入力等)"]
+
+  a1 --> s1["t &lt;値&gt;<br/>(例: t 1, t 0, t clear)"]
+  a2 --> s2["prepend &lt;prefix&gt; + 上流から値 / bang<br/>(例: prepend id, prepend set value)"]
+  a3 --> s3["t b b b → 各サブ t (キーワード)<br/>→ 共通 prepend (prefix)<br/>※ Multiple Commands with Shared Prefix 参照"]
+  a4 --> s4["zl.reg &lt;値1&gt; &lt;値2&gt; …<br/>(引数で初期値保持、bang で出力)"]
+  a5 --> s5["pack / pak<br/>※ Building Specific Lists 参照"]
+  a6 --> s6["message ボックス可<br/>(ただし右 inlet に注意)"]
+```
+
+### ❌ Anti-pattern 1: 固定値を message ボックスで出力
+
+```
+message "property selected_parameter" → live.observer  // ← 禁止
+message "id 0" → live.observer                          // ← 禁止
+message "0" → live.numbox                                // ← 禁止
+```
+
+**症状**: 編集中にクリックして誤発火、右 inlet 経由で値が上書きされる、パッチコードを引っ掛けて意図しない発火。
+
+**正解（上記の例の置換）**:
+
+| ❌ message | ✅ 正解 |
+|---|---|
+| `message "0"` | `t 0` |
+| `message "1"` | `t 1` |
+| `message "id 0"` | bang → `prepend id` (0 を bang から prepend で構築) または `zl.reg id 0` |
+| `message "property selected_parameter"` | `zl.reg property selected_parameter` |
+| `message "set value 0.85"` (固定値) | `t 0.85 → prepend set value` |
+| `message "set value $1"` (動的値) | `prepend set value`（上流から $1 を流す）|
+
+### ❌ Anti-pattern 2: 共通 prefix の固定メッセージを複製
+
+```
+message "get min" ----\
+message "get max" ----+--- live.object        (prefix "get" を 3 回複製)
+message "get name" ---/
+```
+
+**症状**: prefix を変更したい時に複数箇所修正が必要、メッセージ数が増えるとレイアウトが崩れる。
+
+**正解**: trigger + 共通 prepend パターン (本ファイル「Multiple Commands with Shared Prefix」参照)
+
+```mermaid
+flowchart TD
+  bang["bang"] --> tbbb["t b b b"]
+  tbbb -- "out 2 (b, fires first)" --> tn["t name"]
+  tbbb -- "out 1 (b, fires second)" --> tmx["t max"]
+  tbbb -- "out 0 (b, fires third)" --> tmn["t min"]
+  tn -- "'name'" --> prep["prepend get"]
+  tmx -- "'max'" --> prep
+  tmn -- "'min'" --> prep
+  prep -- "'get name' / 'get max' / 'get min'" --> lo["live.object"]
+```
+
+### ❌ Anti-pattern 3: live.observer の有効化を message で書く
+
+```
+sel 1 outlet 0 → message "property selected_parameter" → live.observer
+                                                          // ← message 禁止
+```
+
+**正解**: lom-observer-patterns.md の正規パターン (`t b b → zl.reg property selected_parameter` + `t b b → zl.reg path live_set view → live.path`)。
+
+---
+
 ## Hot Inlet / Cold Inlet
 
 The fundamental execution model of Max objects. Understanding this convention is essential for correct patch design.
@@ -33,11 +112,11 @@ The stored cold-inlet value is used the next time the hot inlet triggers.
 
 `trigger` (t) sends outputs from the rightmost outlet first, proceeding left. This is not arbitrary — it is designed to work with the hot/cold inlet convention:
 
-```
-t b -1
-│    │
-│    └→ + (right inlet = cold: stores -1, no output)
-└───→ int (left inlet = hot: triggers output through +)
+```mermaid
+flowchart TD
+  t["t b -1"] -- "out 1 (-1, fires first)<br/>→ in 1 (cold, stores -1)" --> add["+"]
+  t -- "out 0 (b, fires second)<br/>→ in 0 (hot, triggers output)" --> i["int"]
+  i -- "stored value<br/>→ in 0 (hot)" --> add
 ```
 
 1. Right outlet fires first → value reaches downstream cold inlets (stored, no output)
@@ -90,9 +169,9 @@ Many Max objects that store values are vulnerable to accidental modification:
 
 ```
 trigger i 440 f 0.5 b
-         │     │    └── bang
-         │     └── float 0.5 (always)
-         └── int 440 (always)
+         |     |    \-- bang
+         |     \-- float 0.5 (always)
+         \-- int 440 (always)
 ```
 
 **Why trigger is safe**:
@@ -105,11 +184,11 @@ trigger i 440 f 0.5 b
 **Usage pattern**:
 ```
 bang / any message
-  ↓
+  |
 trigger 440 0.5 b
-  │      │    └── to envelope (bang)
-  │      └── to gain (*~) (0.5)
-  └── to oscillator (cycle~) (440)
+  |      |    \-- to envelope (bang)
+  |      \-- to gain (*~) (0.5)
+  \-- to oscillator (cycle~) (440)
 ```
 
 **Type specifiers**: `i` (int), `f` (float), `b` (bang), `l` (list), `s` (symbol), or literal values.
@@ -136,14 +215,15 @@ t clear     → always outputs "clear"
 
 When generating multiple commands with the same prefix (e.g., `get min`, `get max`, `get name`), use `trigger` to output keywords and a shared `prepend` to add the prefix:
 
-```
-t b b b
-  ↓       ↓       ↓
-t name  t max   t min
-  ↓       ↓       ↓
-  └── prepend get ─┘
-          ↓
-    (output: get name / get max / get min)
+```mermaid
+flowchart TD
+  tbbb["t b b b"] -- "out 2 (b, fires first)" --> tn["t name"]
+  tbbb -- "out 1 (b, fires second)" --> tmx["t max"]
+  tbbb -- "out 0 (b, fires third)" --> tmn["t min"]
+  tn --> prep["prepend get"]
+  tmx --> prep
+  tmn --> prep
+  prep --> out["output:<br/>'get name' / 'get max' / 'get min'"]
 ```
 
 **Benefits**:
@@ -155,12 +235,10 @@ t name  t max   t min
 
 To set an object's value without triggering output (equivalent to `set $1`), use `prepend set`:
 
-```
-incoming value
-  ↓
-prepend set
-  ↓
-number / flonum / message    → value is set, no output triggered
+```mermaid
+flowchart TD
+  inc["incoming value"] --> prep["prepend set"]
+  prep -- "'set V'" --> dst["number / flonum / message<br/>(value is set, no output triggered)"]
 ```
 
 This is safer and more readable than using `message` with `set $1`.
@@ -169,24 +247,21 @@ This is safer and more readable than using `message` with `set $1`.
 
 To add a value at the end of a message or list:
 
-```
-incoming value
-  ↓
-append hz
-  ↓
-→ "440 hz"
+```mermaid
+flowchart TD
+  inc["incoming value (e.g. 440)"] --> ap["append hz"]
+  ap --> out["'440 hz'"]
 ```
 
 ### List Storage: zl.reg
 
 To store and recall a list, use `zl.reg`:
 
-```
-list input
-  ↓
-zl.reg
-  ↓ (bang to recall)
-stored list output
+```mermaid
+flowchart TD
+  in_["list input"] --> zr["zl.reg"]
+  bang["bang (to recall)"] --> zr
+  zr --> out["stored list output"]
 ```
 
 **Why not message or coll?** `zl.reg` is purpose-built for list storage — no click risk, no file overhead.
@@ -197,9 +272,9 @@ To construct a specific list from individual values:
 
 ```
 pack 0 0. symbol
-  │   │    └── symbol inlet
-  │   └── float inlet
-  └── int inlet (triggers output)
+  |   |    \-- symbol inlet
+  |   \-- float inlet
+  \-- int inlet (triggers output)
 ```
 
 `pack` outputs the list when the leftmost inlet receives a value. Use `pak` if any inlet should trigger output.

@@ -2,6 +2,53 @@
 
 Guidelines for arranging UI objects in presentation mode, where the goal shifts from patching clarity to user operability.
 
+## 🔴 必読: アンチパターン
+
+以下は presentation_rect 設計時に頻発する誤実装。**presentation 設定を行う前に必ず確認**。
+
+### ❌ Anti-pattern 1: presentation_rect を patching_rect とほぼ同じ寸法にする
+
+```
+patching_rect:      [60, 700, 50, 18]   // 接続用に最小幅
+presentation_rect:  [10, 80, 50, 18]    // ← 同じ幅 50px のまま放置
+```
+
+**症状**: ユーザーが numbox を操作する時にドラッグできる幅が狭くて使いにくい。Live のデバイス UI として未完成に見える。
+
+**正解**: UI 要素は presentation 用に**幅を拡張**する:
+
+```
+patching_rect:      [60, 700, 50, 18]    // パッチング用は 50px
+presentation_rect:  [40, 80, 130, 18]    // ← UI 用は 130px（2-3 倍に拡張）
+```
+
+ドラッグ操作する live.numbox / live.slider は特に幅を広げる。クリックする live.text / live.button は元の幅で良い。
+
+### ❌ Anti-pattern 2: 処理ロジックを presentation に含める
+
+```
+set_object_attribute(varname="trigger_capture", attribute="presentation", value=1)
+// ↑ trigger / pak / route / prepend は presentation に含めない
+```
+
+**症状**: ユーザーから見える UI に内部処理オブジェクトが表示されてしまう。デバイスが未完成・デバッグ中の見た目になる。
+
+**正解**: presentation に**含めるべき**は以下のみ:
+- ユーザー操作: `live.dial`, `live.numbox`, `live.slider`, `live.text`, `live.button`
+- 値表示: 読み取り専用 `live.numbox`, `live.meter~`, `multislider`, `textedit`
+- レイアウト: `panel`, `live.comment`（ラベル）
+- ブランディング: `fpic`（ロゴ）, `textbutton`（情報ボタン）
+
+**含めない**: `trigger`, `t`, `pak`, `pack`, `prepend`, `route`, `zl.*`, `send`, `receive`, `live.path`, `live.object`, `live.observer`, `live.thisdevice`, `pattr`, `comment`（開発者用ノート）
+
+典型的なデバイスでは presentation に含まれるオブジェクト数は**全体の 10-15%**。それ以上含まれている場合、内部処理が混入していないか確認。
+
+### ❌ Anti-pattern 3: presentation_rect の y 座標が patching_rect と連動
+
+`presentation_rect` は `patching_rect` から**完全に独立**。patching でレイアウトを変更しても presentation は影響を受けない（逆も同様）。**この独立性を活かして、patching は信号フロー優先、presentation はユーザー操作優先で別々に設計する**。
+
+---
+
 ## Dual-Mode Design Principle
 
 Every UI object in a Max patch exists in two layouts simultaneously:

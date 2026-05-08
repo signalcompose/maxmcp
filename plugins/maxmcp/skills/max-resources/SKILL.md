@@ -30,24 +30,24 @@ All resources are located within Max.app:
 
 ```
 /Applications/Max.app/Contents/Resources/
-├── C74/docs/refpages/           # Object references (XML)
-│   ├── max-ref/                 # Max objects (~300)
-│   ├── msp-ref/                 # MSP/audio objects (~200)
-│   ├── jit-ref/                 # Jitter/video objects (~400)
-│   ├── m4l-ref/                 # Max for Live (~50)
-│   └── gen-ref/                 # Gen objects (~100)
-├── C74/docs/userguide/          # User guides
-│   ├── content/                 # Guide content (JSON)
-│   └── userguide_search.sqlite  # Full-text search database
-├── C74/snippets/                # Code snippets (.maxsnip)
-│   ├── max/
-│   ├── msp/
-│   └── jitter/
-└── Examples/                    # Example patches (.maxpat)
-    ├── effects/
-    ├── synths/
-    ├── sequencing/
-    └── jitter-examples/
++-- C74/docs/refpages/           # Object references (XML)
+|   +-- max-ref/                 # Max objects (~300)
+|   +-- msp-ref/                 # MSP/audio objects (~200)
+|   +-- jit-ref/                 # Jitter/video objects (~400)
+|   +-- m4l-ref/                 # Max for Live (~50)
+|   \-- gen-ref/                 # Gen objects (~100)
++-- C74/docs/userguide/          # User guides
+|   +-- content/                 # Guide content (JSON)
+|   \-- userguide_search.sqlite  # Full-text search database
++-- C74/snippets/                # Code snippets (.maxsnip)
+|   +-- max/
+|   +-- msp/
+|   \-- jitter/
+\-- Examples/                    # Example patches (.maxpat)
+    +-- effects/
+    +-- synths/
+    +-- sequencing/
+    \-- jitter-examples/
 ```
 
 ## Search Methods Using Claude Code Tools

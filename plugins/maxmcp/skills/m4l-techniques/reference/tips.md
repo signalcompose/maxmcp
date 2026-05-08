@@ -29,14 +29,11 @@ exponent = log(target_value) / log(0.5)
 
 ### Implementation in Max
 
-```
-live.slider (0.0 - 1.0)
-  ↓
-pow 0.234            → power curve for track volume
-  ↓
-prepend set value
-  ↓
-live.object          → track volume parameter
+```mermaid
+flowchart TD
+  ls["live.slider (0.0 - 1.0)"] -- "linear value" --> pow["pow 0.234"]
+  pow -- "power curve" --> prep["prepend set value"]
+  prep -- "'set value V'" --> lo["live.object<br/>(track volume parameter)"]
 ```
 
 ### Limitation
@@ -125,15 +122,12 @@ Some M4L devices need to resolve LOM paths and set up observers at startup. Howe
 
 ### The Pattern
 
-```
-live.thisdevice
-  ↓ (bang on device load)
-t b b
-│   │
-│   └→ s ---lb1              ← immediate init broadcast
-└───→ delay 100
-        ↓
-        s ---lb2             ← delayed init broadcast
+```mermaid
+flowchart TD
+  ltd["live.thisdevice"] -- "bang (on device load)" --> tbb["t b b"]
+  tbb -- "out 1 (fires first)" --> s_lb1["s ---lb1<br/>(immediate init broadcast)"]
+  tbb -- "out 0 (fires second)" --> delay["delay 100"]
+  delay -- "100ms 後" --> s_lb2["s ---lb2<br/>(delayed init broadcast)"]
 ```
 
 ### How It Works
@@ -149,14 +143,15 @@ The `---` prefix is an M4L device-unique namespace. Each device instance gets it
 
 ### Receiver Side Examples
 
-```
-r ---lb1                     r ---lb2
-  ↓                            ↓
-pack path live_set view      pack path live_set
-  ↓                            ↓
-live.path                    live.path
-  ↓                            ↓
-(resolve view for UI)        (resolve live_set for observer setup)
+```mermaid
+flowchart TD
+  rlb1["r ---lb1<br/>(immediate init)"] -- "bang" --> packv["pack path live_set view"]
+  packv -- "'path live_set view'" --> lpv["live.path"]
+  lpv -. "resolve view for UI" .-> ui["UI 設定"]
+
+  rlb2["r ---lb2<br/>(delayed init)"] -- "bang" --> packs["pack path live_set"]
+  packs -- "'path live_set'" --> lps["live.path"]
+  lps -. "resolve live_set for observer setup" .-> obs["observer 起動"]
 ```
 
 ### When to Use

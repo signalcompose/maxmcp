@@ -26,10 +26,10 @@ Prefer: pattr param_name outlet 1 → textedit inlet 0  ← visible patchcord
 
 ```
 pattrstorage mypresets
-  │
-  ├── pattr pitch        → stored as "mypresets::pitch"
-  ├── pattr volume       → stored as "mypresets::volume"
-  └── pattr filter_freq  → stored as "mypresets::filter_freq"
+  |
+  +-- pattr pitch        (stored as "mypresets::pitch")
+  +-- pattr volume       (stored as "mypresets::volume")
+  \-- pattr filter_freq  (stored as "mypresets::filter_freq")
 ```
 
 **Key messages**:
@@ -144,16 +144,14 @@ In hierarchical patches (top-level → subpatchers → poly~ voices), parameters
 
 ### The Pattern
 
+```mermaid
+flowchart TD
+  read["pattr @invisible 1<br/>@bindto sub_synth::comp_threshold<br/>(read: monitors value)"] -- "value 変更通知" --> prep["prepend set"]
+  prep -- "'set V'" --> nbox["number<br/>(displays current value)"]
+  nbox -- "ユーザーが値変更" --> write["pattr @invisible 1<br/>@bindto sub_synth::comp_threshold<br/>(write: sends changes back)"]
 ```
-// Top-level patch — "Remote UI" section
-pattr @invisible 1 @bindto sub_synth::comp_threshold   ← read: monitors value
-  ↓
-prepend set
-  ↓
-number                                                   ← displays current value
-  ↓
-pattr @invisible 1 @bindto sub_synth::comp_threshold   ← write: sends changes back
-```
+
+> Top-level patch の "Remote UI" セクション。同じ `@bindto` を持つ 2 つの pattr で双方向同期を実現。
 
 ### How It Works
 
@@ -205,10 +203,10 @@ When Remote UI pattr bridges and `@greedy 1` are used together, a single `pattrs
 
 ```
 pattrstorage myApp @greedy 1
-  ├── captures: Remote UI pattr → sub_synth::gain
-  ├── captures: Remote UI pattr → sub_synth::comp_threshold
-  ├── captures: Remote UI pattr → sub_fx::delay_time
-  └── ... (all parameters across all subpatchers)
+  +-- captures: Remote UI pattr   (sub_synth::gain)
+  +-- captures: Remote UI pattr   (sub_synth::comp_threshold)
+  +-- captures: Remote UI pattr   (sub_fx::delay_time)
+  \-- ... (all parameters across all subpatchers)
 ```
 
 **Result**: `store 1` saves everything, `recall 1` restores everything — the entire application state in one preset operation.
@@ -231,13 +229,13 @@ pattrstorage myApp @greedy 1
 When managing many parameters with `pattrstorage`, organize `pattr` groups in a column grid:
 
 ```
-Column 1 (x≈1607)    Column 2 (x≈1973)    Column 3 (x≈2348)    Column 4 (x≈2685)
-──────────────────    ──────────────────    ──────────────────    ──────────────────
+Column 1 (x~=1607)    Column 2 (x~=1973)    Column 3 (x~=2348)    Column 4 (x~=2685)
+------------------    ------------------    ------------------    ------------------
   pattr (binding)       pattr (binding)       pattr (binding)       pattr (binding)
   prepend "set"         prepend "set"         prepend "set"         prepend "set"
   number (UI)           number (UI)           number (UI)           number (UI)
   comment (label)       comment (label)       comment (label)       comment (label)
-  ↓                     ↓                     ↓                     ↓
+  |                     |                     |                     |
   pattr (binding)       pattr (binding)       pattr (binding)       pattr (binding)
   ...                   ...                   ...                   ...
 ```

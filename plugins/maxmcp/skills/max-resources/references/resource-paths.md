@@ -23,33 +23,33 @@
 
 ```
 /Applications/Max.app/Contents/Resources/
-├── C74/
-│   ├── docs/
-│   │   ├── refpages/                    # Object reference pages
-│   │   │   ├── max-ref/                 # Max objects (~300 files)
-│   │   │   ├── msp-ref/                 # MSP objects (~200 files)
-│   │   │   ├── jit-ref/                 # Jitter objects (~400 files)
-│   │   │   ├── m4l-ref/                 # Max for Live (~50 files)
-│   │   │   └── gen-ref/                 # Gen objects (~100 files)
-│   │   ├── userguide/
-│   │   │   ├── content/                 # Guide content (JSON)
-│   │   │   ├── navigation.json          # Topic hierarchy
-│   │   │   ├── maxtopics.json           # Topic mapping
-│   │   │   └── userguide_search.sqlite  # FTS database
-│   │   └── unibrowser/search/
-│   │       └── c74search.server.js      # Internal search API
-│   ├── snippets/                        # Code snippets
-│   │   ├── max/                         # Max snippets
-│   │   ├── msp/                         # MSP snippets
-│   │   ├── jitter/                      # Jitter snippets
-│   │   └── ...
-│   └── init/                            # Startup scripts
-└── Examples/                            # Example patches
-    ├── effects/
-    ├── synths/
-    ├── sequencing/
-    ├── jitter-examples/
-    └── ...
++-- C74/
+|   +-- docs/
+|   |   +-- refpages/                    # Object reference pages
+|   |   |   +-- max-ref/                 # Max objects (~300 files)
+|   |   |   +-- msp-ref/                 # MSP objects (~200 files)
+|   |   |   +-- jit-ref/                 # Jitter objects (~400 files)
+|   |   |   +-- m4l-ref/                 # Max for Live (~50 files)
+|   |   |   \-- gen-ref/                 # Gen objects (~100 files)
+|   |   +-- userguide/
+|   |   |   +-- content/                 # Guide content (JSON)
+|   |   |   +-- navigation.json          # Topic hierarchy
+|   |   |   +-- maxtopics.json           # Topic mapping
+|   |   |   \-- userguide_search.sqlite  # FTS database
+|   |   \-- unibrowser/search/
+|   |       \-- c74search.server.js      # Internal search API
+|   +-- snippets/                        # Code snippets
+|   |   +-- max/                         # Max snippets
+|   |   +-- msp/                         # MSP snippets
+|   |   +-- jitter/                      # Jitter snippets
+|   |   \-- ...
+|   \-- init/                            # Startup scripts
+\-- Examples/                            # Example patches
+    +-- effects/
+    +-- synths/
+    +-- sequencing/
+    +-- jitter-examples/
+    \-- ...
 ```
 
 ## Alternative Path Discovery

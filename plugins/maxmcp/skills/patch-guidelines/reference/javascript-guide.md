@@ -308,13 +308,13 @@ function safeProcess(input) {
 
 ```
 MyProject/
-├── MyPatch.maxpat
-└── code/
-    ├── main.js           # Main processing script
-    ├── utils.js          # Utility functions
-    ├── midi-processor.js # MIDI-specific code
-    └── data/
-        └── presets.json  # Data files
++-- MyPatch.maxpat
+\-- code/
+    +-- main.js           # Main processing script
+    +-- utils.js          # Utility functions
+    +-- midi-processor.js # MIDI-specific code
+    \-- data/
+        \-- presets.json  # Data files
 ```
 
 ### Loading External Scripts
