@@ -95,26 +95,26 @@ For objects with arguments, estimate width:
 ### Standard Patch Layout
 
 ```
-┌─────────────────────────────────────────┐
-│  INPUTS & PARAMETERS (y: 50-150)        │
-│  ├── Audio inputs (adc~)                │
-│  ├── MIDI inputs (midiin)               │
-│  └── User controls (sliders, dials)     │
-├─────────────────────────────────────────┤
-│  PROCESSING (y: 200-400)                │
-│  ├── Signal processing                  │
-│  ├── MIDI processing                    │
-│  └── Logic/routing                      │
-├─────────────────────────────────────────┤
-│  MODULATION & CONTROL (y: 450-550)      │
-│  ├── LFOs, envelopes                    │
-│  └── Automation                         │
-├─────────────────────────────────────────┤
-│  OUTPUTS (y: 600-700)                   │
-│  ├── Audio outputs (dac~)               │
-│  ├── MIDI outputs (midiout)             │
-│  └── Displays (scope~, meter~)          │
-└─────────────────────────────────────────┘
++-----------------------------------------+
+|  INPUTS & PARAMETERS (y: 50-150)        |
+|  +-- Audio inputs (adc~)                |
+|  +-- MIDI inputs (midiin)               |
+|  \-- User controls (sliders, dials)     |
++-----------------------------------------+
+|  PROCESSING (y: 200-400)                |
+|  +-- Signal processing                  |
+|  +-- MIDI processing                    |
+|  \-- Logic/routing                      |
++-----------------------------------------+
+|  MODULATION & CONTROL (y: 450-550)      |
+|  +-- LFOs, envelopes                    |
+|  \-- Automation                         |
++-----------------------------------------+
+|  OUTPUTS (y: 600-700)                   |
+|  +-- Audio outputs (dac~)               |
+|  +-- MIDI outputs (midiout)             |
+|  \-- Displays (scope~, meter~)          |
++-----------------------------------------+
 ```
 
 ## Main Flow Alignment
@@ -128,12 +128,12 @@ Every patch has a **primary processing chain** — the path with the most proces
 **Example — Float addition patch**:
 ```
 input_left (x=272)    input_right (x=325)
-                           │
-                      trig_right (x=325)    ← trigger splits into bang + float
-                        │       │
-                        ↓       ↓
-          input_left ─→ + 0. (x=325)        ← input_left connects diagonally
-                           │
+                           |
+                      trig_right (x=325)         (trigger splits into bang + float)
+                         |        |
+                         |        |
+          input_left --- + 0. (x=325)            (input_left connects diagonally)
+                           |
                         result (x=325)
 ```
 
@@ -170,9 +170,9 @@ The most readable patches keep patchcords as **vertical straight lines**. Achiev
 **Example**:
 ```
 live.button (x=18)     trigger (x=18)
-  outlet (x=27.5)       inlet (x=27.5)   ← same X = straight line
-       │
-       ↓  (vertical, no midpoints needed)
+  outlet (x=27.5)       inlet (x=27.5)        (same X = straight line)
+       |
+       |   (vertical, no midpoints needed)
 ```
 
 **Rule**: Before adding midpoints, first try repositioning objects so that outlet and inlet share the same X coordinate.
@@ -185,8 +185,8 @@ When two objects have multiple inlets/outlets connected (e.g., `filtercoeff~` �
 
 ```
 filtercoeff~  (width adjusted to align rightmost outlet with biquad~'s rightmost inlet)
-  │  │  │  │  │
-  ↓  ↓  ↓  ↓  ↓   ← all vertical straight lines
+  |  |  |  |  |
+  |  |  |  |  |    (all vertical straight lines)
 biquad~
 ```
 
@@ -199,8 +199,8 @@ When objects in the main flow chain have different default widths, adjust their 
 Before (default widths):          After (matched widths):
 
   t b f (w=30)                      t b f (w=56)
-   │  ╲                              │    │
-   ↓    ╲  ← diagonal               ↓    ↓  ← both vertical
+   |  \                              |    |
+   |   \   (diagonal)                |    |    (both vertical)
   + 0. (w=30)                       + 0. (w=56)
 ```
 
@@ -211,11 +211,12 @@ Before (default widths):          After (matched widths):
 When a vertical patchcord between two objects (e.g., `trigger` → `*`) passes through an intermediate object that is wider, expand the source and destination widths so the patchcord runs **outside** the intermediate object's right edge.
 
 ```
-t b i (width=170) — outlet 1 at x=516.5
-  ↓ vertical line (x=516.5)
-  ↓ zl.reg get canonical_parent (width=155, right edge x=511) — passes outside
-  ↓
-* 0 (width=170) — inlet 1 at x=516.5
+t b i (width=170)                                  (outlet 1 at x=516.5)
+  |
+  |   vertical line (x=516.5)
+  |   zl.reg get canonical_parent                  (width=155, right edge x=511 — passes outside)
+  |
+* 0 (width=170)                                    (inlet 1 at x=516.5)
 ```
 
 - Set `t b i` and `* 0` width to 170, placing outlet/inlet 1 at x=516.5
@@ -231,10 +232,10 @@ When multiple patchcords converge or diverge, align connected objects by Y coord
 Place all source objects at the **same Y position**:
 
 ```
-  objA (y=200)    objB (y=200)    objC (y=200)   ← same Y
-    │                │                │
-    └────────────────┼────────────────┘
-                     ↓
+  objA (y=200)    objB (y=200)    objC (y=200)        (same Y)
+    |                |                |
+    \----------------+----------------/
+                     |
                   dest (y=260)
 ```
 
@@ -244,10 +245,10 @@ Place all destination objects at the **same Y position**:
 
 ```
                 source (y=200)
-                     │
-            ┌────────┼────────┐
-            ↓        ↓        ↓
-  objA (y=260)  objB (y=260)  objC (y=260)   ← same Y
+                     |
+            /--------+--------\
+            |        |        |
+  objA (y=260)  objB (y=260)  objC (y=260)             (same Y)
 ```
 
 #### Multiple Outlets → Multiple Inlets
@@ -255,13 +256,13 @@ Place all destination objects at the **same Y position**:
 Place all source objects at the **same Y** and all destination objects at the **same Y**. Use **staggered horizontal lanes** (L-shape midpoints) to separate each source's non-direct connections at distinct Y levels:
 
 ```
-  int1 (y=439)     int2 (y=439)     int3 (y=439)      ← sources: same Y
-    │                 │                 │
-    │ int1 lane ──────│─────────────────│── y=476
-    │                 │ int2 lane ──────│── y=500
-    │                 │                 │ int3 lane ── y=518
-    ↓                 ↓                 ↓
-    a (y=535)    b (y=535)    c (y=535)    d (y=535)    ← dests: same Y
+  int1 (y=439)     int2 (y=439)     int3 (y=439)             (sources: same Y)
+    |                 |                 |
+    | int1 lane ------|-----------------|-- y=476
+    |                 | int2 lane ------|-- y=500
+    |                 |                 | int3 lane -- y=518
+    |                 |                 |
+    a (y=535)    b (y=535)    c (y=535)    d (y=535)         (dests: same Y)
 ```
 
 **Rules**:
@@ -286,9 +287,9 @@ When a single multi-outlet object (e.g., `route`) connects each outlet to a dedi
 
 ```
 route 0 1 2 3 4 5 6 7 8 (x=369, y=616)
-  │ │ │ │ │ │ │ │ │
-  ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓     ← 9 outlets, all vertical straight lines
-  t t t t t t t t t        ← trigger objects at same Y (y=649), ~24px spacing
+  | | | | | | | | |
+  | | | | | | | | |        (9 outlets, all vertical straight lines)
+  t t t t t t t t t        (trigger objects at same Y (y=649), ~24px spacing)
 ```
 
 **Rules**:
@@ -307,11 +308,11 @@ For redirecting a connection to an adjacent column without crossing objects:
 
 ```
 Source outlet (x=97.5, y=476)
-       │
-       ↓
-   M1 (97.5, 488) ──→ M2 (27.5, 488)
-                            │
-                            ↓
+       |
+       |
+   M1 (97.5, 488) --- M2 (27.5, 488)
+                            |
+                            |
                    Dest inlet (27.5, 520)
 ```
 
@@ -332,13 +333,13 @@ set_patchline_midpoints({
 
 ```
 adsr~ (x=46, y=496)
-  │
-  │  (long vertical run, ~900px)
-  │
-  M1 (56, 1406) ──→ M2 (656, 1406)    ← horizontal near dest
-                          │
-                          ↓
-                    times~ (x=636, y=1430)   ← 24px below horizontal
+  |
+  |   (long vertical run, ~900px)
+  |
+  M1 (56, 1406) --- M2 (656, 1406)         (horizontal near dest)
+                          |
+                          |
+                    times~ (x=636, y=1430)  (24px below horizontal)
 ```
 
 Place the horizontal segment 20-30px above the destination inlet. When multiple long-distance connections share the same destination area, align their horizontal segments at the same Y for visual consistency.
@@ -349,18 +350,18 @@ For feedback loops or long-distance return paths that must avoid crossing the ma
 
 ```
 Source outlet (x=27.5, y=984)
-       │
-       ↓
-   M1 (27.5, 1001) ──→ M2 (-1.5, 1001)
-                            │
-                            ↑  (travels upward outside patch)
-                            │
+       |
+       |
+   M1 (27.5, 1001) --- M2 (-1.5, 1001)
+                            |
+                            |   (travels upward outside patch)
+                            |
                         M3 (-1.5, 509)
-                            │
-                            ↓
-   M4 (49.5, 509)  ←──────┘
-       │
-       ↓
+                            |
+                            |
+   M4 (49.5, 509) ---------/
+       |
+       |
    Dest inlet (49.5, 520)
 ```
 
@@ -395,10 +396,12 @@ In production patches (365+ objects), ~19% of straight connections are diagonal 
 **Exception — Fan-In Convergence**: When many sources at the same Y converge to a single destination, diagonal lines are acceptable even with large dx (up to ~280px). The visual funnel pattern is immediately readable, and adding midpoints to each line would clutter the patch.
 
 ```
-t(x=369) t(x=393) t(x=417) ... t(x=561)   ← same Y
-  \         \         \            /
-   \         \         \          /
-    ─────────────→ - (x=646)              ← single destination
+t(x=369)  t(x=393)  t(x=417)  ...  t(x=561)        (same Y)
+    \         \         \             /
+     \         \         \           /
+      +---------+---------+--- ... -+
+                       |
+                   - (x=646)                       (single destination)
 ```
 
 ### Routing Decision Flowchart
@@ -518,15 +521,15 @@ For parallel signal paths, use column layout:
 
 ```
 Col 1 (x=50)     Col 2 (x=170)    Col 3 (x=290)
-─────────────    ─────────────    ─────────────
+-------------    -------------    -------------
   cycle~           noise~           saw~
-    │                │                │
+    |                |                |
    *~ 0.3          *~ 0.2           *~ 0.5
-    │                │                │
-    └────────────────┼────────────────┘
-                     │
+    |                |                |
+    \----------------+----------------/
+                     |
                    +~ +~
-                     │
+                     |
                    dac~
 ```
 
@@ -535,11 +538,11 @@ Col 1 (x=50)     Col 2 (x=170)    Col 3 (x=290)
 Keep control logic separate from signal path. In subpatchers, separate **control/message** columns (left) from **audio signal** columns (right):
 
 ```
-Left Column (x≈50)          Right Column (x≈600+)
-───────────────────         ──────────────────────
+Left Column (x~=50)         Right Column (x~=600+)
+-------------------         ----------------------
 in, zl, trigger             receive, int, trigger
 unpack, route               wave~, line~, pack
-adsr~, thispoly~            times~ × 2, out~ × 2
+adsr~, thispoly~            times~ x 2, out~ x 2
 ```
 
 Cross-column connections (control → audio) use **L-shape midpoints** to keep the layout clean.
@@ -549,14 +552,14 @@ Cross-column connections (control → audio) use **L-shape midpoints** to keep t
 Duplicate identical processing chains for L/R channels with consistent horizontal offset (~200px):
 
 ```
-Left channel (x≈636)    Right channel (x≈836)
-────────────────────    ─────────────────────
+Left channel (x~=636)   Right channel (x~=836)
+---------------------   ----------------------
 trigger                 trigger
-  ↓                       ↓
+  |                       |
 < (compare)             < (compare)
-  ↓                       ↓
+  |                       |
 select                  select
-  ↓                       ↓
+  |                       |
 int                     int
 ```
 

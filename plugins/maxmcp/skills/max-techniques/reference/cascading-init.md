@@ -76,14 +76,14 @@ When building the cascade chain in a patch, use a staircase layout where each `d
 
 ```
 loadbang (x=1850, y=2264)
-  ↓
-delay → trigger (x=1850, y=2296)
-  ├─→ send (long vertical, y≈3189)    ← init message 1
-  ├─→ textbutton (nearby)             ← visual indicator
-  └─→ next delay (x=1905, y=2351)     ← +55px right, +54px down
-       ├─→ send (y≈3142)              ← init message 2
-       └─→ next delay (x=1953, y=2406)
-            └─→ ... (continues for N stages)
+  |
+delay --- trigger (x=1850, y=2296)
+  +-- send (long vertical, y~=3189)         (init message 1)
+  +-- textbutton (nearby)                   (visual indicator)
+  \-- next delay (x=1905, y=2351)           (+55px right, +54px down)
+        +-- send (y~=3142)                  (init message 2)
+        \-- next delay (x=1953, y=2406)
+              \-- ... (continues for N stages)
 ```
 
 **Layout rules**:

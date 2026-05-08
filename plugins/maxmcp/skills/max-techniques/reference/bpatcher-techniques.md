@@ -31,8 +31,8 @@ receive #1_volume    → matches the same channel
 
 ```
 Parent bpatcher (arg: "main")
-  └── Child bpatcher (arg: "#1_sub")    → becomes "main_sub"
-       └── send #1_data                 → becomes "main_sub_data"
+  \-- Child bpatcher (arg: "#1_sub")    (becomes "main_sub")
+        \-- send #1_data                (becomes "main_sub_data")
 ```
 
 深い階層でも名前衝突なしにネーミングが可能。`poly~` / `mc.poly~` での `@args` による選択的転送・結合については [Argument Forwarding with Transformation](poly-techniques.md#argument-forwarding-with-transformation) を参照。

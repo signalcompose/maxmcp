@@ -49,9 +49,9 @@ message "0" → live.numbox                                // ← 禁止
 ### ❌ Anti-pattern 2: 共通 prefix の固定メッセージを複製
 
 ```
-message "get min" ──┐
-message "get max" ──┼─→ live.object   // ← prefix "get" を3回複製
-message "get name" ─┘
+message "get min" ----\
+message "get max" ----+--- live.object        (prefix "get" を 3 回複製)
+message "get name" ---/
 ```
 
 **症状**: prefix を変更したい時に複数箇所修正が必要、メッセージ数が増えるとレイアウトが崩れる。
@@ -169,9 +169,9 @@ Many Max objects that store values are vulnerable to accidental modification:
 
 ```
 trigger i 440 f 0.5 b
-         │     │    └── bang
-         │     └── float 0.5 (always)
-         └── int 440 (always)
+         |     |    \-- bang
+         |     \-- float 0.5 (always)
+         \-- int 440 (always)
 ```
 
 **Why trigger is safe**:
@@ -184,11 +184,11 @@ trigger i 440 f 0.5 b
 **Usage pattern**:
 ```
 bang / any message
-  ↓
+  |
 trigger 440 0.5 b
-  │      │    └── to envelope (bang)
-  │      └── to gain (*~) (0.5)
-  └── to oscillator (cycle~) (440)
+  |      |    \-- to envelope (bang)
+  |      \-- to gain (*~) (0.5)
+  \-- to oscillator (cycle~) (440)
 ```
 
 **Type specifiers**: `i` (int), `f` (float), `b` (bang), `l` (list), `s` (symbol), or literal values.
@@ -272,9 +272,9 @@ To construct a specific list from individual values:
 
 ```
 pack 0 0. symbol
-  │   │    └── symbol inlet
-  │   └── float inlet
-  └── int inlet (triggers output)
+  |   |    \-- symbol inlet
+  |   \-- float inlet
+  \-- int inlet (triggers output)
 ```
 
 `pack` outputs the list when the leftmost inlet receives a value. Use `pak` if any inlet should trigger output.

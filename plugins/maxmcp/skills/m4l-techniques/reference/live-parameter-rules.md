@@ -145,7 +145,7 @@ flowchart TD
 
 ```
 Live Set (.als)
-  └→ 各パラメータを直接保存（live.* は自動、pattr は parameter_enable=1）
+  \-- 各パラメータを直接保存 (live.* は自動、pattr は parameter_enable=1)
 ```
 
 - live.dial / live.numbox / live.text → Live が自動保存
@@ -158,8 +158,8 @@ Live Set (.als)
 
 ```
 Live Set (.als)
-  └→ pattrstorage の状態を保存（現在のプリセット番号、各プリセットの内容）
-       └→ pattrstorage が各 pattr / autopattr の値を管理
+  \-- pattrstorage の状態を保存 (現在のプリセット番号、各プリセットの内容)
+        \-- pattrstorage が各 pattr / autopattr の値を管理
 ```
 
 - pattrstorage (greedy) + autopattr で全パラメータを管理

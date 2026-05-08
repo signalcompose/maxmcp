@@ -443,10 +443,10 @@ Consolidate audio I/O to a single location in the patch:
 
 ```
 [all signal processing]
-  ├── L channel
-  └── R channel
-        ↓
-      dac~ 1 2    ← single dac~ at the bottom of the output section
+  +-- L channel
+  \-- R channel
+        |
+      dac~ 1 2                  (single dac~ at the bottom of the output section)
 ```
 
 If multiple sections need independent audio output control, route all signals to one `dac~` via `send~`/`receive~` rather than placing separate `dac~` objects in each section.
