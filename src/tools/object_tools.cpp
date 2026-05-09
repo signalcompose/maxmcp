@@ -291,6 +291,20 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
     VALIDATE_DEFERRED_ARGS("get_objects_deferred");
     EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_objects_data, data, argv);
 
+    // Helpers populating field groups. Each mode picks the helpers it needs.
+    auto add_identity_fields = [](json& obj, t_object* box, int index) {
+        obj["index"] = index;
+        t_symbol* maxclass = jbox_get_maxclass(box);
+        obj["maxclass"] = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
+        obj["text"] = PatchHelpers::get_box_text(box);
+    };
+    auto add_geometry_fields = [](json& obj, t_object* box) {
+        t_rect rect;
+        jbox_get_patching_rect(box, &rect);
+        obj["position"] = json::array({rect.x, rect.y});
+        obj["size"] = json::array({rect.width, rect.height});
+    };
+
     json objects = json::array();
     t_object* patcher = data->patch->patcher;
     int index = 0;
@@ -300,49 +314,21 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         std::string varname_str = (varname && varname->s_name) ? varname->s_name : "";
 
         json obj_info = json::object();
+        if (!varname_str.empty()) {
+            obj_info["varname"] = varname_str;
+        }
 
         switch (data->mode) {
-        case GetObjectsMode::Default: {
-            t_symbol* maxclass = jbox_get_maxclass(box);
-            std::string maxclass_str =
-                (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
-            t_rect rect;
-            jbox_get_patching_rect(box, &rect);
-
-            obj_info["index"] = index;
-            if (!varname_str.empty()) {
-                obj_info["varname"] = varname_str;
-            }
-            obj_info["maxclass"] = maxclass_str;
-            obj_info["text"] = PatchHelpers::get_box_text(box);
-            obj_info["position"] = json::array({rect.x, rect.y});
-            obj_info["size"] = json::array({rect.width, rect.height});
+        case GetObjectsMode::Default:
+            add_identity_fields(obj_info, box, index);
+            add_geometry_fields(obj_info, box);
             break;
-        }
-        case GetObjectsMode::Layout: {
-            t_rect rect;
-            jbox_get_patching_rect(box, &rect);
-
-            if (!varname_str.empty()) {
-                obj_info["varname"] = varname_str;
-            }
-            obj_info["position"] = json::array({rect.x, rect.y});
-            obj_info["size"] = json::array({rect.width, rect.height});
+        case GetObjectsMode::Layout:
+            add_geometry_fields(obj_info, box);
             break;
-        }
-        case GetObjectsMode::Identity: {
-            t_symbol* maxclass = jbox_get_maxclass(box);
-            std::string maxclass_str =
-                (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
-
-            obj_info["index"] = index;
-            if (!varname_str.empty()) {
-                obj_info["varname"] = varname_str;
-            }
-            obj_info["maxclass"] = maxclass_str;
-            obj_info["text"] = PatchHelpers::get_box_text(box);
+        case GetObjectsMode::Identity:
+            add_identity_fields(obj_info, box, index);
             break;
-        }
         }
 
         objects.push_back(obj_info);
