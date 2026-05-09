@@ -573,11 +573,26 @@ json get_tool_schemas() {
                     }},
                     {"arguments", {
                         {"type", "array"},
-                        {"description", "Object arguments (e.g., [440] for 'cycle~')"}
+                        {"items", {{"oneOf", json::array({
+                            json{{"type", "number"}},
+                            json{{"type", "string"}}
+                        })}}},
+                        {"description",
+                            "Object arguments as a JSON array. Each element must be a JSON "
+                            "number or string WITHOUT surrounding quotes around the array. "
+                            "e.g., [440] for 'cycle~', [\"sine\"] for a symbol argument"}
                     }},
                     {"attributes", {
                         {"type", "object"},
-                        {"description", "Object attributes (e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]})"}
+                        {"additionalProperties", {{"oneOf", json::array({
+                            json{{"type", "number"}},
+                            json{{"type", "string"}},
+                            json{{"type", "array"}, {"items", json{{"type", "number"}}}}
+                        })}}},
+                        {"description",
+                            "Object attributes as a JSON object. Each value must be a JSON "
+                            "number, string, or array of numbers WITHOUT surrounding quotes. "
+                            "e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]}"}
                     }}
                 }},
                 {"required", json::array({"patch_id", "obj_type", "position"})}

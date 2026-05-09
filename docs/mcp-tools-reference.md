@@ -110,8 +110,8 @@ Add a Max object to a patch.
   "obj_type": {"type": "string", "required": true, "description": "e.g., 'cycle~', 'number', 'button'"},
   "position": {"type": "array", "required": true, "description": "[x, y] coordinates"},
   "varname": {"type": "string", "required": false, "description": "Variable name for the object"},
-  "arguments": {"type": "array", "required": false, "description": "Object arguments, e.g., [440]"},
-  "attributes": {"type": "object", "required": false, "description": "Object attributes"}
+  "arguments": {"type": "array", "items": {"oneOf": ["number", "string"]}, "required": false, "description": "Object arguments as a JSON array. Each element must be a JSON number or string WITHOUT surrounding quotes around the array. e.g., [440], [\"sine\"]"},
+  "attributes": {"type": "object", "additionalProperties": {"oneOf": ["number", "string", "array<number>"]}, "required": false, "description": "Object attributes as a JSON object. Each value must be a JSON number, string, or array of numbers WITHOUT surrounding quotes. e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]}"}
 }
 ```
 
@@ -187,7 +187,7 @@ Set an attribute of a Max object.
   "patch_id": {"type": "string", "required": true},
   "varname": {"type": "string", "required": true},
   "attribute": {"type": "string", "required": true},
-  "value": {"required": true, "description": "Number, string, or array"}
+  "value": {"oneOf": ["number", "string", "array<number>"], "required": true, "description": "Attribute value. Pass numbers as JSON numbers, strings as JSON strings, and multi-value attributes (patching_rect, bgcolor, etc.) as JSON arrays of numbers WITHOUT surrounding quotes. e.g., 440, \"hello\", [100, 200, 300, 50]"}
 }
 ```
 
