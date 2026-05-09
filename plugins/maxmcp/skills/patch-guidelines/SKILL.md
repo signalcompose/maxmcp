@@ -380,7 +380,7 @@ flowchart TD
 
 一連のレイアウト操作が完了した後に**必ず**実行する:
 
-1. `get_objects_in_patch` で全オブジェクトの矩形 (position + size) を取得
+1. `get_objects_in_patch({mode: "layout"})` で全オブジェクトの矩形 (position + size) を取得 — text/maxclass を省略してトークン削減
 2. `get_patchlines` で全パッチコードの start_point, end_point, midpoints を取得
 3. 以下を検出・修正:
    - **上向き接続**: `start_point.y > end_point.y` かつミッドポイントなし → オブジェクト移動または U-shape ミッドポイント追加
@@ -514,7 +514,7 @@ See [Object Text Conventions Reference](reference/object-text-conventions.md)
 |------|---------|
 | `list_active_patches` | List registered patches |
 | `get_frontmost_patch` | Get currently focused patch |
-| `get_objects_in_patch` | List objects in a patch |
+| `get_objects_in_patch` | List objects in a patch (use `mode: "layout"` for position/size only, `mode: "identity"` for naming/inspection — reduces token usage) |
 | `get_patch_info` | Get patch metadata |
 | `add_max_object` | Create a new object |
 | `set_object_attribute` | Modify object properties |

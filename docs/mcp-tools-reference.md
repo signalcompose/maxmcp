@@ -141,16 +141,18 @@ Remove a Max object from a patch by varname.
 
 ### `get_objects_in_patch`
 
-List all objects in a patch with metadata.
+List all objects in a patch with metadata. The optional `mode` parameter narrows the response shape to reduce token usage when only specific fields are needed.
 
 **Parameters**:
 ```json
 {
-  "patch_id": {"type": "string", "required": true}
+  "patch_id": {"type": "string", "required": true},
+  "mode": {"type": "string", "enum": ["layout", "identity"], "required": false, "description": "Optional response shape. Omit for full metadata."}
 }
 ```
 
-**Response**:
+**Response (default — full metadata)**:
+Includes `index`, `varname` (when set), `maxclass`, `text`, `position`, `size`.
 ```json
 {
   "result": {
@@ -158,21 +160,42 @@ List all objects in a patch with metadata.
     "objects": [
       {
         "index": 0,
-        "maxclass": "newobj",
+        "varname": "osc1",
+        "maxclass": "cycle~",
         "text": "cycle~ 440",
         "position": [100, 100],
-        "size": [80, 22],
-        "varname": "osc1"
-      },
-      {
-        "index": 1,
-        "maxclass": "number",
-        "text": "",
-        "position": [100, 150],
-        "size": [50, 22]
+        "size": [80, 22]
       }
     ],
-    "count": 2
+    "count": 1
+  }
+}
+```
+
+**Response (`mode: "layout"`)**:
+Includes `varname` (when set), `position`, `size` only. Use for layout/positioning work.
+```json
+{
+  "result": {
+    "patch_id": "synth_a7f2",
+    "objects": [
+      {"varname": "osc1", "position": [100, 100], "size": [80, 22]}
+    ],
+    "count": 1
+  }
+}
+```
+
+**Response (`mode: "identity"`)**:
+Includes `index`, `varname` (when set), `maxclass`, `text` only. Use for naming and inspection (e.g., before `assign_varnames`).
+```json
+{
+  "result": {
+    "patch_id": "synth_a7f2",
+    "objects": [
+      {"index": 0, "varname": "osc1", "maxclass": "cycle~", "text": "cycle~ 440"}
+    ],
+    "count": 1
   }
 }
 ```
