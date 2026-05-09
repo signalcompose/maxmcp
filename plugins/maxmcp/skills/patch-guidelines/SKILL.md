@@ -381,7 +381,7 @@ flowchart TD
 一連のレイアウト操作が完了した後に**必ず**実行する:
 
 1. `get_objects_in_patch({mode: "layout"})` で全オブジェクトの矩形 (position + size) を取得 — text/maxclass を省略してトークン削減
-2. `get_patchlines` で全パッチコードの start_point, end_point, midpoints を取得
+2. `get_patchlines({mode: "geometry"})` で全パッチコードの start_point, end_point, midpoints を取得 (color/hidden を省略してトークン削減)
 3. 以下を検出・修正:
    - **上向き接続**: `start_point.y > end_point.y` かつミッドポイントなし → オブジェクト移動または U-shape ミッドポイント追加
    - **オブジェクト重複**: 矩形同士の交差 → 位置調整
@@ -521,7 +521,7 @@ See [Object Text Conventions Reference](reference/object-text-conventions.md)
 | `get_object_value` | Get current value (number, slider, etc.) |
 | `connect_max_objects` | Create patchcord |
 | `disconnect_max_objects` | Remove patchcord |
-| `get_patchlines` | List all patchcords with coordinates and midpoints |
+| `get_patchlines` | List all patchcords (use `mode: "geometry"` for layout work without color/hidden, `mode: "connections"` for topology-only when inspecting an existing patch — reduces token usage) |
 | `set_patchline_midpoints` | Add/remove midpoints to fold patchcords |
 | `remove_max_object` | Delete an object |
 | `get_avoid_rect_position` | Find safe position |
