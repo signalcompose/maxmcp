@@ -254,6 +254,50 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
         return (v && v->s_name) ? v->s_name : "";
     };
 
+    // Helpers populating field groups. Each mode picks the helpers it needs.
+    auto add_geometry_fields = [](json& pl, t_object* line) {
+        double sx, sy, ex, ey;
+        jpatchline_get_startpoint(line, &sx, &sy);
+        jpatchline_get_endpoint(line, &ex, &ey);
+        long num_midpoints = jpatchline_get_nummidpoints(line);
+
+        pl["start_point"] = {{"x", sx}, {"y", sy}};
+        pl["end_point"] = {{"x", ex}, {"y", ey}};
+        pl["num_midpoints"] = num_midpoints;
+
+        if (num_midpoints == 0) {
+            return;
+        }
+
+        long num_values = num_midpoints * 2;
+        std::vector<double> coords(num_values, 0.0);
+        long count =
+            object_attr_getdouble_array(line, gensym("midpoints"), num_values, coords.data());
+        // num_midpoints and count should always match in a healthy patch.
+        // Mismatch indicates internal Max state inconsistency or data
+        // corruption — log it so the user can investigate.
+        if (count != num_values) {
+            ConsoleLogger::log(("Warning: midpoint count mismatch (expected " +
+                                std::to_string(num_values) + ", got " + std::to_string(count) + ")")
+                                   .c_str());
+        }
+        if (count == 0) {
+            return;
+        }
+
+        json midpoints = json::array();
+        for (long i = 0; i + 1 < count; i += 2) {
+            midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
+        }
+        pl["midpoints"] = midpoints;
+    };
+    auto add_visual_fields = [](json& pl, t_object* line) {
+        t_jrgba color = {0.0, 0.0, 0.0, 1.0};
+        jpatchline_get_color(line, &color);
+        pl["hidden"] = (bool)jpatchline_get_hidden(line);
+        pl["color"] = {{"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}};
+    };
+
     for (t_object* line = jpatcher_get_firstline(patcher); line;
          line = jpatchline_get_nextline(line)) {
         t_object* box1 = (t_object*)jpatchline_get_box1(line);
@@ -269,66 +313,14 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
 
         switch (data->mode) {
         case GetPatchlinesMode::Connections:
-            // Topology only — nothing else to add.
             break;
-
-        case GetPatchlinesMode::Geometry: {
-            double sx, sy, ex, ey;
-            jpatchline_get_startpoint(line, &sx, &sy);
-            jpatchline_get_endpoint(line, &ex, &ey);
-            long num_midpoints = jpatchline_get_nummidpoints(line);
-
-            pl["start_point"] = {{"x", sx}, {"y", sy}};
-            pl["end_point"] = {{"x", ex}, {"y", ey}};
-            pl["num_midpoints"] = num_midpoints;
-
-            if (num_midpoints > 0) {
-                long num_values = num_midpoints * 2;
-                std::vector<double> coords(num_values, 0.0);
-                long count = object_attr_getdouble_array(line, gensym("midpoints"), num_values,
-                                                         coords.data());
-                if (count > 0) {
-                    json midpoints = json::array();
-                    for (long i = 0; i + 1 < count; i += 2) {
-                        midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
-                    }
-                    pl["midpoints"] = midpoints;
-                }
-            }
+        case GetPatchlinesMode::Geometry:
+            add_geometry_fields(pl, line);
             break;
-        }
-
-        case GetPatchlinesMode::Default: {
-            double sx, sy, ex, ey;
-            jpatchline_get_startpoint(line, &sx, &sy);
-            jpatchline_get_endpoint(line, &ex, &ey);
-            long num_midpoints = jpatchline_get_nummidpoints(line);
-
-            t_jrgba color = {0.0, 0.0, 0.0, 1.0};
-            jpatchline_get_color(line, &color);
-
-            pl["start_point"] = {{"x", sx}, {"y", sy}};
-            pl["end_point"] = {{"x", ex}, {"y", ey}};
-            pl["num_midpoints"] = num_midpoints;
-            pl["hidden"] = (bool)jpatchline_get_hidden(line);
-            pl["color"] = {
-                {"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}};
-
-            if (num_midpoints > 0) {
-                long num_values = num_midpoints * 2;
-                std::vector<double> coords(num_values, 0.0);
-                long count = object_attr_getdouble_array(line, gensym("midpoints"), num_values,
-                                                         coords.data());
-                if (count > 0) {
-                    json midpoints = json::array();
-                    for (long i = 0; i + 1 < count; i += 2) {
-                        midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
-                    }
-                    pl["midpoints"] = midpoints;
-                }
-            }
+        case GetPatchlinesMode::Default:
+            add_geometry_fields(pl, line);
+            add_visual_fields(pl, line);
             break;
-        }
         }
 
         patchlines.push_back(pl);
