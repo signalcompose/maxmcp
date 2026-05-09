@@ -323,7 +323,7 @@ MaxMCP uses a comprehensive CI/CD pipeline with automated testing and code quali
 - **Code Quality**: Pre-commit hooks with clang-format, ESLint, and automated tests
 - **Local Setup**: `npm install` to enable pre-commit hooks via Husky
 
-See [docs/PHASE1_INFRASTRUCTURE.md](docs/PHASE1_INFRASTRUCTURE.md) for details on the testing infrastructure.
+See [docs/development-guide.md](docs/development-guide.md) for details on the testing infrastructure.
 
 ## Contributing
 
