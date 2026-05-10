@@ -112,4 +112,4 @@ tests/
 
 ## Documentation
 
-See [docs/implementation-plan.md](../docs/implementation-plan.md) Task 1.6 for detailed testing strategy.
+See [docs/development-guide.md](../docs/development-guide.md) for the testing strategy.

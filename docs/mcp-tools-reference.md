@@ -1,27 +1,25 @@
 # MaxMCP MCP Tools Reference
 
-**Last Updated**: 2026-02-22
+**Last Updated**: 2026-05-09
 
-This document provides a complete reference for all MCP tools available in MaxMCP.
+This document lists all MCP tools available in MaxMCP with their response shapes and behavioral notes.
+
+> **Parameter schemas are not duplicated here.** The authoritative parameter schema (types, required flags, descriptions) is defined in C++ at [`src/tools/`](../src/tools/) and served live to MCP clients via `tools/list`. Any MCP-compliant client can introspect parameters at runtime; humans should consult the source files directly to avoid documentation drift.
 
 ---
 
 ## Overview
 
-MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands.
 
----
-
-## Tool Categories
-
-| Category | Count | Description |
+| Category | Count | Source File |
 |----------|-------|-------------|
-| Patch Management | 3 | List, query, and manage patches |
-| Object Operations | 12 | Create, modify, replace, assign varnames, and query objects |
-| Connection Operations | 4 | Create, remove, and manage patchcords |
-| Patch State | 3 | Lock state and dirty flag management |
-| Hierarchy | 2 | Parent/child patcher navigation |
-| Utilities | 2 | Console logging and positioning |
+| Patch Management | 3 | [`src/tools/patch_tools.cpp`](../src/tools/patch_tools.cpp) |
+| Object Operations | 12 | [`src/tools/object_tools.cpp`](../src/tools/object_tools.cpp) |
+| Connection Operations | 4 | [`src/tools/connection_tools.cpp`](../src/tools/connection_tools.cpp) |
+| Patch State | 3 | [`src/tools/state_tools.cpp`](../src/tools/state_tools.cpp) |
+| Hierarchy | 2 | [`src/tools/hierarchy_tools.cpp`](../src/tools/hierarchy_tools.cpp) |
+| Utilities | 2 | [`src/tools/utility_tools.cpp`](../src/tools/utility_tools.cpp) |
 
 ---
 
@@ -29,18 +27,7 @@ MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural lan
 
 ### `list_active_patches`
 
-List all registered MaxMCP client patches.
-
-**Parameters**:
-```json
-{
-  "group": {
-    "type": "string",
-    "description": "Optional group name to filter patches",
-    "required": false
-  }
-}
-```
+List all registered MaxMCP client patches. Optionally filter by group.
 
 **Response**:
 ```json
@@ -60,17 +47,6 @@ List all registered MaxMCP client patches.
 
 Get detailed information about a specific patch.
 
-**Parameters**:
-```json
-{
-  "patch_id": {
-    "type": "string",
-    "description": "Patch ID to query",
-    "required": true
-  }
-}
-```
-
 **Response**:
 ```json
 {
@@ -84,8 +60,6 @@ Get detailed information about a specific patch.
 ### `get_frontmost_patch`
 
 Get the currently focused/frontmost patch.
-
-**Parameters**: None
 
 **Response**:
 ```json
@@ -103,18 +77,6 @@ Get the currently focused/frontmost patch.
 
 Add a Max object to a patch.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "obj_type": {"type": "string", "required": true, "description": "e.g., 'cycle~', 'number', 'button'"},
-  "position": {"type": "array", "required": true, "description": "[x, y] coordinates"},
-  "varname": {"type": "string", "required": false, "description": "Variable name for the object"},
-  "arguments": {"type": "array", "items": {"oneOf": ["number", "string"]}, "required": false, "description": "Object arguments as a JSON array. Each element must be a JSON number or string WITHOUT surrounding quotes around the array. e.g., [440], [\"sine\"]"},
-  "attributes": {"type": "object", "additionalProperties": {"oneOf": ["number", "string", "array<number>"]}, "required": false, "description": "Object attributes as a JSON object. Each value must be a JSON number, string, or array of numbers WITHOUT surrounding quotes. e.g., {\"bgcolor\": [1.0, 0.5, 0.0, 1.0]}"}
-}
-```
-
 **Response**:
 ```json
 {
@@ -131,25 +93,9 @@ Add a Max object to a patch.
 
 Remove a Max object from a patch by varname.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true}
-}
-```
-
 ### `get_objects_in_patch`
 
 List all objects in a patch with metadata. The optional `mode` parameter narrows the response shape to reduce token usage when only specific fields are needed.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "mode": {"type": "string", "enum": ["layout", "identity"], "required": false, "description": "Optional response shape. Omit for full metadata."}
-}
-```
 
 **Response (default — full metadata)**:
 Includes `index`, `varname` (when set), `maxclass`, `text`, `position`, `size`.
@@ -202,30 +148,11 @@ Includes `index`, `varname` (when set), `maxclass`, `text` only. Use for naming 
 
 ### `set_object_attribute`
 
-Set an attribute of a Max object.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true},
-  "attribute": {"type": "string", "required": true},
-  "value": {"oneOf": ["number", "string", "array<number>"], "required": true, "description": "Attribute value. Pass numbers as JSON numbers, strings as JSON strings, and multi-value attributes (patching_rect, bgcolor, etc.) as JSON arrays of numbers WITHOUT surrounding quotes. e.g., 440, \"hello\", [100, 200, 300, 50]"}
-}
-```
+Set an attribute of a Max object. Multi-value attributes (`patching_rect`, `bgcolor`, etc.) accept JSON arrays of numbers.
 
 ### `get_object_attribute`
 
-Get the value of an attribute of a Max object. Returns the current value of the specified attribute.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true},
-  "attribute": {"type": "string", "required": true, "description": "Attribute name (e.g., patching_rect, bgcolor, fontsize)"}
-}
-```
+Get the value of an attribute of a Max object. Uses `object_attr_getvalueof()` internally.
 
 **Response**:
 ```json
@@ -240,20 +167,11 @@ Get the value of an attribute of a Max object. Returns the current value of the 
 
 **Notes**:
 - Returns scalar value for single-value attributes, array for multi-value attributes
-- Uses `object_attr_getvalueof()` internally
 - Returns an error if the attribute does not exist or has no value
 
 ### `get_object_io_info`
 
 Get inlet and outlet count for an object.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true}
-}
-```
 
 **Response**:
 ```json
@@ -270,14 +188,6 @@ Get inlet and outlet count for an object.
 
 Check if an object is hidden.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true}
-}
-```
-
 **Response**:
 ```json
 {
@@ -291,15 +201,6 @@ Check if an object is hidden.
 ### `set_object_hidden`
 
 Set the visibility of an object in a patch.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true},
-  "hidden": {"type": "boolean", "required": true, "description": "true=hide, false=show"}
-}
-```
 
 **Response**:
 ```json
@@ -316,14 +217,6 @@ Set the visibility of an object in a patch.
 
 Force redraw of a specific object.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true}
-}
-```
-
 **Response**:
 ```json
 {
@@ -339,15 +232,6 @@ Force redraw of a specific object.
 Replace the box text of an existing Max object by deleting and recreating it. All patchcord connections are automatically saved and restored.
 
 For regular objects, `new_text` is the full box text including the class name (e.g., `"cycle~ 880"`). For message/comment/textedit objects, `new_text` is the displayed text content.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true, "description": "Variable name of the object"},
-  "new_text": {"type": "string", "required": true, "description": "New box text or content"}
-}
-```
 
 **Response**:
 ```json
@@ -371,22 +255,6 @@ For regular objects, `new_text` is the full box text including the class name (e
 ### `assign_varnames`
 
 Assign varnames to objects identified by index. Use `get_objects_in_patch` first to get object indices, then assign meaningful varnames based on object type and context. Existing varnames can be overwritten.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "assignments": {
-    "type": "array",
-    "required": true,
-    "description": "Array of index-varname pairs",
-    "items": {
-      "index": {"type": "integer", "description": "Object index from get_objects_in_patch"},
-      "varname": {"type": "string", "description": "Varname to assign (e.g., 'osc_440', 'gain_ctrl')"}
-    }
-  }
-}
-```
 
 **Response**:
 ```json
@@ -418,14 +286,6 @@ Assign varnames to objects identified by index. Use `get_objects_in_patch` first
 
 Get the current value of a Max object. Uses `object_getvalueof()` internally. Works with objects that implement the getvalueof interface (e.g., number boxes, flonum, sliders, dials).
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "varname": {"type": "string", "required": true}
-}
-```
-
 **Response**:
 ```json
 {
@@ -448,43 +308,13 @@ Get the current value of a Max object. Uses `object_getvalueof()` internally. Wo
 
 Create a patchcord connection between two Max objects.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "src_varname": {"type": "string", "required": true},
-  "outlet": {"type": "number", "required": true, "description": "0-based outlet index"},
-  "dst_varname": {"type": "string", "required": true},
-  "inlet": {"type": "number", "required": true, "description": "0-based inlet index"}
-}
-```
-
 ### `disconnect_max_objects`
 
 Remove a patchcord connection between two Max objects.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "src_varname": {"type": "string", "required": true},
-  "outlet": {"type": "number", "required": true},
-  "dst_varname": {"type": "string", "required": true},
-  "inlet": {"type": "number", "required": true}
-}
-```
-
 ### `get_patchlines`
 
 List all patchlines (connections) in a patch. The optional `mode` parameter narrows the response shape to reduce token usage when only specific fields are needed.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "mode": {"type": "string", "enum": ["geometry", "connections"], "required": false, "description": "Optional response shape. Omit for full metadata."}
-}
-```
 
 **Response (default — full metadata)**:
 Includes topology (`src_varname`, `outlet`, `dst_varname`, `inlet`), `start_point`, `end_point`, `num_midpoints`, optional `midpoints`, `hidden`, `color`. Folded patchcords also include `midpoints` as an array of `{x, y}` points.
@@ -550,18 +380,6 @@ Topology only. Use for connectivity checks and inspecting an existing patch befo
 
 Set midpoint coordinates for a patchcord. Pass an array of `{x, y}` objects to fold the cord, or an empty array to straighten it.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "src_varname": {"type": "string", "required": true},
-  "outlet": {"type": "number", "required": true},
-  "dst_varname": {"type": "string", "required": true},
-  "inlet": {"type": "number", "required": true},
-  "midpoints": {"type": "array", "required": true, "description": "Array of {x, y} objects, or [] to remove"}
-}
-```
-
 ---
 
 ## Patch State
@@ -569,13 +387,6 @@ Set midpoint coordinates for a patchcord. Pass an array of `{x, y}` objects to f
 ### `get_patch_lock_state`
 
 Get the lock/edit state of a patch.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true}
-}
-```
 
 **Response**:
 ```json
@@ -595,14 +406,6 @@ Get the lock/edit state of a patch.
 
 Set the lock/edit state of a patch.
 
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "locked": {"type": "boolean", "required": true, "description": "true=lock, false=unlock"}
-}
-```
-
 **Response**:
 ```json
 {
@@ -616,13 +419,6 @@ Set the lock/edit state of a patch.
 ### `get_patch_dirty`
 
 Check if a patch has unsaved changes.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true}
-}
-```
 
 **Response**:
 ```json
@@ -641,13 +437,6 @@ Check if a patch has unsaved changes.
 ### `get_parent_patcher`
 
 Get the parent patcher of a subpatcher.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true, "description": "Child patch ID"}
-}
-```
 
 **Response** (has parent):
 ```json
@@ -672,13 +461,6 @@ Get the parent patcher of a subpatcher.
 ### `get_subpatchers`
 
 List all subpatchers in a patch.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true}
-}
-```
 
 **Response**:
 ```json
@@ -707,15 +489,7 @@ List all subpatchers in a patch.
 
 ### `get_console_log`
 
-Retrieve recent Max Console messages.
-
-**Parameters**:
-```json
-{
-  "lines": {"type": "number", "required": false, "description": "Number of lines (default: 50, max: 1000)"},
-  "clear": {"type": "boolean", "required": false, "description": "Clear log after reading (default: false)"}
-}
-```
+Retrieve recent Max Console messages. Optionally clear the log after reading.
 
 **Response**:
 ```json
@@ -731,15 +505,6 @@ Retrieve recent Max Console messages.
 ### `get_avoid_rect_position`
 
 Find an empty position for placing new objects.
-
-**Parameters**:
-```json
-{
-  "patch_id": {"type": "string", "required": true},
-  "width": {"type": "number", "required": false, "description": "Object width (default: 50)"},
-  "height": {"type": "number", "required": false, "description": "Object height (default: 20)"}
-}
-```
 
 **Response**:
 ```json
