@@ -61,8 +61,28 @@ struct t_get_attribute_data {
     ToolCommon::DeferredResult* deferred_result;
 };
 
+enum class GetObjectsMode {
+    Default,  // index, varname, maxclass, text, position, size
+    Layout,   // varname, position, size
+    Identity  // index, varname, maxclass, text
+};
+
+// Convert "layout"/"identity" to the corresponding enum value.
+// Empty string or any unrecognized value falls back to Default
+// (so omitting the parameter preserves the original behavior).
+static GetObjectsMode parse_get_objects_mode(const std::string& mode_str) {
+    if (mode_str == "layout") {
+        return GetObjectsMode::Layout;
+    }
+    if (mode_str == "identity") {
+        return GetObjectsMode::Identity;
+    }
+    return GetObjectsMode::Default;
+}
+
 struct t_get_objects_data {
     t_maxmcp* patch;
+    GetObjectsMode mode;
     ToolCommon::DeferredResult* deferred_result;
 };
 
@@ -271,6 +291,20 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
     VALIDATE_DEFERRED_ARGS("get_objects_deferred");
     EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_objects_data, data, argv);
 
+    // Helpers populating field groups. Each mode picks the helpers it needs.
+    auto add_identity_fields = [](json& obj, t_object* box, int index) {
+        obj["index"] = index;
+        t_symbol* maxclass = jbox_get_maxclass(box);
+        obj["maxclass"] = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
+        obj["text"] = PatchHelpers::get_box_text(box);
+    };
+    auto add_geometry_fields = [](json& obj, t_object* box) {
+        t_rect rect;
+        jbox_get_patching_rect(box, &rect);
+        obj["position"] = json::array({rect.x, rect.y});
+        obj["size"] = json::array({rect.width, rect.height});
+    };
+
     json objects = json::array();
     t_object* patcher = data->patch->patcher;
     int index = 0;
@@ -279,22 +313,22 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
         t_symbol* varname = object_attr_getsym(box, gensym("varname"));
         std::string varname_str = (varname && varname->s_name) ? varname->s_name : "";
 
-        t_symbol* maxclass = jbox_get_maxclass(box);
-        std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
-
-        std::string text = PatchHelpers::get_box_text(box);
-
-        t_rect rect;
-        jbox_get_patching_rect(box, &rect);
-
-        json obj_info = {{"index", index},
-                         {"maxclass", maxclass_str},
-                         {"text", text},
-                         {"position", json::array({rect.x, rect.y})},
-                         {"size", json::array({rect.width, rect.height})}};
-
+        json obj_info = json::object();
         if (!varname_str.empty()) {
             obj_info["varname"] = varname_str;
+        }
+
+        switch (data->mode) {
+        case GetObjectsMode::Default:
+            add_identity_fields(obj_info, box, index);
+            add_geometry_fields(obj_info, box);
+            break;
+        case GetObjectsMode::Layout:
+            add_geometry_fields(obj_info, box);
+            break;
+        case GetObjectsMode::Identity:
+            add_identity_fields(obj_info, box, index);
+            break;
         }
 
         objects.push_back(obj_info);
@@ -614,11 +648,23 @@ json get_tool_schemas() {
         // ---- get_objects_in_patch ----
         {
             {"name", "get_objects_in_patch"},
-            {"description", "List all objects in a patch with metadata"},
+            {"description",
+                "List all objects in a patch with metadata. "
+                "Use 'mode' to reduce response size when only specific fields are needed."},
             {"inputSchema", {
                 {"type", "object"},
                 {"properties", {
-                    {"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}
+                    {"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}},
+                    {"mode", {
+                        {"type", "string"},
+                        {"enum", json::array({"layout", "identity"})},
+                        {"description",
+                            "Optional response shape. Omit for full metadata "
+                            "(index, varname, maxclass, text, position, size). "
+                            "'layout' returns only varname, position, size — for "
+                            "layout/positioning work. 'identity' returns only index, "
+                            "varname, maxclass, text — for naming and inspection."}
+                    }}
                 }},
                 {"required", json::array({"patch_id"})}
             }}
@@ -912,8 +958,10 @@ json execute_get_objects_in_patch(const json& params) {
         return ToolCommon::patch_not_found_error(patch_id);
     }
 
+    GetObjectsMode mode = parse_get_objects_mode(params.value("mode", ""));
+
     auto* deferred_result = new ToolCommon::DeferredResult();
-    t_get_objects_data* data = new t_get_objects_data{patch, deferred_result};
+    t_get_objects_data* data = new t_get_objects_data{patch, mode, deferred_result};
 
     t_atom a;
     atom_setobj(&a, data);

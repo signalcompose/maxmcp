@@ -28,7 +28,9 @@
 |----|------------------------|-----------------------------------|-------------------------------------------|------|
 | 4  | `add_max_object`       | Add `cycle~ 440`                  | status: success, varname returned         | [ ]  |
 | 5  | `remove_max_object`    | Remove added object               | status: success                           | [ ]  |
-| 6  | `get_objects_in_patch` | List objects in patch             | Array of objects returned                 | [ ]  |
+| 6  | `get_objects_in_patch` | List objects (no `mode`)          | Full metadata: index/varname/maxclass/text/position/size | [ ]  |
+| 6a | `get_objects_in_patch` | `mode: "layout"`                  | Only varname/position/size returned       | [ ]  |
+| 6b | `get_objects_in_patch` | `mode: "identity"`                | Only index/varname/maxclass/text returned | [ ]  |
 | 7  | `set_object_attribute` | Change bgcolor of number box      | status: success, color changes in patch   | [ ]  |
 | 8  | `get_object_attribute` | Get patching_rect                 | Returns [x, y, width, height] array       | [ ]  |
 | 9  | `get_object_value`     | Get number box value              | Returns number (default: 0)               | [ ]  |
