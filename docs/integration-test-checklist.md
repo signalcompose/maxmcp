@@ -47,7 +47,9 @@
 |----|---------------------------|----------------------------|--------------------------------------------|------|
 | 16 | `connect_max_objects`     | Connect two objects        | status: success, patchcord visible         | [ ]  |
 | 17 | `disconnect_max_objects`  | Disconnect objects         | status: success, patchcord removed         | [ ]  |
-| 18 | `get_patchlines`          | List all patchcords        | patchlines array with connection info      | [ ]  |
+| 18  | `get_patchlines`         | List patchcords (no `mode`)  | Full metadata: topology + start/end + midpoints + hidden + color | [ ]  |
+| 18a | `get_patchlines`         | `mode: "geometry"`           | Topology + start/end + midpoints (no hidden/color)               | [ ]  |
+| 18b | `get_patchlines`         | `mode: "connections"`        | Topology only (src_varname/outlet/dst_varname/inlet)             | [ ]  |
 | 19 | `set_patchline_midpoints` | Set then clear midpoints   | Midpoints set / cleared with empty array   | [ ]  |
 
 ## Patch State (3)

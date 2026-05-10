@@ -476,16 +476,18 @@ Remove a patchcord connection between two Max objects.
 
 ### `get_patchlines`
 
-List all patchlines (connections) in a patch with metadata including source/destination, coordinates, color, and visibility.
+List all patchlines (connections) in a patch. The optional `mode` parameter narrows the response shape to reduce token usage when only specific fields are needed.
 
 **Parameters**:
 ```json
 {
-  "patch_id": {"type": "string", "required": true}
+  "patch_id": {"type": "string", "required": true},
+  "mode": {"type": "string", "enum": ["geometry", "connections"], "required": false, "description": "Optional response shape. Omit for full metadata."}
 }
 ```
 
-**Response**:
+**Response (default — full metadata)**:
+Includes topology (`src_varname`, `outlet`, `dst_varname`, `inlet`), `start_point`, `end_point`, `num_midpoints`, optional `midpoints`, `hidden`, `color`. Folded patchcords also include `midpoints` as an array of `{x, y}` points.
 ```json
 {
   "result": {
@@ -502,6 +504,42 @@ List all patchlines (connections) in a patch with metadata including source/dest
         "hidden": false,
         "color": {"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0}
       }
+    ],
+    "count": 1
+  }
+}
+```
+
+**Response (`mode: "geometry"`)**:
+Drops `hidden` and `color`. Use for layout verification (overlap detection, upward connection detection) where visual attributes are noise.
+```json
+{
+  "result": {
+    "patch_id": "synth_a7f2",
+    "patchlines": [
+      {
+        "src_varname": "osc1",
+        "outlet": 0,
+        "dst_varname": "dac",
+        "inlet": 0,
+        "start_point": {"x": 125, "y": 122},
+        "end_point": {"x": 125, "y": 172},
+        "num_midpoints": 0
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+**Response (`mode: "connections"`)**:
+Topology only. Use for connectivity checks and inspecting an existing patch before editing (insert/replace/refactor flows).
+```json
+{
+  "result": {
+    "patch_id": "synth_a7f2",
+    "patchlines": [
+      {"src_varname": "osc1", "outlet": 0, "dst_varname": "dac", "inlet": 0}
     ],
     "count": 1
   }

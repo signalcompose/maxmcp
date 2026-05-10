@@ -55,8 +55,28 @@ struct t_set_midpoints_data : t_connection_data {
           coords(std::move(coords)) {}
 };
 
+enum class GetPatchlinesMode {
+    Default,     // topology + start/end + midpoints + hidden + color
+    Geometry,    // topology + start/end + midpoints (no hidden/color)
+    Connections  // topology only
+};
+
+// Convert "geometry"/"connections" to the corresponding enum value.
+// Empty string or any unrecognized value falls back to Default
+// (so omitting the parameter preserves the original behavior).
+static GetPatchlinesMode parse_get_patchlines_mode(const std::string& mode_str) {
+    if (mode_str == "geometry") {
+        return GetPatchlinesMode::Geometry;
+    }
+    if (mode_str == "connections") {
+        return GetPatchlinesMode::Connections;
+    }
+    return GetPatchlinesMode::Default;
+}
+
 struct t_get_patchlines_data {
     t_maxmcp* patch;
+    GetPatchlinesMode mode;
     DeferredResult* deferred_result;
 };
 
@@ -229,6 +249,55 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
     json patchlines = json::array();
     t_object* patcher = data->patch->patcher;
 
+    auto get_varname = [](t_object* box) -> std::string {
+        t_symbol* v = object_attr_getsym(box, gensym("varname"));
+        return (v && v->s_name) ? v->s_name : "";
+    };
+
+    // Helpers populating field groups. Each mode picks the helpers it needs.
+    auto add_geometry_fields = [](json& pl, t_object* line) {
+        double sx, sy, ex, ey;
+        jpatchline_get_startpoint(line, &sx, &sy);
+        jpatchline_get_endpoint(line, &ex, &ey);
+        long num_midpoints = jpatchline_get_nummidpoints(line);
+
+        pl["start_point"] = {{"x", sx}, {"y", sy}};
+        pl["end_point"] = {{"x", ex}, {"y", ey}};
+        pl["num_midpoints"] = num_midpoints;
+
+        if (num_midpoints == 0) {
+            return;
+        }
+
+        long num_values = num_midpoints * 2;
+        std::vector<double> coords(num_values, 0.0);
+        long count =
+            object_attr_getdouble_array(line, gensym("midpoints"), num_values, coords.data());
+        // num_midpoints and count should always match in a healthy patch.
+        // Mismatch indicates internal Max state inconsistency or data
+        // corruption — log it so the user can investigate.
+        if (count != num_values) {
+            ConsoleLogger::log(("Warning: midpoint count mismatch (expected " +
+                                std::to_string(num_values) + ", got " + std::to_string(count) + ")")
+                                   .c_str());
+        }
+        if (count == 0) {
+            return;
+        }
+
+        json midpoints = json::array();
+        for (long i = 0; i + 1 < count; i += 2) {
+            midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
+        }
+        pl["midpoints"] = midpoints;
+    };
+    auto add_visual_fields = [](json& pl, t_object* line) {
+        t_jrgba color = {0.0, 0.0, 0.0, 1.0};
+        jpatchline_get_color(line, &color);
+        pl["hidden"] = (bool)jpatchline_get_hidden(line);
+        pl["color"] = {{"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}};
+    };
+
     for (t_object* line = jpatcher_get_firstline(patcher); line;
          line = jpatchline_get_nextline(line)) {
         t_object* box1 = (t_object*)jpatchline_get_box1(line);
@@ -236,44 +305,22 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
         long outlet = jpatchline_get_outletnum(line);
         long inlet = jpatchline_get_inletnum(line);
 
-        auto get_varname = [](t_object* box) -> std::string {
-            t_symbol* v = object_attr_getsym(box, gensym("varname"));
-            return (v && v->s_name) ? v->s_name : "";
-        };
-
-        double sx, sy, ex, ey;
-        jpatchline_get_startpoint(line, &sx, &sy);
-        jpatchline_get_endpoint(line, &ex, &ey);
-
-        t_jrgba color = {0.0, 0.0, 0.0, 1.0};
-        jpatchline_get_color(line, &color);
-
-        long num_midpoints = jpatchline_get_nummidpoints(line);
-
+        // Topology fields are included in every mode.
         json pl = {{"src_varname", get_varname(box1)},
                    {"outlet", outlet},
                    {"dst_varname", get_varname(box2)},
-                   {"inlet", inlet},
-                   {"start_point", {{"x", sx}, {"y", sy}}},
-                   {"end_point", {{"x", ex}, {"y", ey}}},
-                   {"num_midpoints", num_midpoints},
-                   {"hidden", (bool)jpatchline_get_hidden(line)},
-                   {"color",
-                    {{"r", color.red}, {"g", color.green}, {"b", color.blue}, {"a", color.alpha}}}};
+                   {"inlet", inlet}};
 
-        if (num_midpoints > 0) {
-            // midpoints are stored as [x1, y1, x2, y2, ...] coordinate pairs
-            long num_values = num_midpoints * 2;
-            std::vector<double> coords(num_values, 0.0);
-            long count =
-                object_attr_getdouble_array(line, gensym("midpoints"), num_values, coords.data());
-            if (count > 0) {
-                json midpoints = json::array();
-                for (long i = 0; i + 1 < count; i += 2) {
-                    midpoints.push_back({{"x", coords[i]}, {"y", coords[i + 1]}});
-                }
-                pl["midpoints"] = midpoints;
-            }
+        switch (data->mode) {
+        case GetPatchlinesMode::Connections:
+            break;
+        case GetPatchlinesMode::Geometry:
+            add_geometry_fields(pl, line);
+            break;
+        case GetPatchlinesMode::Default:
+            add_geometry_fields(pl, line);
+            add_visual_fields(pl, line);
+            break;
         }
 
         patchlines.push_back(pl);
@@ -479,8 +526,10 @@ static json execute_get_patchlines(const json& params) {
         return ToolCommon::patch_not_found_error(patch_id);
     }
 
+    GetPatchlinesMode mode = parse_get_patchlines_mode(params.value("mode", ""));
+
     auto* deferred_result = new DeferredResult();
-    auto* data = new t_get_patchlines_data{patch, deferred_result};
+    auto* data = new t_get_patchlines_data{patch, mode, deferred_result};
 
     t_atom a;
     atom_setobj(&a, data);
@@ -597,13 +646,21 @@ json get_tool_schemas() {
              json::array({"patch_id", "src_varname", "outlet", "dst_varname", "inlet"})}}}},
          {{"name", "get_patchlines"},
           {"description",
-           "List all patchlines (connections) in a patch with metadata "
-           "including source/destination, coordinates, color, and visibility. "
-           "Folded patchcords include midpoint coordinates as an array of {x, y} points"},
+           "List all patchlines (connections) in a patch. "
+           "Use 'mode' to reduce response size when only specific fields are needed."},
           {"inputSchema",
            {{"type", "object"},
             {"properties",
-             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}}}},
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}},
+              {"mode",
+               {{"type", "string"},
+                {"enum", json::array({"geometry", "connections"})},
+                {"description", "Optional response shape. Omit for full metadata "
+                                "(topology + start/end points + midpoints + hidden + color). "
+                                "'geometry' returns topology + start/end points + midpoints — "
+                                "for layout verification. 'connections' returns topology only "
+                                "(src_varname, outlet, dst_varname, inlet) — for connectivity "
+                                "checks and inspecting an existing patch before editing."}}}}},
             {"required", json::array({"patch_id"})}}}},
          {{"name", "set_patchline_midpoints"},
           {"description",
