@@ -43,12 +43,14 @@ flowchart TD
 Use `get_avoid_rect_position` to find safe positions that don't overlap existing objects:
 
 ```javascript
-// Before adding an object, find a safe position.
-// Current behavior: places to the right of existing objects.
+// Before adding an object, find a safe (non-overlapping) position.
+// With near_x/near_y it returns the nearest free spot to that point;
+// without them it places to the right of existing objects.
 // Returns { position: [x, y], width, height, rationale }.
-// (A near_x/near_y hint is planned — see issue #72.)
 const result = await mcp.get_avoid_rect_position({
   patch_id: "...",
+  near_x: 100,   // optional target point
+  near_y: 200,
   width: 80,
   height: 20
 });

@@ -13,6 +13,9 @@
 
 #include "tool_common.h"
 
+#include <algorithm>
+#include <cmath>
+
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
 
@@ -28,6 +31,120 @@ namespace UtilityTools {
 using ToolCommon::DeferredResult;
 
 // ============================================================================
+// Geometry: nearest non-overlapping placement (Max-API independent, testable)
+// ============================================================================
+
+// Two rectangles conflict if they are closer than `gap` on both axes.
+// Public so the same predicate can be reused by unit tests.
+bool rects_conflict(const Rect& a, const Rect& b, double gap) {
+    return a.x < b.x + b.width + gap && b.x < a.x + a.width + gap && a.y < b.y + b.height + gap &&
+           b.y < a.y + a.height + gap;
+}
+
+namespace {
+
+constexpr double PLACE_MARGIN = 50.0;        // gap used when stacking to the right
+constexpr double PLACE_GAP = 8.0;            // minimum visual gap between objects
+constexpr double PLACE_GRID = 15.0;          // search step (matches Max default grid)
+constexpr double PLACE_MAX_RADIUS = 4000.0;  // give up beyond this many px
+
+struct Point {
+    double x;
+    double y;
+};
+
+// A width x height rect at (x, y) is valid when it stays in the visible area
+// and clears every existing rect (keeping PLACE_GAP of separation).
+bool position_is_free(double x, double y, double width, double height,
+                      const std::vector<Rect>& existing) {
+    if (x < 0.0 || y < 0.0) {
+        return false;
+    }
+    const Rect candidate{x, y, width, height};
+    for (const Rect& r : existing) {
+        if (rects_conflict(candidate, r, PLACE_GAP)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+double rightmost_edge(const std::vector<Rect>& existing) {
+    double edge = 0.0;
+    for (const Rect& r : existing) {
+        edge = std::max(edge, r.x + r.width);
+    }
+    return edge;
+}
+
+std::string coord_pair(double x, double y) {
+    return "(" + std::to_string(static_cast<int>(x)) + ", " + std::to_string(static_cast<int>(y)) +
+           ")";
+}
+
+// Where to start searching from, plus a human-readable description.
+Point search_anchor(const std::vector<Rect>& existing, bool has_near, double near_x, double near_y,
+                    std::string& desc) {
+    if (has_near) {
+        desc = "near " + coord_pair(near_x, near_y);
+        return {std::max(0.0, near_x), std::max(0.0, near_y)};
+    }
+    if (existing.empty()) {
+        desc = "default origin (empty patch)";
+        return {50.0, 50.0};
+    }
+    desc = "to the right of existing objects";
+    return {rightmost_edge(existing) + PLACE_MARGIN, 50.0};
+}
+
+// Nearest (Euclidean) free spot on the square ring at Chebyshev distance
+// `radius` from the anchor. Returns false if the ring has no free spot.
+bool nearest_free_on_ring(const Point& anchor, double radius, double width, double height,
+                          const std::vector<Rect>& existing, Point& out) {
+    bool found = false;
+    double best_dist2 = 0.0;
+    for (double dx = -radius; dx <= radius; dx += PLACE_GRID) {
+        for (double dy = -radius; dy <= radius; dy += PLACE_GRID) {
+            const bool on_perimeter = std::max(std::fabs(dx), std::fabs(dy)) >= radius;
+            if (!on_perimeter ||
+                !position_is_free(anchor.x + dx, anchor.y + dy, width, height, existing)) {
+                continue;
+            }
+            const double dist2 = dx * dx + dy * dy;
+            if (!found || dist2 < best_dist2) {
+                found = true;
+                best_dist2 = dist2;
+                out = {anchor.x + dx, anchor.y + dy};
+            }
+        }
+    }
+    return found;
+}
+
+}  // namespace
+
+PlacedPosition find_avoid_rect_position(const std::vector<Rect>& existing, double width,
+                                        double height, bool has_near, double near_x,
+                                        double near_y) {
+    std::string desc;
+    const Point anchor = search_anchor(existing, has_near, near_x, near_y, desc);
+
+    if (position_is_free(anchor.x, anchor.y, width, height, existing)) {
+        return {anchor.x, anchor.y, "Placed " + desc};
+    }
+
+    Point spot{};
+    for (double radius = PLACE_GRID; radius <= PLACE_MAX_RADIUS; radius += PLACE_GRID) {
+        if (nearest_free_on_ring(anchor, radius, width, height, existing, spot)) {
+            return {spot.x, spot.y, "Found nearest free position " + desc};
+        }
+    }
+
+    // Fallback for an extremely dense patch: the far right is always free.
+    return {rightmost_edge(existing) + PLACE_MARGIN, 50.0, "Fallback: placed to the far right"};
+}
+
+// ============================================================================
 // Data Structures for Deferred Callbacks
 // ============================================================================
 
@@ -35,6 +152,9 @@ struct t_get_position_data {
     t_maxmcp* patch;
     double width;
     double height;
+    bool has_near;
+    double near_x;
+    double near_y;
     DeferredResult* deferred_result;
 };
 
@@ -45,46 +165,36 @@ struct t_get_position_data {
 #ifndef MAXMCP_TEST_MODE
 
 /**
- * @brief Deferred callback for finding empty position
+ * @brief Deferred callback for finding an empty position
  *
- * Executed on main thread via defer(). Scans existing objects and finds
- * position to the right of all existing objects with margin, considering
- * the requested object dimensions.
+ * Executed on main thread via defer(). Collects the patching rectangles of all
+ * existing objects, then delegates the placement decision to the Max-API
+ * independent find_avoid_rect_position() so the geometry stays unit-testable.
  */
 static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
     VALIDATE_DEFERRED_ARGS("get_position_deferred");
     EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_position_data, data, argv);
 
     t_object* patcher = data->patch->patcher;
-    double max_x = 50.0;  // Default starting position
-    double start_y = 50.0;
-    double margin = 50.0;
 
-    // Find bounding box of existing objects
+    // Collect the patching rectangle of every existing object.
+    std::vector<Rect> existing;
     for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
         t_rect rect;
         jbox_get_patching_rect(box, &rect);
-
-        // Update max_x to be past the rightmost object
-        double box_right = rect.x + rect.width;
-        if (box_right > max_x) {
-            max_x = box_right;
-        }
+        existing.push_back({rect.x, rect.y, rect.width, rect.height});
     }
 
-    // Calculate position with margin, ensuring the new object fits
-    double new_x = max_x + margin;
-    double new_y = start_y;
+    PlacedPosition placed = find_avoid_rect_position(existing, data->width, data->height,
+                                                     data->has_near, data->near_x, data->near_y);
 
-    // Build rationale including dimensions if non-default
-    std::string rationale = "Positioned to the right of existing objects with " +
-                            std::to_string(static_cast<int>(margin)) + "px margin";
+    std::string rationale = placed.rationale;
     if (data->width != 50.0 || data->height != 20.0) {
         rationale += " (for object " + std::to_string(static_cast<int>(data->width)) + "x" +
                      std::to_string(static_cast<int>(data->height)) + ")";
     }
 
-    COMPLETE_DEFERRED(data, json({{"position", json::array({new_x, new_y})},
+    COMPLETE_DEFERRED(data, json({{"position", json::array({placed.x, placed.y})},
                                   {"width", data->width},
                                   {"height", data->height},
                                   {"rationale", rationale}}));
@@ -113,13 +223,22 @@ json get_tool_schemas() {
 
          // get_avoid_rect_position
          {{"name", "get_avoid_rect_position"},
-          {"description", "Find an empty position for placing new objects"},
+          {"description", "Find an empty (non-overlapping) position for a new object. With "
+                          "near_x/near_y, returns the nearest free spot to that point; "
+                          "otherwise places to the right of existing objects."},
           {"inputSchema",
            {{"type", "object"},
             {"properties",
              {{"patch_id", {{"type", "string"}, {"description", "Patch ID to query"}}},
               {"width", {{"type", "number"}, {"description", "Object width (default: 50)"}}},
-              {"height", {{"type", "number"}, {"description", "Object height (default: 20)"}}}}},
+              {"height", {{"type", "number"}, {"description", "Object height (default: 20)"}}},
+              {"near_x",
+               {{"type", "number"},
+                {"description", "Optional target x. Provide with near_y to search near a point."}}},
+              {"near_y",
+               {{"type", "number"},
+                {"description",
+                 "Optional target y. Provide with near_x to search near a point."}}}}},
             {"required", json::array({"patch_id"})}}}}});
 }
 
@@ -153,13 +272,20 @@ static json execute_get_avoid_rect_position(const json& params) {
         return ToolCommon::missing_param_error("patch_id");
     }
 
+    // near_x/near_y are optional: when both are present, the search anchors at
+    // that point; otherwise it falls back to placing to the right.
+    bool has_near = params.contains("near_x") && params.contains("near_y");
+    double near_x = params.value("near_x", 0.0);
+    double near_y = params.value("near_y", 0.0);
+
     t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
     if (!patch) {
         return ToolCommon::patch_not_found_error(patch_id);
     }
 
     auto* deferred_result = new DeferredResult();
-    auto* data = new t_get_position_data{patch, width, height, deferred_result};
+    auto* data =
+        new t_get_position_data{patch, width, height, has_near, near_x, near_y, deferred_result};
 
     t_atom a;
     atom_setobj(&a, data);

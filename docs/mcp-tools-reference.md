@@ -730,14 +730,21 @@ Retrieve recent Max Console messages.
 
 ### `get_avoid_rect_position`
 
-Find an empty position for placing new objects.
+Find an empty (non-overlapping) position for a new object.
+
+- With `near_x`/`near_y`: returns the nearest free spot to that target point,
+  searching outward on a grid until the object clears every existing box.
+- Without them: places the object to the right of all existing objects (the
+  default when no anchor is given).
 
 **Parameters**:
 ```json
 {
   "patch_id": {"type": "string", "required": true},
   "width": {"type": "number", "required": false, "description": "Object width (default: 50)"},
-  "height": {"type": "number", "required": false, "description": "Object height (default: 20)"}
+  "height": {"type": "number", "required": false, "description": "Object height (default: 20)"},
+  "near_x": {"type": "number", "required": false, "description": "Optional target x; provide with near_y to search near a point"},
+  "near_y": {"type": "number", "required": false, "description": "Optional target y; provide with near_x to search near a point"}
 }
 ```
 
@@ -746,7 +753,9 @@ Find an empty position for placing new objects.
 {
   "result": {
     "position": [250, 50],
-    "rationale": "Positioned to the right of existing objects with 50px margin"
+    "width": 50,
+    "height": 20,
+    "rationale": "Placed to the right of existing objects"
   }
 }
 ```
