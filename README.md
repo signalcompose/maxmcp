@@ -37,7 +37,7 @@ Max/MSP Patches
 
 ## Tech Stack
 
-- **Language**: C/C++ (Max SDK 8.6+)
+- **Language**: C/C++ (Max SDK v8.2.0)
 - **Build System**: CMake 3.19+
 - **Architecture**: arm64 (Apple Silicon native)
 - **MCP Protocol**: stdio-based JSON-RPC
@@ -75,9 +75,9 @@ Use this path if you're cloning the repository and want to build the external yo
    - Requires macOS 13+, Xcode Command Line Tools, Max 9.1+, Node.js 18+ with npm.
 3. **Fetch the Max SDK with submodules**
    ```bash
-   git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+   git clone --branch v8.2.0 https://github.com/Cycling74/max-sdk.git --recursive max-sdk
    ```
-   The `--recursive` flag is critical; without it `max-pretarget.cmake` is missing.
+   The `--recursive` flag is critical; without it `max-pretarget.cmake` is missing. v8.2.0 is pinned because newer max-sdk no longer ships the `max-sdk-base` submodule (it switched to CMake FetchContent).
 4. **Install bridge dependencies**
    ```bash
    cd package/MaxMCP/support/bridge

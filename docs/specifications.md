@@ -20,7 +20,7 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 4. **Natural language**: "Add oscillator to synth patch" just works
 
 ### Tech Stack
-- **C/C++17** (Max SDK 8.6+)
+- **C/C++17** (Max SDK v8.2.0)
 - **WebSocket** (libwebsockets)
 - **Node.js Bridge** (stdio-to-WebSocket translation)
 - **CMake** (Cross-platform builds)

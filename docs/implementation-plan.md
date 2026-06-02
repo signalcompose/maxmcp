@@ -877,7 +877,7 @@ TEST(MCPServer, ListToolsReturnsArray) {
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| Max SDK version incompatibility | Medium | High | Test with Max SDK 8.6+ early |
+| Max SDK version incompatibility | Medium | High | Test with Max SDK v8.2.0 early |
 | Thread safety issues (defer_low) | High | Critical | Review all Max API calls, add assertions |
 | stdio buffering problems | Low | Medium | Use line-based protocol, flush after writes |
 | CMake configuration errors | Medium | Medium | Use Max SDK example CMakeLists.txt as base |
