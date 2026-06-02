@@ -43,11 +43,12 @@ flowchart TD
 Use `get_avoid_rect_position` to find safe positions that don't overlap existing objects:
 
 ```javascript
-// Before adding an object, find a safe position
-const position = await mcp.get_avoid_rect_position({
+// Before adding an object, find a safe position.
+// Current behavior: places to the right of existing objects.
+// Returns { position: [x, y], width, height, rationale }.
+// (A near_x/near_y hint is planned — see issue #72.)
+const result = await mcp.get_avoid_rect_position({
   patch_id: "...",
-  near_x: 100,
-  near_y: 200,
   width: 80,
   height: 20
 });
@@ -411,8 +412,8 @@ Always provide meaningful varnames for important objects:
 ```javascript
 await mcp.add_max_object({
   patch_id: "...",
-  object_type: "cycle~",
-  args: "440",
+  obj_type: "cycle~",
+  arguments: [440],     // JSON array; elements are bare numbers/strings
   varname: "osc_main",  // Meaningful, descriptive name
   position: [100, 200]
 });
@@ -433,10 +434,10 @@ Connect objects using their varnames:
 ```javascript
 await mcp.connect_max_objects({
   patch_id: "...",
-  source_varname: "osc_main",
-  source_outlet: 0,
-  dest_varname: "gain_master",
-  dest_inlet: 0
+  src_varname: "osc_main",
+  outlet: 0,
+  dst_varname: "gain_master",
+  inlet: 0
 });
 ```
 

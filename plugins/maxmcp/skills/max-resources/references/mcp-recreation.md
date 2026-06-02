@@ -84,8 +84,8 @@ Planned layout:
 // Create oscillator
 await mcp.add_max_object({
     patch_id: "my_patch",
-    object_type: "cycle~",
-    args: "440",
+    obj_type: "cycle~",
+    arguments: [440],
     varname: "osc_main",
     position: [100, 100]
 });
@@ -93,8 +93,8 @@ await mcp.add_max_object({
 // Create gain
 await mcp.add_max_object({
     patch_id: "my_patch",
-    object_type: "*~",
-    args: "0.5",
+    obj_type: "*~",
+    arguments: [0.5],
     varname: "gain_main",
     position: [100, 150]
 });
@@ -102,7 +102,7 @@ await mcp.add_max_object({
 // Create DAC
 await mcp.add_max_object({
     patch_id: "my_patch",
-    object_type: "ezdac~",
+    obj_type: "ezdac~",
     varname: "dac_out",
     position: [100, 200]
 });
@@ -114,28 +114,28 @@ await mcp.add_max_object({
 // osc -> gain
 await mcp.connect_max_objects({
     patch_id: "my_patch",
-    source_varname: "osc_main",
-    source_outlet: 0,
-    dest_varname: "gain_main",
-    dest_inlet: 0
+    src_varname: "osc_main",
+    outlet: 0,
+    dst_varname: "gain_main",
+    inlet: 0
 });
 
 // gain -> dac left
 await mcp.connect_max_objects({
     patch_id: "my_patch",
-    source_varname: "gain_main",
-    source_outlet: 0,
-    dest_varname: "dac_out",
-    dest_inlet: 0
+    src_varname: "gain_main",
+    outlet: 0,
+    dst_varname: "dac_out",
+    inlet: 0
 });
 
 // gain -> dac right
 await mcp.connect_max_objects({
     patch_id: "my_patch",
-    source_varname: "gain_main",
-    source_outlet: 0,
-    dest_varname: "dac_out",
-    dest_inlet: 1
+    src_varname: "gain_main",
+    outlet: 0,
+    dst_varname: "dac_out",
+    inlet: 1
 });
 ```
 
@@ -168,20 +168,24 @@ async function recreatePatch(sourceFile, targetPatchId) {
         idMap[box.id] = varname;
 
         // 3. Create object
-        let objType, args;
+        let objType, argList;
         if (box.maxclass === 'newobj') {
             const parts = box.text.split(' ');
             objType = parts[0];
-            args = parts.slice(1).join(' ');
+            // Remaining tokens become the arguments array (numbers stay numeric)
+            argList = parts.slice(1).map(p => {
+                const n = Number(p);
+                return Number.isNaN(n) ? p : n;
+            });
         } else {
             objType = box.maxclass;
-            args = '';
+            argList = [];
         }
 
         await mcp.add_max_object({
             patch_id: targetPatchId,
-            object_type: objType,
-            args: args,
+            obj_type: objType,
+            arguments: argList,
             varname: varname,
             position: [box.patching_rect[0], box.patching_rect[1]]
         });
@@ -192,10 +196,10 @@ async function recreatePatch(sourceFile, targetPatchId) {
         const pl = line.patchline;
         await mcp.connect_max_objects({
             patch_id: targetPatchId,
-            source_varname: idMap[pl.source[0]],
-            source_outlet: pl.source[1],
-            dest_varname: idMap[pl.destination[0]],
-            dest_inlet: pl.destination[1]
+            src_varname: idMap[pl.source[0]],
+            outlet: pl.source[1],
+            dst_varname: idMap[pl.destination[0]],
+            inlet: pl.destination[1]
         });
     }
 }
@@ -254,8 +258,8 @@ async function createSubpatcher(box, parentId) {
     // Create the subpatcher object first
     await mcp.add_max_object({
         patch_id: parentId,
-        object_type: "p",
-        args: extractName(box.text),
+        obj_type: "p",
+        arguments: [extractName(box.text)],
         varname: box.varname
     });
 

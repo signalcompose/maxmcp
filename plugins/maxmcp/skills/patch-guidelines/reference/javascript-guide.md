@@ -43,8 +43,8 @@ Max 8.6+ includes the **v8** (headless) and **v8ui** (with UI) JavaScript object
 // In MaxMCP
 await mcp.add_max_object({
   patch_id: "...",
-  object_type: "v8",
-  args: "script_name.js",
+  obj_type: "v8",
+  arguments: ["script_name.js"],
   varname: "js_processor",
   position: [100, 200]
 });
@@ -253,8 +253,8 @@ Set attributes when creating v8 object:
 ```javascript
 await mcp.add_max_object({
   patch_id: "...",
-  object_type: "v8",
-  args: "processor.js @autowatch 1",  // Enable autowatch
+  obj_type: "v8",
+  arguments: ["processor.js", "@autowatch", 1],  // Enable autowatch
   varname: "js_main",
   position: [100, 200]
 });
@@ -280,8 +280,7 @@ function debug(label, value) {
 
 // Retrieve via MaxMCP
 const logs = await mcp.get_console_log({
-  patch_id: "...",
-  num_lines: 50
+  lines: 50
 });
 ```
 

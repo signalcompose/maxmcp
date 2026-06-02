@@ -155,7 +155,7 @@ The exact cause is undocumented, but the blob type reliably persists values in t
 
 ## selected_parameter Monitoring
 
-`live_set view selected_parameter` を `live.observer` で監視する場合、バースト出力や不正データのフィルタリングが必要。詳細なフィルタチェーンは [LOM Applied Patterns](lom-observer-patterns.md#selected_parameter-フィルタチェーン) を参照。
+`live_set view selected_parameter` を `live.observer` で監視する場合、バースト出力や不正データのフィルタリングが必要。詳細なフィルタチェーンは [LOM Observer Patterns](lom-observer-patterns.md#selected_parameter-フィルタチェーン) を参照。
 
 ## Quick Reference
 

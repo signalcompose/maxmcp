@@ -52,7 +52,7 @@ sel 1 outlet 0 → message "property selected_parameter" → observer inlet 0
                   ↑ 編集中クリックで誤発火、右 inlet 上書き、起動タイミング不明確
 ```
 
-**`@property` を禁じる理由**: `property` は `live.observer` の `<objarglist>` 定義（生成時引数）であり `<attributelist>`（アトリビュート）にないため、`@property` 構文の信頼性が不明確。
+**`@property` を禁じる理由**: 公式 refpage で確認すると `property` は `live.observer` の `<objarglist>`（生成時引数, type=symbol）として定義され、アトリビュートは存在しない（`<attributelist>` なし）。よって `@property`（アトリビュート構文）は使えない。設定するなら生成時引数 `live.observer property <name>` か `property <name>` メッセージのいずれかとなる。
 
 **`message` を禁じる理由**: 固定値の message ボックスは [execution-and-messaging.md](../../patch-guidelines/reference/execution-and-messaging.md) のアンチパターン参照。`zl.reg` で同等の機能をより安全に実現できる。
 

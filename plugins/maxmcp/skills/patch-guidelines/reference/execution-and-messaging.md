@@ -77,7 +77,7 @@ sel 1 outlet 0 → message "property selected_parameter" → live.observer
                                                           // ← message 禁止
 ```
 
-**正解**: lom-observer-patterns.md の正規パターン (`t b b → zl.reg property selected_parameter` + `t b b → zl.reg path live_set view → live.path`)。
+**正解**: [m4l-techniques の lom-observer-patterns.md](../../m4l-techniques/reference/lom-observer-patterns.md) の正規パターン (`t b b → zl.reg property selected_parameter` + `t b b → zl.reg path live_set view → live.path`)。
 
 ---
 

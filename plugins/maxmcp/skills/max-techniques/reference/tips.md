@@ -12,9 +12,10 @@ Filter cutoff frequencies that exceed the Nyquist frequency (half the sampling r
 
 `dspstate~` reports the current audio configuration:
 
-- **Outlet 0**: Signal (1.0 when DSP is on, 0.0 when off)
+- **Outlet 0**: `1` when audio turns on, `0` when it turns off (int message sent on state change — not a continuous signal)
 - **Outlet 1**: Current sampling rate (integer, e.g., 44100, 48000, 96000)
-- **Outlet 2**: Signal vector size
+- **Outlet 2**: DSP signal vector size
+- **Outlet 3**: I/O vector size
 
 ### Adaptive Filter Pattern
 
@@ -243,17 +244,17 @@ The gain value comes from a dB-to-linear conversion:
 ```mermaid
 flowchart LR
   pg["pattr gain"] --> n["number"]
-  n -- "dB value" --> gen["gen db2level"]
+  n -- "dB value" --> gen["dbtoa"]
   gen -- "linear multiplier" --> mul["*~"]
 ```
 
 ### How It Works
 
-1. **`gen db2level`**: Converts a dB value to a linear multiplier (e.g., -6dB → 0.5, 0dB → 1.0)
+1. **`dbtoa`**: Converts a dB value to a linear multiplier (e.g., -6dB → 0.5, 0dB → 1.0)
 2. **`*~`**: Applies the linear gain to the signal — safer than `*~` with raw dB values
 3. **`limi~`**: Lookahead limiter prevents output from exceeding 0dBFS
    - `@dcblock 1`: Removes DC offset that can accumulate through processing
-   - `@lookahead 100`: 100ms lookahead for transparent limiting (no audible pumping)
+   - `@lookahead 100`: lookahead amount in **samples** (not ms; max = the internal buffer size, default 512). Larger values smooth limiting at the cost of added latency.
 
 ### Why This Order
 
@@ -279,9 +280,9 @@ flowchart TD
   limiR --> outR["outlet (R)"]
 ```
 
-> 両チャンネルの `*~` は同じ `gen db2level` 出力を共有する。
+> 両チャンネルの `*~` は同じ `dbtoa` 出力を共有する。
 
-Both channels share the same gain source (`gen db2level` output).
+Both channels share the same gain source (`dbtoa` output).
 
 ### When to Use
 

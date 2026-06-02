@@ -32,7 +32,7 @@ fi
 
 # Search for the object in all reference directories
 found=""
-for dir in max-ref msp-ref jit-ref m4l-ref gen-ref; do
+for dir in max-ref msp-ref jit-ref m4l-ref; do
     file="$MAX_REFPAGES/$dir/${obj_name}.maxref.xml"
     if [ -f "$file" ]; then
         found="$file"
@@ -45,7 +45,7 @@ if [ -z "$found" ]; then
     echo "Object not found: $obj_name"
     echo ""
     echo "Searching for similar objects..."
-    for dir in max-ref msp-ref jit-ref m4l-ref gen-ref; do
+    for dir in max-ref msp-ref jit-ref m4l-ref; do
         matches=$(ls "$MAX_REFPAGES/$dir/" 2>/dev/null | grep -i "$obj_name" | head -5)
         if [ -n "$matches" ]; then
             echo "[$dir]"

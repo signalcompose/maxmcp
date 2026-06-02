@@ -172,11 +172,12 @@ Use this to explore what's available for a given LOM object.
 
 ```mermaid
 flowchart TD
-  lp["live.path"] -- "out 1: id N<br/>→ in 1 (cold, target 設定)" --> lobs["live.observer<br/>@property value"]
+  lp["live.path"] -- "out 1: id N<br/>→ in 1 (cold, target 設定)" --> lobs["live.observer"]
+  zr["zl.reg property value"] -- "→ in 0 (hot, 監視開始)" --> lobs
   lobs -- "out 0: 値が変化したとき出力" --> dn["next (UI / logic)"]
 ```
 
-> `@property value` のような `@` 構文は本オブジェクトでは信頼性が不明確。実装時は `zl.reg property value` パターンで設定することを [live-parameter-rules.md](live-parameter-rules.md) で推奨している。
+> 公式リファレンスでも `live.observer` の `property` は生成時引数（`<objarglist>`, type=symbol）として定義され、アトリビュートは存在しない（`<attributelist>` なし）。したがって `@property value`（アトリビュート構文）は**使えない**。正しくは **生成時引数 `live.observer property value`** とするか、**`property value` メッセージを inlet 0 に送る**。本プロジェクトでは監視開始のタイミングを明示するため `zl.reg property value` パターンを推奨する（[live-parameter-rules.md](live-parameter-rules.md) Section 1 参照）。
 
 ### Why Not Use metro?
 
