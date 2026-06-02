@@ -495,23 +495,25 @@ Block comment          → Position above group, same x as first object
 Always use this tool to find safe positions:
 
 ```javascript
-// Find position for a new object near (100, 200)
+// Find a free position for a new object of the given size.
+// The tool places it to the right of existing objects (current behavior).
 const pos = await mcp.get_avoid_rect_position({
   patch_id: "patch_123",
-  near_x: 100,
-  near_y: 200,
   width: 80,   // estimated object width
   height: 20   // estimated object height
 });
 
-// Use returned position
+// Returns { position: [x, y], width, height, rationale }
 await mcp.add_max_object({
   patch_id: "patch_123",
-  object_type: "cycle~",
-  position: [pos.x, pos.y],
+  obj_type: "cycle~",
+  position: pos.position,
   // ...
 });
 ```
+
+> Note: a `near_x` / `near_y` hint (place near a target point with true
+> non-overlap search) is planned but not yet implemented — see issue #72.
 
 ## Multi-Column Layouts
 

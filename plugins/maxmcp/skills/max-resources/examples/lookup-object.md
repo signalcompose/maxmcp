@@ -82,24 +82,21 @@ Grep: pattern="random"
 
 Result includes files mentioning "random" in their documentation.
 
-## Example 4: Full-Text Search
+## Example 4: Full-Text Documentation Search
 
 **User request**: "How do I do FM synthesis?"
 
-Use the helper script for SQLite FTS:
+Grep over the user guide content JSON:
 
-```bash
-./scripts/search-fts.sh "FM synthesis"
+```
+Grep: pattern="FM synthesis"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/userguide/content"
+      glob="*.json"
+      output_mode="files_with_matches"
 ```
 
-Output:
-```
-Full-text search: FM synthesis
----
-title                path                          excerpt
------------------    --------------------------    ----------------
-FM Synthesis         /userguide/audio/fm          ...frequency modulation...
-```
+Result includes the guide pages mentioning FM synthesis (e.g.
+`content/fm_synthesis.json`); Read the matching file to extract the text.
 
 ## Example 5: Finding Related Objects
 
@@ -197,5 +194,5 @@ Returns all Max control objects (~300 files).
 | Search by pattern | Glob | `**/*filter*.maxref.xml` |
 | Search content | Grep | `pattern="oscillator" glob="*.maxref.xml"` |
 | Read reference | Read | Direct file path |
-| Full-text search | Bash | `./scripts/search-fts.sh "query"` |
+| Full-text search | Grep | `pattern="query"` over `userguide/content/*.json` |
 | List category | Glob | `*.maxref.xml` in category dir |

@@ -31,14 +31,12 @@ All resources are located within Max.app:
 ```
 /Applications/Max.app/Contents/Resources/
 +-- C74/docs/refpages/           # Object references (XML)
-|   +-- max-ref/                 # Max objects (~300)
-|   +-- msp-ref/                 # MSP/audio objects (~200)
-|   +-- jit-ref/                 # Jitter/video objects (~400)
-|   +-- m4l-ref/                 # Max for Live (~50)
-|   \-- gen-ref/                 # Gen objects (~100)
+|   +-- max-ref/                 # Max objects (~473)
+|   +-- msp-ref/                 # MSP/audio objects (~455)
+|   +-- jit-ref/                 # Jitter/video objects (~210)
+|   \-- m4l-ref/                 # Max for Live (~37)
 +-- C74/docs/userguide/          # User guides
-|   +-- content/                 # Guide content (JSON)
-|   \-- userguide_search.sqlite  # Full-text search database
+|   \-- content/                 # Guide content (JSON, full-text searchable)
 +-- C74/snippets/                # Code snippets (.maxsnip)
 |   +-- max/
 |   +-- msp/
@@ -46,7 +44,7 @@ All resources are located within Max.app:
 \-- Examples/                    # Example patches (.maxpat)
     +-- effects/
     +-- synths/
-    +-- sequencing/
+    +-- sequencing-looping/
     \-- jitter-examples/
 ```
 
@@ -84,15 +82,19 @@ Grep: pattern="frequency"
       glob="*.maxref.xml"
 ```
 
-### 3. Full-Text Search (SQLite FTS)
+### 3. Full-Text Documentation Search
 
-For comprehensive documentation search, use Max's built-in FTS database via helper script:
+To search the user guide text, **Grep** over the guide content JSON:
 
-```bash
-./scripts/search-fts.sh "oscillator" 20
+```
+Grep: pattern="oscillator"
+      path="/Applications/Max.app/Contents/Resources/C74/docs/userguide/content"
+      glob="*.json"
+      output_mode="files_with_matches"
 ```
 
-This uses Max's pre-built SQLite FTS database (no index building required).
+This searches the same user-guide source text directly - no database or index
+required, and results always match the installed Max version.
 
 ### 4. Example Patches
 
@@ -179,12 +181,11 @@ Lightweight helper scripts for operations that require Bash:
 
 | Script | Purpose | When to Use |
 |--------|---------|-------------|
-| `search-fts.sh` | SQLite FTS query | Full-text documentation search |
 | `get-reference.sh` | Get object reference | Convenient summary extraction |
 | `list-examples.sh` | List example patches | Browse examples |
 | `get-snippet.sh` | Get code snippets | Browse snippets |
 
-**Note**: Prefer using Glob/Grep/Read tools directly. Use scripts only when SQLite access is needed.
+**Note**: Prefer using Glob/Grep/Read tools directly. The scripts are thin convenience wrappers around the same filesystem lookups.
 
 ## When to Use
 

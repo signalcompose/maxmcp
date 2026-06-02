@@ -26,16 +26,14 @@
 +-- C74/
 |   +-- docs/
 |   |   +-- refpages/                    # Object reference pages
-|   |   |   +-- max-ref/                 # Max objects (~300 files)
-|   |   |   +-- msp-ref/                 # MSP objects (~200 files)
-|   |   |   +-- jit-ref/                 # Jitter objects (~400 files)
-|   |   |   +-- m4l-ref/                 # Max for Live (~50 files)
-|   |   |   \-- gen-ref/                 # Gen objects (~100 files)
+|   |   |   +-- max-ref/                 # Max objects (~473 files)
+|   |   |   +-- msp-ref/                 # MSP objects (~455 files)
+|   |   |   +-- jit-ref/                 # Jitter objects (~210 files)
+|   |   |   \-- m4l-ref/                 # Max for Live (~37 files)
 |   |   +-- userguide/
-|   |   |   +-- content/                 # Guide content (JSON)
+|   |   |   +-- content/                 # Guide content (JSON, full-text searchable)
 |   |   |   +-- navigation.json          # Topic hierarchy
-|   |   |   +-- maxtopics.json           # Topic mapping
-|   |   |   \-- userguide_search.sqlite  # FTS database
+|   |   |   \-- maxtopics.json           # Topic mapping
 |   |   \-- unibrowser/search/
 |   |       \-- c74search.server.js      # Internal search API
 |   +-- snippets/                        # Code snippets
@@ -47,7 +45,7 @@
 \-- Examples/                            # Example patches
     +-- effects/
     +-- synths/
-    +-- sequencing/
+    +-- sequencing-looping/
     +-- jitter-examples/
     \-- ...
 ```
@@ -76,21 +74,24 @@ echo $MAX_APP_PATH
 | Example patches | ~777 |
 | User guide pages | ~147 |
 
-## SQLite Search Database
+## User Guide Full-Text Search
 
-The user guide search database supports full-text search:
+The user guide text lives as JSON source files. Search them directly with
+Grep - no database or pre-built index needed, and results always match the
+installed Max version:
 
 ```bash
-# Location
-/Applications/Max.app/Contents/Resources/C74/docs/userguide/userguide_search.sqlite
+# Location of the guide content
+/Applications/Max.app/Contents/Resources/C74/docs/userguide/content/
 
-# Schema exploration
-sqlite3 userguide_search.sqlite ".schema"
-
-# FTS search
-sqlite3 userguide_search.sqlite \
-    "SELECT title, path FROM pages_fts WHERE pages_fts MATCH 'oscillator'"
+# Full-text search across all guide pages
+grep -rli "oscillator" \
+    /Applications/Max.app/Contents/Resources/C74/docs/userguide/content
 ```
+
+> Note: Max also ships a `userguide_search.sqlite` FTS database in the
+> `userguide/` directory, but its schema is an internal/undocumented detail
+> that can change between releases. Prefer Grep over the JSON source above.
 
 ## Navigation JSON Structure
 

@@ -16,6 +16,10 @@ user-invocable: true
 
 Practical techniques for building robust Max for Live devices, covering the Live Object Model, device namespaces, parameter persistence, and common pitfalls.
 
+## 前提スキル: max-techniques
+
+このスキルは [`max-techniques`](../max-techniques/SKILL.md) を**前提**とする。pattr の基礎、hot/cold inlet モデル、messaging パターンといった土台知識は `max-techniques` 側で扱っており、本スキルはその上に M4L 固有の内容を積み上げる。M4L デバイスを作る前に `max-techniques`（特に `reference/pattr-parameters.md` と `reference/cascading-init.md`）を先に読むこと。
+
 ## 🔴 MUST: パターン参照の強制（最重要）
 
 **LOM 系オブジェクト（`live.path` / `live.object` / `live.observer` / `live.thisdevice` / `pattr`）を `add_max_object` で追加する前に、該当する reference ドキュメントを Read で必ず先に読み込む。**

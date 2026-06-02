@@ -21,7 +21,7 @@ flowchart TD
 
 **Key conventions**:
 - `in` at top, `out~` at bottom
-- `thispoly~` near `adsr~` for mute-on-release (`adsr~` outlet 1 → `thispoly~` inlet 0)
+- `thispoly~` near `adsr~` for mute-on-release (`adsr~` outlet 2 = mute outlet → `thispoly~` inlet 0)
 - Use `loadmess` to set initial `thispoly~` state (e.g., steal mode)
 - `thispoly~` can be placed multiple times — all report the same voice number and share the same mute state
 

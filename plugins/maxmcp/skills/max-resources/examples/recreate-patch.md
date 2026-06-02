@@ -46,7 +46,7 @@ Following `patch-guidelines`:
 // 1. Create frequency control
 add_max_object({
     patch_id: "demo_patch",
-    object_type: "flonum",
+    obj_type: "flonum",
     varname: "ctrl_freq",
     position: [100, 50]
 })
@@ -54,8 +54,8 @@ add_max_object({
 // 2. Create oscillator
 add_max_object({
     patch_id: "demo_patch",
-    object_type: "cycle~",
-    args: "440",
+    obj_type: "cycle~",
+    arguments: [440],
     varname: "osc_main",
     position: [100, 100]
 })
@@ -63,8 +63,8 @@ add_max_object({
 // 3. Create gain
 add_max_object({
     patch_id: "demo_patch",
-    object_type: "*~",
-    args: "0.3",
+    obj_type: "*~",
+    arguments: [0.3],
     varname: "gain_output",
     position: [100, 150]
 })
@@ -72,7 +72,7 @@ add_max_object({
 // 4. Create DAC
 add_max_object({
     patch_id: "demo_patch",
-    object_type: "ezdac~",
+    obj_type: "ezdac~",
     varname: "dac_out",
     position: [100, 200]
 })
@@ -80,37 +80,37 @@ add_max_object({
 // 5. Connect freq → osc
 connect_max_objects({
     patch_id: "demo_patch",
-    source_varname: "ctrl_freq",
-    source_outlet: 0,
-    dest_varname: "osc_main",
-    dest_inlet: 0
+    src_varname: "ctrl_freq",
+    outlet: 0,
+    dst_varname: "osc_main",
+    inlet: 0
 })
 
 // 6. Connect osc → gain
 connect_max_objects({
     patch_id: "demo_patch",
-    source_varname: "osc_main",
-    source_outlet: 0,
-    dest_varname: "gain_output",
-    dest_inlet: 0
+    src_varname: "osc_main",
+    outlet: 0,
+    dst_varname: "gain_output",
+    inlet: 0
 })
 
 // 7. Connect gain → dac (left)
 connect_max_objects({
     patch_id: "demo_patch",
-    source_varname: "gain_output",
-    source_outlet: 0,
-    dest_varname: "dac_out",
-    dest_inlet: 0
+    src_varname: "gain_output",
+    outlet: 0,
+    dst_varname: "dac_out",
+    inlet: 0
 })
 
 // 8. Connect gain → dac (right)
 connect_max_objects({
     patch_id: "demo_patch",
-    source_varname: "gain_output",
-    source_outlet: 0,
-    dest_varname: "dac_out",
-    dest_inlet: 1
+    src_varname: "gain_output",
+    outlet: 0,
+    dst_varname: "dac_out",
+    inlet: 1
 })
 ```
 
@@ -152,24 +152,24 @@ flowchart TD
 
 ```javascript
 // Parameter controls
-add_max_object({ object_type: "flonum", varname: "ctrl_carrier", position: [100, 50] })
-add_max_object({ object_type: "flonum", varname: "ctrl_ratio", position: [200, 50] })
-add_max_object({ object_type: "flonum", varname: "ctrl_depth", position: [300, 50] })
+add_max_object({ obj_type: "flonum", varname: "ctrl_carrier", position: [100, 50] })
+add_max_object({ obj_type: "flonum", varname: "ctrl_ratio", position: [200, 50] })
+add_max_object({ obj_type: "flonum", varname: "ctrl_depth", position: [300, 50] })
 
 // Ratio multiplier
-add_max_object({ object_type: "*", varname: "ratio_mult", position: [150, 100] })
+add_max_object({ obj_type: "*", varname: "ratio_mult", position: [150, 100] })
 
 // Modulator
-add_max_object({ object_type: "cycle~", varname: "osc_mod", position: [150, 150] })
-add_max_object({ object_type: "*~", varname: "mod_scale", position: [250, 150] })
+add_max_object({ obj_type: "cycle~", varname: "osc_mod", position: [150, 150] })
+add_max_object({ obj_type: "*~", varname: "mod_scale", position: [250, 150] })
 
 // Carrier
-add_max_object({ object_type: "+~", varname: "freq_mod", position: [150, 200] })
-add_max_object({ object_type: "cycle~", varname: "osc_carrier", position: [150, 250] })
+add_max_object({ obj_type: "+~", varname: "freq_mod", position: [150, 200] })
+add_max_object({ obj_type: "cycle~", varname: "osc_carrier", position: [150, 250] })
 
 // Output
-add_max_object({ object_type: "*~", args: "0.3", varname: "gain_out", position: [150, 300] })
-add_max_object({ object_type: "ezdac~", varname: "dac_out", position: [150, 350] })
+add_max_object({ obj_type: "*~", arguments: [0.3], varname: "gain_out", position: [150, 300] })
+add_max_object({ obj_type: "ezdac~", varname: "dac_out", position: [150, 350] })
 
 // Connections (abbreviated)
 // ctrl_carrier → ratio_mult (inlet 0)
@@ -198,16 +198,19 @@ Found: `lowpass-filter.maxsnip`
 
 ### Read Snippet Content
 
-Snippets are also JSON format:
+Snippets (`.maxsnip`) use the same JSON structure as `.maxpat` - the boxes
+and lines are nested under a top-level `patcher` object, not at the root:
 
 ```json
 {
-  "boxes": [
-    {"box": {"maxclass": "newobj", "text": "svf~", ...}},
-    {"box": {"maxclass": "flonum", ...}},
-    ...
-  ],
-  "lines": [...]
+  "patcher": {
+    "boxes": [
+      {"box": {"maxclass": "newobj", "text": "svf~", ...}},
+      {"box": {"maxclass": "flonum", ...}},
+      ...
+    ],
+    "lines": [...]
+  }
 }
 ```
 
@@ -240,15 +243,15 @@ When reading example JSON, look for nested `patcher` objects:
 ### Recreation Strategy
 
 1. Create main patch objects
-2. Create subpatcher object: `add_max_object({ object_type: "p", args: "voice", ... })`
+2. Create subpatcher object: `add_max_object({ obj_type: "p", arguments: ["voice"], ... })`
 3. Access subpatcher contents
 4. Recursively create objects inside
 
 ```javascript
 // Create subpatcher
 add_max_object({
-    object_type: "p",
-    args: "voice",
+    obj_type: "p",
+    arguments: ["voice"],
     varname: "sub_voice",
     position: [100, 150]
 })

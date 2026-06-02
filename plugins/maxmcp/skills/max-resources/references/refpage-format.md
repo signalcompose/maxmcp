@@ -13,7 +13,6 @@ Categories:
 - `msp-ref` - MSP (audio) objects
 - `jit-ref` - Jitter objects
 - `m4l-ref` - Max for Live objects
-- `gen-ref` - Gen objects
 
 ## XML Structure
 

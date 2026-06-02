@@ -235,10 +235,10 @@ objects.forEach((obj, i) => {
 
 // Convert connections
 const mcpConnections = connections.map(c => ({
-    source_varname: idToVarname[c.source_id],
-    source_outlet: c.source_outlet,
-    dest_varname: idToVarname[c.dest_id],
-    dest_inlet: c.dest_inlet
+    src_varname: idToVarname[c.source_id],
+    outlet: c.source_outlet,
+    dst_varname: idToVarname[c.dest_id],
+    inlet: c.dest_inlet
 }));
 ```
 
