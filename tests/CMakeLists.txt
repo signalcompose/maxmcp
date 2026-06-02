@@ -86,6 +86,7 @@ set(TOOL_SOURCES
 
 add_executable(test_tool_routing
     unit/test_tool_routing.cpp
+    unit/test_avoid_rect_position.cpp
     ${TOOL_SOURCES}
     ../src/utils/console_logger.cpp
     ../src/utils/patch_registry.cpp

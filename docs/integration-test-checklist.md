@@ -69,10 +69,14 @@
 
 ## Utilities (2)
 
-| #  | Tool                      | Test                    | Expected                                      | Pass |
-|----|---------------------------|-------------------------|-----------------------------------------------|------|
-| 25 | `get_console_log`         | Retrieve console log    | Array of log messages returned                | [ ]  |
-| 26 | `get_avoid_rect_position` | Find empty position     | Returns coordinates avoiding existing objects | [ ]  |
+| #   | Tool                      | Test                                  | Expected                                                              | Pass |
+|-----|---------------------------|---------------------------------------|----------------------------------------------------------------------|------|
+| 25  | `get_console_log`         | Retrieve console log                  | Array of log messages returned                                       | [ ]  |
+| 26  | `get_avoid_rect_position` | No `near_x`/`near_y`                   | Placed to the right of existing objects; rationale mentions "right"  | [ ]  |
+| 26a | `get_avoid_rect_position` | `near_x`/`near_y` at a free spot      | Returns that exact point; rationale mentions "near"                  | [ ]  |
+| 26b | `get_avoid_rect_position` | `near_x`/`near_y` on top of an object | Returns the nearest non-overlapping spot; rationale mentions "nearest" | [ ]  |
+| 26c | `get_avoid_rect_position` | `width`/`height` of a large object    | Returned spot clears all objects by the gap for that size; rationale notes the size | [ ]  |
+| 26d | `get_avoid_rect_position` | Negative `near_x`/`near_y`            | Result clamped to non-negative coordinates (x ≥ 0, y ≥ 0)           | [ ]  |
 
 ---
 

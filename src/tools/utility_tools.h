@@ -13,6 +13,7 @@
 #define UTILITY_TOOLS_H
 
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -23,6 +24,67 @@ typedef struct _maxmcp t_maxmcp;
 namespace UtilityTools {
 
 using json = nlohmann::json;
+
+// ============================================================================
+// Geometry helpers for get_avoid_rect_position (Max-API independent, testable)
+// ============================================================================
+
+/**
+ * @brief Axis-aligned rectangle in patch coordinates.
+ */
+struct Rect {
+    double x;
+    double y;
+    double width;
+    double height;
+};
+
+/**
+ * @brief Result of a placement search.
+ */
+struct PlacedPosition {
+    double x;
+    double y;
+    std::string rationale;
+};
+
+/**
+ * @brief Whether two rectangles are closer than @p gap on both axes.
+ *
+ * With @p gap == 0 this is a plain (strict) axis-aligned overlap test: rectangles
+ * that merely touch edges do not conflict. A positive @p gap additionally
+ * enforces that much clearance — rectangles separated by exactly @p gap do not
+ * conflict, while anything closer does.
+ *
+ * @param a   First rectangle
+ * @param b   Second rectangle
+ * @param gap Required clearance (0 for a pure overlap test)
+ * @return true if the rectangles overlap or sit within @p gap on both axes
+ */
+bool rects_conflict(const Rect& a, const Rect& b, double gap);
+
+/**
+ * @brief Find a non-overlapping position for a new object of the given size.
+ *
+ * Pure geometry, free of any Max API dependency so it can be unit-tested.
+ *
+ * - When @p has_near is true, searches outward from (@p near_x, @p near_y) on a
+ *   grid for the nearest spot where a @p width x @p height rectangle does not
+ *   overlap (within a small gap) any rectangle in @p existing.
+ * - When @p has_near is false, the anchor defaults to the right of all existing
+ *   objects (legacy behavior) — or the origin when the patch is empty — and the
+ *   same non-overlap search is applied from there.
+ *
+ * @param existing Existing object rectangles to avoid
+ * @param width    Width of the rectangle to place
+ * @param height   Height of the rectangle to place
+ * @param has_near Whether a target anchor point was supplied
+ * @param near_x   Target anchor x (used only when @p has_near)
+ * @param near_y   Target anchor y (used only when @p has_near)
+ * @return The chosen position and a human-readable rationale
+ */
+PlacedPosition find_avoid_rect_position(const std::vector<Rect>& existing, double width,
+                                        double height, bool has_near, double near_x, double near_y);
 
 /**
  * @brief Get the JSON schemas for all utility tools
