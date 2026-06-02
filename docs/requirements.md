@@ -260,7 +260,7 @@ Develop a native MCP server external object for Max/MSP, enabling Claude Code to
 - **Rationale**: Cover 95% of Max users
 
 #### NFR-8: Max SDK
-- **Requirement**: Max SDK 8.6+
+- **Requirement**: Max SDK v8.2.0
 - **Rationale**: C++ standard library compatibility
 
 ### 3.3 Reliability
@@ -437,7 +437,7 @@ These may be considered for future versions based on user feedback.
 ## 9. Dependencies
 
 ### 9.1 External Dependencies
-- Max SDK 8.6+
+- Max SDK v8.2.0
 - CMake 3.19+
 - nlohmann/json 3.11.0+
 - libwebsockets

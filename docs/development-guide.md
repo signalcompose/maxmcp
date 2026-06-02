@@ -97,7 +97,7 @@ json validate_and_respond(const json& params) {
 brew install cmake nlohmann-json libwebsockets openssl googletest
 
 # Clone Max SDK (recursive for submodules)
-git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+git clone --branch v8.2.0 https://github.com/Cycling74/max-sdk.git --recursive max-sdk
 ```
 
 ### 2.2 Project Initialization
@@ -106,7 +106,7 @@ git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
 # Clone and set up
 git clone https://github.com/signalcompose/MaxMCP.git
 cd MaxMCP
-git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+git clone --branch v8.2.0 https://github.com/Cycling74/max-sdk.git --recursive max-sdk
 
 # Install bridge dependencies
 cd package/MaxMCP/support/bridge && npm install && cd ../../../..

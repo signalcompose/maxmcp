@@ -208,7 +208,7 @@ Each patch gets a unique ID when `[maxmcp]` is created:
 
 **Prerequisites**:
 - CMake 3.19+
-- Max SDK 8.6+
+- Max SDK v8.2.0
 - Xcode (macOS)
 - nlohmann/json
 

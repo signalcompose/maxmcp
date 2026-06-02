@@ -62,7 +62,7 @@ Claude Code:
 ## Tech Stack
 
 ### Confirmed Choices
-- **Language**: C/C++17 (Max SDK 8.6+)
+- **Language**: C/C++17 (Max SDK v8.2.0)
 - **Build System**: CMake
 - **MCP Protocol**: stdio ↔ WebSocket (via Node.js bridge)
 - **JSON Library**: nlohmann/json
@@ -157,9 +157,9 @@ Follow this exact order to reproduce the working installation from our latest de
    ```bash
    git clone https://github.com/signalcompose/MaxMCP.git
    cd MaxMCP
-   git clone https://github.com/Cycling74/max-sdk.git --recursive max-sdk
+   git clone --branch v8.2.0 https://github.com/Cycling74/max-sdk.git --recursive max-sdk
    ```
-   > The `--recursive` flag is mandatory; without it the `max-pretarget.cmake` script is missing.
+   > The `--recursive` flag is mandatory; without it the `max-pretarget.cmake` script is missing. v8.2.0 is pinned because newer max-sdk no longer ships the `max-sdk-base` submodule (it switched to CMake FetchContent).
 
 2. **Install system dependencies**
    ```bash

@@ -24,9 +24,12 @@ jobs:
 
       - name: Clone Max SDK
         run: |
-          git clone --depth 1 https://github.com/Cycling74/max-sdk.git max-sdk
+          # Pin to v8.2.0: max-sdk's default branch was restructured to fetch
+          # max-sdk-base via CMake FetchContent and no longer ships the
+          # source/max-sdk-base submodule that this project's CMakeLists expects.
+          git clone --depth 1 --branch v8.2.0 https://github.com/Cycling74/max-sdk.git max-sdk
           cd max-sdk
-          git submodule update --init --recursive --depth 1
+          git submodule update --init --recursive
 
       - name: Install dependencies
         run: |

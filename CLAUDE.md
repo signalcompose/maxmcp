@@ -118,7 +118,7 @@ WebSocket Thread → defer() → Max Main Thread → Execute Max API
 ## Dependencies
 
 - **C++17** (required)
-- **Max SDK 8.6+** (clone to `max-sdk/` directory)
+- **Max SDK v8.2.0** (clone to `max-sdk/` directory; newer max-sdk dropped the `max-sdk-base` submodule this project requires)
 - **nlohmann/json 3.11.0+** (`brew install nlohmann-json`)
 - **libwebsockets** (`brew install libwebsockets`)
 - **Google Test** (for tests only, `brew install googletest`)
