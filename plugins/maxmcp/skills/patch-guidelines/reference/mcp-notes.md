@@ -17,6 +17,16 @@ MaxMCP の MCP ツールを使用する際の注意事項。Max の挙動と MCP
 
 **検証**: `get_object_attribute` で設定が反映されているか確認する。"Attribute not found" が返る場合、テキスト記述が必要。
 
+### 永続化（保存）の注意
+
+**ルール**: `set_object_attribute` で実行時に変更できても、**save フラグを持たないアトリビュートは `.amxd` / `.maxpat` に保存されない**。永続化が必要な構成は `@attr value` でオブジェクトテキストに焼き込む。
+
+**理由**: アトリビュートには「パッチに保存される（save フラグ付き）」ものとそうでないものがある。後者は実行時に値を変えてもシリアライズされず、再読み込みで既定値に戻る。`live.*` のパラメータ系は保存されるが、通常オブジェクトのアトリビュートには保存されないものが多い。
+
+**実例**: `scale` の `classic`。`set_object_attribute classic 0` は実行時の値だけを変え、保存されない。再読み込みで既定の `classic 1` に戻る。modern モード（`x^n`）を永続化するには `scale 0. 1. min max n @classic 0` とテキストに記述する（[Object Text Conventions](object-text-conventions.md) Section 3 参照）。
+
+**検証法**: `.amxd` / `.maxpat`（JSON maxpat 形式）を読み、該当ボックスの `text` に `@attr` が含まれるか、または属性キー自体が保存されているかを確認する。保存されていなければテキスト記述に切り替える。
+
 ## 2. 新規オブジェクトの presentation 設定
 
 **ルール**: `add_max_object` でオブジェクトを追加した後、ロジック用オブジェクトは必ず `set_object_attribute` で `presentation 0` を設定する。

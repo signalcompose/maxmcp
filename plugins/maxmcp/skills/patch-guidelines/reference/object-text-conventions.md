@@ -107,19 +107,32 @@ replace_object_text new_text="scale 0. 1. 0. 1. 1. @classic 0"
 
 ## 3. scale の第5引数によるカーブ変換の統合
 
-**ルール**: `pow` + `scale` でカーブ変換と範囲マッピングを行う場合、`scale` の第5引数（exponent）に統合する。
+**ルール**: `pow` + `scale` でカーブ変換と範囲マッピングを行う場合、`scale` の第5引数（exponent）に統合する。**ただし `x^n` のべき乗カーブには `@classic 0`（modern モード）をテキストに明示すること。**
 
-**理由**: `scale` オブジェクトは第5引数で入力値に指数スケーリング（`x^n`）を適用できる。`pow` と `scale` を別々に使用するより、1つのオブジェクトにまとめた方がパッチが簡潔になる。
+**理由**: `scale` オブジェクトは第5引数で入力値に指数スケーリングを適用できる。`pow` と `scale` を別々に使用するより、1つのオブジェクトにまとめた方がパッチが簡潔になる。
 
 **パターン**:
 
 ```
-誤: input → pow n → scale 0. 1. min max    ← オブジェクト2つ
-正: input → scale 0. 1. min max n           ← 1つに統合
+誤: input → pow n → scale 0. 1. min max              ← オブジェクト2つ
+誤: input → scale 0. 1. min max n                     ← classic モードのまま（n < 1 が効かない）
+正: input → scale 0. 1. min max n @classic 0          ← 1つに統合 + modern モード
 ```
 
 - 第5引数（inlet 5）で指数 n を動的に設定可能
-- modern モード（デフォルト）での計算: `output = out_low + (out_high - out_low) * ((x - in_low) / (in_high - in_low)) ^ n`
+
+### 🔴 必須: `@classic 0`（modern モード）の明示
+
+`scale` の `classic` アトリビュートは **デフォルトが `1`（classic モード）**。modern モードではない。両モードで計算式が全く異なる:
+
+| モード | 計算式（in 0→1 のとき） | exponent の制約 |
+|---|---|---|
+| **classic（既定 `1`）** | `exp(x·log(power))` を核とする指数関数（出力スケーリングは別途） | リファレンス明記: **base > 1 必須**。`n < 1`（0.5 / 0.8 等）では正しく曲がらない |
+| **modern（`@classic 0`）** | `out_low + (out_high-out_low) · x^exp` のべき乗 | **exp > 0 であれば可**（仕様の `y = x^n` 通り） |
+
+**症状**: `@classic 0` を付けないと、`n > 1` のカーブは効くが `n < 1` が効かず「指数が無視される」ように見える。
+
+**🚫 `set_object_attribute classic 0` では永続化されない**: `classic` は save フラグを持たないため、実行時に変更しても `.amxd` に保存されず、再読み込みで `classic 1` に戻る。**必ずテキストに `@classic 0` を焼き込む**こと（詳細は [MCP Notes](mcp-notes.md) Section 1 の「永続化（保存）の注意」を参照）。
 
 ## 4. 乗算フィルタパターン
 
