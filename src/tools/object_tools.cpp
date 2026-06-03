@@ -294,8 +294,7 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
     // Helpers populating field groups. Each mode picks the helpers it needs.
     auto add_identity_fields = [](json& obj, t_object* box, int index) {
         obj["index"] = index;
-        t_symbol* maxclass = jbox_get_maxclass(box);
-        obj["maxclass"] = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
+        obj["maxclass"] = PatchHelpers::get_box_maxclass(box, "unknown");
         obj["text"] = PatchHelpers::get_box_text(box);
     };
     auto add_geometry_fields = [](json& obj, t_object* box) {
@@ -310,8 +309,7 @@ static void get_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom
     int index = 0;
 
     for (t_object* box = jpatcher_get_firstobject(patcher); box; box = jbox_get_nextobject(box)) {
-        t_symbol* varname = object_attr_getsym(box, gensym("varname"));
-        std::string varname_str = (varname && varname->s_name) ? varname->s_name : "";
+        std::string varname_str = PatchHelpers::get_box_varname(box);
 
         json obj_info = json::object();
         if (!varname_str.empty()) {
@@ -434,8 +432,7 @@ static void replace_object_text_deferred(t_maxmcp* patch, t_symbol* s, long argc
     }
 
     // --- 1. Save current box state ---
-    t_symbol* maxclass = jbox_get_maxclass(box);
-    std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "";
+    std::string maxclass_str = PatchHelpers::get_box_maxclass(box);
     std::string old_text = PatchHelpers::get_box_text(box);
     auto saved_attrs = PatchHelpers::save_box_attributes(box);
     auto saved_connections = PatchHelpers::save_box_connections(patcher, box);
@@ -524,8 +521,7 @@ static void assign_varnames_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
 
         object_attr_setsym(box, gensym("varname"), gensym(varname.c_str()));
 
-        t_symbol* maxclass = jbox_get_maxclass(box);
-        std::string maxclass_str = (maxclass && maxclass->s_name) ? maxclass->s_name : "unknown";
+        std::string maxclass_str = PatchHelpers::get_box_maxclass(box, "unknown");
 
         assigned.push_back({{"index", idx}, {"varname", varname}, {"maxclass", maxclass_str}});
     }
