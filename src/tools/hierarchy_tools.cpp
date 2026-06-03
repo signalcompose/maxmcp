@@ -17,6 +17,7 @@
 
 #include "maxmcp.h"
 #include "utils/console_logger.h"
+#include "utils/patch_helpers.h"
 #include "utils/patch_registry.h"
 
 namespace HierarchyTools {
@@ -76,19 +77,16 @@ static void get_subpatchers_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_
     // Iterate through all boxes to find subpatchers (patcher, bpatcher, poly~)
     for (t_object* box = jpatcher_get_firstobject(data->patch->patcher); box != nullptr;
          box = jbox_get_nextobject(box)) {
-        t_symbol* maxclass = jbox_get_maxclass(box);
-        if (!maxclass || !maxclass->s_name) {
+        std::string class_name = PatchHelpers::get_box_maxclass(box);
+        if (class_name.empty()) {
             continue;
         }
-
-        std::string class_name = maxclass->s_name;
 
         // Check if this is a subpatcher type
         // Max may report "jpatcher" (jbox variant) instead of "patcher"
         if (class_name == "patcher" || class_name == "jpatcher" || class_name == "bpatcher" ||
             class_name == "poly~") {
-            t_symbol* varname = object_attr_getsym(box, gensym("varname"));
-            std::string varname_str = (varname && varname->s_name) ? varname->s_name : "";
+            std::string varname_str = PatchHelpers::get_box_varname(box);
 
             // Get subpatcher name if available
             std::string name_str = "";

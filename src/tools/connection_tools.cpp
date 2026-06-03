@@ -249,11 +249,6 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
     json patchlines = json::array();
     t_object* patcher = data->patch->patcher;
 
-    auto get_varname = [](t_object* box) -> std::string {
-        t_symbol* v = object_attr_getsym(box, gensym("varname"));
-        return (v && v->s_name) ? v->s_name : "";
-    };
-
     // Helpers populating field groups. Each mode picks the helpers it needs.
     auto add_geometry_fields = [](json& pl, t_object* line) {
         double sx, sy, ex, ey;
@@ -306,9 +301,9 @@ static void get_patchlines_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_a
         long inlet = jpatchline_get_inletnum(line);
 
         // Topology fields are included in every mode.
-        json pl = {{"src_varname", get_varname(box1)},
+        json pl = {{"src_varname", PatchHelpers::get_box_varname(box1)},
                    {"outlet", outlet},
-                   {"dst_varname", get_varname(box2)},
+                   {"dst_varname", PatchHelpers::get_box_varname(box2)},
                    {"inlet", inlet}};
 
         switch (data->mode) {
