@@ -124,6 +124,7 @@ M4L デバイスを構築する際、以下の順序で設計・実装する。
 6. **live.object の API**: プロパティ設定は `set <property> <value>`、取得は `get <property>`（`<property> <value>` ではない）
 7. **live.* UI の unitstyle**: `_parameter_type` が Float (0) なら `_parameter_unitstyle` も Float (1) に設定（[Live Parameter Rules](reference/live-parameter-rules.md) Section 2 参照）
 8. **pattr outlet 構造**: outlet 0 = 値出力、outlet 1 = bindto（UI バインド）、outlet 2 = dumpout。UI にバインドする場合は outlet 1 をパッチコードで接続
+9. **scale のカーブ（exponent）**: `scale` の既定は `classic 1`。`x^n` の modern カーブ（`n < 1` を含む）には `@classic 0` を**テキストに明示**（`set_object_attribute` では保存されない）（[Object Text Conventions](../patch-guidelines/reference/object-text-conventions.md) Section 3 参照）
 
 ## Categories
 
