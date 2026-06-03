@@ -24,7 +24,7 @@
     "coverageDirectory": "coverage"
   },
   "dependencies": {
-    "ws": "^8.14.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
