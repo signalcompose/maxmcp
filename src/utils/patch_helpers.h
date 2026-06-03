@@ -94,6 +94,28 @@ inline const std::unordered_set<std::string> kBoxAttributeWhitelist = {
 t_object* find_box_by_varname(t_object* patcher, const std::string& varname);
 
 /**
+ * @brief Get a box's varname attribute as a string.
+ *
+ * @param box The box object
+ * @return The varname, or an empty string if the box is null or unnamed
+ *
+ * @note This function must be called on the main thread (or via defer)
+ */
+std::string get_box_varname(t_object* box);
+
+/**
+ * @brief Get a box's maxclass (object class name) as a string.
+ *
+ * @param box The box object
+ * @param fallback Value to return when the box is null or has no class name
+ *                 (call sites differ: some want "", some "unknown")
+ * @return The maxclass name, or @p fallback if unavailable
+ *
+ * @note This function must be called on the main thread (or via defer)
+ */
+std::string get_box_maxclass(t_object* box, const std::string& fallback = "");
+
+/**
  * @brief Get inlet count for a box
  *
  * @param box The box object

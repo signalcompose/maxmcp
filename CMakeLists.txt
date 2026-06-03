@@ -59,6 +59,8 @@ set(UTILS_SRC
     src/utils/patch_registry.h
     src/utils/patch_helpers.cpp
     src/utils/patch_helpers.h
+    src/utils/geometry.cpp
+    src/utils/geometry.h
 )
 
 # MCP Tool implementation files (extracted from mcp_server.cpp)
@@ -77,6 +79,8 @@ set(TOOLS_SRC
     src/tools/hierarchy_tools.h
     src/tools/utility_tools.cpp
     src/tools/utility_tools.h
+    src/tools/layout_tools.cpp
+    src/tools/layout_tools.h
 )
 
 # Source files (unified object with @mode attribute)

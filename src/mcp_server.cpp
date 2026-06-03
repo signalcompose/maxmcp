@@ -15,6 +15,7 @@
 // Tool module headers
 #include "tools/connection_tools.h"
 #include "tools/hierarchy_tools.h"
+#include "tools/layout_tools.h"
 #include "tools/object_tools.h"
 #include "tools/patch_tools.h"
 #include "tools/state_tools.h"
@@ -105,6 +106,7 @@ static json get_all_tool_schemas() {
     auto state_schemas = StateTools::get_tool_schemas();
     auto hierarchy_schemas = HierarchyTools::get_tool_schemas();
     auto utility_schemas = UtilityTools::get_tool_schemas();
+    auto layout_schemas = LayoutTools::get_tool_schemas();
 
     // Merge all schemas
     for (const auto& schema : patch_schemas) {
@@ -123,6 +125,9 @@ static json get_all_tool_schemas() {
         all_tools.push_back(schema);
     }
     for (const auto& schema : utility_schemas) {
+        all_tools.push_back(schema);
+    }
+    for (const auto& schema : layout_schemas) {
         all_tools.push_back(schema);
     }
 
@@ -273,6 +278,12 @@ json MCPServer::execute_tool(const std::string& tool, const json& params) {
 
     // Try UtilityTools (get_console_log, get_avoid_rect_position)
     result = UtilityTools::execute(tool, params);
+    if (!result.is_null()) {
+        return result;
+    }
+
+    // Try LayoutTools (validate_layout)
+    result = LayoutTools::execute(tool, params);
     if (!result.is_null()) {
         return result;
     }

@@ -35,10 +35,13 @@ using ToolCommon::DeferredResult;
 // ============================================================================
 
 // Two rectangles conflict if they are closer than `gap` on both axes.
-// Public so the same predicate can be reused by unit tests.
+// This is the shared AABB separating-axis test with a negated tolerance: a
+// positive clearance `gap` (keep objects apart) is the mirror image of
+// geometry::aabb_overlap's positive penetration tolerance (ignore tiny overlaps),
+// so the single formula lives in geometry and this stays a thin, intent-named
+// wrapper. Public so the same predicate can be reused by unit tests.
 bool rects_conflict(const Rect& a, const Rect& b, double gap) {
-    return a.x < b.x + b.width + gap && b.x < a.x + a.width + gap && a.y < b.y + b.height + gap &&
-           b.y < a.y + a.height + gap;
+    return geometry::aabb_overlap(a, b, -gap);
 }
 
 namespace {
@@ -72,7 +75,7 @@ bool position_is_free(double x, double y, double width, double height,
 double rightmost_edge(const std::vector<Rect>& existing) {
     double edge = 0.0;
     for (const Rect& r : existing) {
-        edge = std::max(edge, r.x + r.width);
+        edge = std::max(edge, r.origin.x + r.width);
     }
     return edge;
 }

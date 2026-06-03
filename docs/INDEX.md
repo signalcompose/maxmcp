@@ -1,7 +1,7 @@
 # MaxMCP Documentation Index
 
-**Last Updated**: 2026-02-22
-**Project Status**: 26 MCP Tools
+**Last Updated**: 2026-06-03
+**Project Status**: 27 MCP Tools
 
 ---
 
@@ -73,7 +73,7 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 **Purpose**: Complete reference for all MCP tools
 **Audience**: Developers, users
 **Contents**:
-- All 26 MCP tools documentation
+- All 27 MCP tools documentation
 - Parameter specifications
 - Response formats
 - Error codes
