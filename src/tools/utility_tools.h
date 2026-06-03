@@ -12,6 +12,8 @@
 #ifndef UTILITY_TOOLS_H
 #define UTILITY_TOOLS_H
 
+#include "utils/geometry.h"
+
 #include <string>
 #include <vector>
 
@@ -31,13 +33,11 @@ using json = nlohmann::json;
 
 /**
  * @brief Axis-aligned rectangle in patch coordinates.
+ *
+ * Aliased to geometry::Rect so the placement search and the layout validation
+ * tools share a single rectangle type (see src/utils/geometry.h).
  */
-struct Rect {
-    double x;
-    double y;
-    double width;
-    double height;
-};
+using Rect = geometry::Rect;
 
 /**
  * @brief Result of a placement search.

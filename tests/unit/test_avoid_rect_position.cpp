@@ -36,7 +36,7 @@ void expect_cleared(const PlacedPosition& placed, double width, double height,
     for (const Rect& e : existing) {
         EXPECT_FALSE(rects_conflict(r, e, kGap))
             << "placed (" << placed.x << "," << placed.y << ") is within the gap of existing ("
-            << e.x << "," << e.y << "," << e.width << "," << e.height << ")";
+            << e.origin.x << "," << e.origin.y << "," << e.width << "," << e.height << ")";
     }
 }
 

@@ -52,6 +52,16 @@ t_object* find_box_by_varname(t_object* patcher, const std::string& varname) {
     return nullptr;
 }
 
+std::string get_box_varname(t_object* box) {
+    (void)box;
+    return "";
+}
+
+std::string get_box_maxclass(t_object* box, const std::string& fallback) {
+    (void)box;
+    return fallback;
+}
+
 long get_inlet_count(t_object* box) {
     (void)box;
     return -1;
@@ -124,6 +134,22 @@ t_object* find_box_by_varname(t_object* patcher, const std::string& varname) {
     }
 
     return nullptr;
+}
+
+std::string get_box_varname(t_object* box) {
+    if (!box) {
+        return "";
+    }
+    t_symbol* varname = object_attr_getsym(box, gensym("varname"));
+    return (varname && varname->s_name) ? varname->s_name : "";
+}
+
+std::string get_box_maxclass(t_object* box, const std::string& fallback) {
+    if (!box) {
+        return fallback;
+    }
+    t_symbol* maxclass = jbox_get_maxclass(box);
+    return (maxclass && maxclass->s_name) ? maxclass->s_name : fallback;
 }
 
 long get_inlet_count(t_object* box) {

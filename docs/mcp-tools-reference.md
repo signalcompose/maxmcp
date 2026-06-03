@@ -1,6 +1,6 @@
 # MaxMCP MCP Tools Reference
 
-**Last Updated**: 2026-02-22
+**Last Updated**: 2026-06-03
 
 This document provides a complete reference for all MCP tools available in MaxMCP.
 
@@ -8,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 27 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -22,6 +22,7 @@ MaxMCP provides 26 MCP tools for controlling Max/MSP patches through natural lan
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
+| Layout Validation | 1 | Machine-check layout geometry (overlaps, crossings) |
 
 ---
 
@@ -759,6 +760,76 @@ Find an empty (non-overlapping) position for a new object.
   }
 }
 ```
+
+---
+
+## Layout Validation
+
+### `validate_layout`
+
+Machine-check a patch's layout geometry and return a structured findings list.
+**Read-only** — never modifies the patch. Replaces the manual Phase 8 checks of
+the `organize-patch` skill (object overlaps, upward patchcords, patchcords
+crossing unrelated objects, collinear overlapping cords). The geometry is
+computed deterministically on the server and pinned by unit tests, so callers do
+not need to reason about coordinates themselves. Call it before saving and fix
+findings until `clean` is `true`.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true, "description": "Patch ID to validate"},
+  "scope_varnames": {"type": "array", "required": false, "description": "Limit checks to these objects (and cords between them). Omit to check the whole patch."},
+  "mode": {"type": "string", "required": false, "description": "'patching' (default) or 'presentation'. Presentation mode checks presentation_rect overlaps of objects shown in presentation; cord checks are skipped."},
+  "checks": {"type": "array", "required": false, "description": "Subset of [\"upward\", \"overlap\", \"cord_object\", \"cord_cord\", \"presentation_overlap\"]. Omit to run all."},
+  "epsilon": {"type": "number", "required": false, "description": "Tolerance in pixels for all checks (default: 2.0)"}
+}
+```
+
+**Check types**:
+
+| Check | Severity | Meaning |
+|-------|----------|---------|
+| `upward` | error (straight) / warning (folded) | Cord rises on screen (`start.y > end.y`). A straight upward cord is an error; an upward segment of a midpoint-folded cord is a flagged detour. |
+| `overlap` | error | Two objects' `patching_rect` overlap by more than `epsilon` on both axes. |
+| `cord_object` | error | A cord segment passes through an unrelated object's rect (its own source/destination objects are excluded). |
+| `cord_cord` | warning | Two cords have collinear, axis-aligned overlapping segments. |
+| `presentation_overlap` | error | Two objects shown in presentation overlap in `presentation_rect` (presentation mode only). |
+
+**Response**:
+```json
+{
+  "result": {
+    "patch_id": "patch_altXO9Sx",
+    "clean": false,
+    "summary": {"upward": 1, "overlap": 1, "cord_object": 1, "cord_cord": 0, "presentation_overlap": 0},
+    "findings": [
+      {
+        "type": "cord_object",
+        "severity": "error",
+        "cord": {"src_varname": "target_id_prefix", "outlet": 0, "dst_varname": "set_obj", "inlet": 1},
+        "object": "prop_route",
+        "detail": "cord segment passes through object rect; crossing at (876.8, 860.0)"
+      },
+      {
+        "type": "overlap",
+        "severity": "error",
+        "objects": ["curve_scale", "disp_pak"],
+        "detail": "patching_rect overlap area 120 px^2 (x:679-690 y:1180-1200)"
+      },
+      {
+        "type": "upward",
+        "severity": "error",
+        "cord": {"src_varname": "a", "outlet": 0, "dst_varname": "b", "inlet": 0},
+        "detail": "start.y 1360 > end.y 800, num_midpoints 0"
+      }
+    ]
+  }
+}
+```
+
+An empty `findings` array means `clean` is `true`. The intended loop is:
+validate → fix findings → re-validate until clean.
 
 ---
 

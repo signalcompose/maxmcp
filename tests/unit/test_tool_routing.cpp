@@ -238,7 +238,7 @@ TEST_F(MCPServerRoutingTest, ToolsListReturnsAllTools) {
 
     auto& tools = response["result"]["tools"];
     ASSERT_TRUE(tools.is_array());
-    EXPECT_EQ(tools.size(), 26) << "tools/list should return all 26 tools";
+    EXPECT_EQ(tools.size(), 27) << "tools/list should return all 27 tools";
 }
 
 TEST_F(MCPServerRoutingTest, ToolsListResponseFormat) {

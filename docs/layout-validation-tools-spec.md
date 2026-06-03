@@ -2,7 +2,7 @@
 
 **作成日**: 2026-06-03
 **対象読者**: MaxMCP を開発する Claude / 開発者
-**ステータス**: 設計提案（未実装）
+**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}` と Step 2 `validate_layout` は実装済み。Step 3 `get_io_position` 以降は未着手）
 
 ---
 

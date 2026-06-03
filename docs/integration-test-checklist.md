@@ -1,6 +1,6 @@
 # MCP Integration Test Checklist
 
-**Total Tools**: 26
+**Total Tools**: 27
 **Purpose**: Manual verification checklist for all MCP tools. Use before PR merges and releases.
 
 ---
@@ -78,6 +78,24 @@
 | 26c | `get_avoid_rect_position` | `width`/`height` of a large object    | Returned spot clears all objects by the gap for that size; rationale notes the size | [ ]  |
 | 26d | `get_avoid_rect_position` | Negative `near_x`/`near_y`            | Result clamped to non-negative coordinates (x ≥ 0, y ≥ 0)           | [ ]  |
 
+## Layout Validation (1)
+
+`validate_layout` is read-only. For each case, set up the patch state described, then run the tool and confirm the finding (or `clean`).
+
+| #   | Tool              | Test                                                                 | Expected                                                                                  | Pass |
+|-----|-------------------|----------------------------------------------------------------------|-------------------------------------------------------------------------------------------|------|
+| 27  | `validate_layout` | Tidy patch (no overlaps/crossings)                                   | `clean: true`, empty `findings`, all `summary` counters 0                                  | [ ]  |
+| 27a | `validate_layout` | Two objects overlapping by more than `epsilon`                       | One `overlap` finding (severity error); `detail` reports area + overlap region bounds      | [ ]  |
+| 27b | `validate_layout` | Straight cord routed upward (`start.y > end.y`, no midpoints)        | One `upward` finding, severity **error**                                                    | [ ]  |
+| 27c | `validate_layout` | Folded cord (midpoints) with an upward intermediate segment          | `upward` finding, severity **warning**                                                      | [ ]  |
+| 27d | `validate_layout` | Cord passing through an unrelated object's rect                      | One `cord_object` finding; `object` names the obstacle; `detail` gives the crossing point  | [ ]  |
+| 27e | `validate_layout` | Cord whose endpoint object lies on its path                          | That endpoint object is **not** reported (src/dst excluded)                                 | [ ]  |
+| 27f | `validate_layout` | Two cords collinear on the same row/column with overlapping spans    | One `cord_cord` finding (severity warning)                                                  | [ ]  |
+| 27g | `validate_layout` | `scope_varnames` limited to one section                             | Only objects/cords within that section are checked                                          | [ ]  |
+| 27h | `validate_layout` | `mode: "presentation"` with overlapping `presentation_rect`         | `presentation_overlap` finding; cord checks skipped                                         | [ ]  |
+| 27i | `validate_layout` | `checks` subset (e.g. `["overlap"]`)                                | Only the requested check runs; others stay 0                                               | [ ]  |
+| 27j | `validate_layout` | Fix a reported finding, then re-run                                  | The finding disappears; repeat until `clean: true` (validate → fix → re-validate loop)     | [ ]  |
+
 ---
 
 ## Recommended Test Flow
@@ -89,7 +107,8 @@
 5. **Patch state**: Check lock/dirty state (#20-22)
 6. **Hierarchy**: Verify parent/subpatcher queries (#23-24)
 7. **Utilities**: Test log and position tools (#25-26)
-8. **Cleanup**: Remove test objects (#5)
+8. **Layout validation**: Deliberately break the layout (overlap, upward cord, crossing), confirm `validate_layout` reports each, fix and re-validate to `clean` (#27)
+9. **Cleanup**: Remove test objects (#5)
 
 ---
 
@@ -98,3 +117,5 @@
 - `get_parent_patcher` returns an error on top-level patches — this is expected behavior
 - `get_subpatchers` returns an empty array when no subpatchers exist — this is expected behavior
 - Full hierarchy testing requires a patch containing subpatchers (p, poly~, bpatcher, etc.)
+- `validate_layout` is read-only (never moves objects or cords); it only reports findings. The intended workflow is validate → fix → re-validate until `clean: true`
+- `validate_layout` cord endpoints use the patchline's real start/end points (`jpatchline_get_startpoint/endpoint`); per-inlet/outlet pixel positions (`get_io_position`) are a separate future tool (see `docs/layout-validation-tools-spec.md`)
