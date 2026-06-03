@@ -16,7 +16,11 @@ maxApi.post('npm-install.js loaded');
 maxApi.addHandler(maxApi.MESSAGE_TYPES.BANG, () => {
   maxApi.post(`Installing dependencies in: ${bridgeDir}`);
 
-  const npmProcess = spawn('npm', ['install'], {
+  // Install production dependencies only (runtime needs `ws`; eslint/jest/
+  // prettier are devDependencies used for linting/testing and are unnecessary
+  // in the end-user deploy environment). This also suppresses the deprecation
+  // and dev-only audit warnings that the full install surfaces.
+  const npmProcess = spawn('npm', ['install', '--omit=dev'], {
     cwd: bridgeDir,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
