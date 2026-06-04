@@ -51,10 +51,9 @@ constexpr double PLACE_GAP = 8.0;            // minimum visual gap between objec
 constexpr double PLACE_GRID = 15.0;          // search step (matches Max default grid)
 constexpr double PLACE_MAX_RADIUS = 4000.0;  // give up beyond this many px
 
-struct Point {
-    double x;
-    double y;
-};
+// Reuse the shared geometry point so the placement search and the layout tools
+// speak the same coordinate type (see src/utils/geometry.h).
+using Point = geometry::Point;
 
 // A width x height rect at (x, y) is valid when it stays in the visible area
 // and clears every existing rect (keeping PLACE_GAP of separation).
@@ -133,18 +132,18 @@ PlacedPosition find_avoid_rect_position(const std::vector<Rect>& existing, doubl
     const Point anchor = search_anchor(existing, has_near, near_x, near_y, desc);
 
     if (position_is_free(anchor.x, anchor.y, width, height, existing)) {
-        return {anchor.x, anchor.y, "Placed " + desc};
+        return {anchor, "Placed " + desc};
     }
 
     Point spot{};
     for (double radius = PLACE_GRID; radius <= PLACE_MAX_RADIUS; radius += PLACE_GRID) {
         if (nearest_free_on_ring(anchor, radius, width, height, existing, spot)) {
-            return {spot.x, spot.y, "Found nearest free position " + desc};
+            return {spot, "Found nearest free position " + desc};
         }
     }
 
     // Fallback for an extremely dense patch: the far right is always free.
-    return {rightmost_edge(existing) + PLACE_MARGIN, 50.0, "Fallback: placed to the far right"};
+    return {{rightmost_edge(existing) + PLACE_MARGIN, 50.0}, "Fallback: placed to the far right"};
 }
 
 // ============================================================================
@@ -197,7 +196,7 @@ static void get_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_ato
                      std::to_string(static_cast<int>(data->height)) + ")";
     }
 
-    COMPLETE_DEFERRED(data, json({{"position", json::array({placed.x, placed.y})},
+    COMPLETE_DEFERRED(data, json({{"position", json::array({placed.position.x, placed.position.y})},
                                   {"width", data->width},
                                   {"height", data->height},
                                   {"rationale", rationale}}));

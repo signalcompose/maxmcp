@@ -43,8 +43,7 @@ using Rect = geometry::Rect;
  * @brief Result of a placement search.
  */
 struct PlacedPosition {
-    double x;
-    double y;
+    geometry::Point position;
     std::string rationale;
 };
 

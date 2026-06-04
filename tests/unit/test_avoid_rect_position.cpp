@@ -32,11 +32,12 @@ constexpr double kGap = 8.0;
 // boundary coverage).
 void expect_cleared(const PlacedPosition& placed, double width, double height,
                     const std::vector<Rect>& existing) {
-    const Rect r{placed.x, placed.y, width, height};
+    const Rect r{placed.position.x, placed.position.y, width, height};
     for (const Rect& e : existing) {
         EXPECT_FALSE(rects_conflict(r, e, kGap))
-            << "placed (" << placed.x << "," << placed.y << ") is within the gap of existing ("
-            << e.origin.x << "," << e.origin.y << "," << e.width << "," << e.height << ")";
+            << "placed (" << placed.position.x << "," << placed.position.y
+            << ") is within the gap of existing (" << e.origin.x << "," << e.origin.y << ","
+            << e.width << "," << e.height << ")";
     }
 }
 
@@ -92,8 +93,8 @@ TEST(RectsConflict, WithinGapOnlyConflictsWhenBothAxesClose) {
 // Empty patch, no anchor -> default origin (50, 50).
 TEST(AvoidRectPosition, EmptyPatchReturnsOrigin) {
     PlacedPosition p = find_avoid_rect_position({}, 50.0, 20.0, false, 0.0, 0.0);
-    EXPECT_DOUBLE_EQ(p.x, 50.0);
-    EXPECT_DOUBLE_EQ(p.y, 50.0);
+    EXPECT_DOUBLE_EQ(p.position.x, 50.0);
+    EXPECT_DOUBLE_EQ(p.position.y, 50.0);
     EXPECT_TRUE(contains(p.rationale, "origin")) << p.rationale;
 }
 
@@ -103,8 +104,8 @@ TEST(AvoidRectPosition, NoAnchorPlacesToTheRight) {
     std::vector<Rect> existing{{50.0, 50.0, 100.0, 22.0}};
     PlacedPosition p = find_avoid_rect_position(existing, 50.0, 20.0, false, 0.0, 0.0);
     // rightmost edge = 150, + margin 50 = 200
-    EXPECT_DOUBLE_EQ(p.x, 200.0);
-    EXPECT_DOUBLE_EQ(p.y, 50.0);
+    EXPECT_DOUBLE_EQ(p.position.x, 200.0);
+    EXPECT_DOUBLE_EQ(p.position.y, 50.0);
     EXPECT_TRUE(contains(p.rationale, "right")) << p.rationale;
     expect_cleared(p, 50.0, 20.0, existing);
 }
@@ -113,8 +114,8 @@ TEST(AvoidRectPosition, NoAnchorPlacesToTheRight) {
 TEST(AvoidRectPosition, FreeAnchorReturnedExactly) {
     std::vector<Rect> existing{{0.0, 0.0, 40.0, 40.0}};
     PlacedPosition p = find_avoid_rect_position(existing, 50.0, 20.0, true, 400.0, 300.0);
-    EXPECT_DOUBLE_EQ(p.x, 400.0);
-    EXPECT_DOUBLE_EQ(p.y, 300.0);
+    EXPECT_DOUBLE_EQ(p.position.x, 400.0);
+    EXPECT_DOUBLE_EQ(p.position.y, 300.0);
     EXPECT_TRUE(contains(p.rationale, "near")) << p.rationale;
     expect_cleared(p, 50.0, 20.0, existing);
 }
@@ -127,8 +128,8 @@ TEST(AvoidRectPosition, FreeAnchorReturnedExactly) {
 TEST(AvoidRectPosition, OccupiedAnchorPicksNearestFreeSpot) {
     std::vector<Rect> existing{{100.0, 100.0, 100.0, 40.0}};
     PlacedPosition p = find_avoid_rect_position(existing, 50.0, 20.0, true, 150.0, 120.0);
-    EXPECT_DOUBLE_EQ(p.x, 150.0);
-    EXPECT_DOUBLE_EQ(p.y, 150.0);
+    EXPECT_DOUBLE_EQ(p.position.x, 150.0);
+    EXPECT_DOUBLE_EQ(p.position.y, 150.0);
     EXPECT_TRUE(contains(p.rationale, "nearest")) << p.rationale;
     expect_cleared(p, 50.0, 20.0, existing);
 }
@@ -139,13 +140,14 @@ TEST(AvoidRectPosition, RespectsObjectSizeWhenFittingGaps) {
     std::vector<Rect> existing{{100.0, 100.0, 100.0, 40.0}, {100.0, 200.0, 100.0, 40.0}};
     // The gap spans y in [140, 200]; anchor at its middle.
     PlacedPosition small = find_avoid_rect_position(existing, 50.0, 20.0, true, 150.0, 170.0);
-    EXPECT_DOUBLE_EQ(small.x, 150.0);
-    EXPECT_DOUBLE_EQ(small.y, 170.0);  // 20px-tall object fits, anchor is already free
+    EXPECT_DOUBLE_EQ(small.position.x, 150.0);
+    EXPECT_DOUBLE_EQ(small.position.y, 170.0);  // 20px-tall object fits, anchor is already free
     expect_cleared(small, 50.0, 20.0, existing);
 
     PlacedPosition tall = find_avoid_rect_position(existing, 50.0, 80.0, true, 150.0, 170.0);
     // 80px tall cannot fit the 60px gap, so it is placed clear of both objects.
-    EXPECT_FALSE(tall.y >= 140.0 && tall.y + 80.0 <= 200.0) << "tall object squeezed into the gap";
+    EXPECT_FALSE(tall.position.y >= 140.0 && tall.position.y + 80.0 <= 200.0)
+        << "tall object squeezed into the gap";
     expect_cleared(tall, 50.0, 80.0, existing);
 }
 
@@ -165,8 +167,8 @@ TEST(AvoidRectPosition, ClearsAllInClusteredLayout) {
 TEST(AvoidRectPosition, AvoidsNegativeCoordinates) {
     std::vector<Rect> existing{{0.0, 0.0, 200.0, 200.0}};
     PlacedPosition p = find_avoid_rect_position(existing, 50.0, 20.0, true, -100.0, -100.0);
-    EXPECT_GE(p.x, 0.0);
-    EXPECT_GE(p.y, 0.0);
+    EXPECT_GE(p.position.x, 0.0);
+    EXPECT_GE(p.position.y, 0.0);
     expect_cleared(p, 50.0, 20.0, existing);
 }
 
@@ -175,6 +177,6 @@ TEST(AvoidRectPosition, IsDeterministic) {
     std::vector<Rect> existing{{100.0, 100.0, 100.0, 40.0}};
     PlacedPosition a = find_avoid_rect_position(existing, 50.0, 20.0, true, 150.0, 120.0);
     PlacedPosition b = find_avoid_rect_position(existing, 50.0, 20.0, true, 150.0, 120.0);
-    EXPECT_DOUBLE_EQ(a.x, b.x);
-    EXPECT_DOUBLE_EQ(a.y, b.y);
+    EXPECT_DOUBLE_EQ(a.position.x, b.position.x);
+    EXPECT_DOUBLE_EQ(a.position.y, b.position.y);
 }
