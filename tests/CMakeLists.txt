@@ -28,6 +28,7 @@ set(TEST_SOURCES
     unit/test_console_logger.cpp
     unit/test_mcp_server.cpp
     unit/test_geometry.cpp
+    unit/test_layout_validate.cpp
 )
 
 # Utility source files (to be tested)
@@ -37,6 +38,7 @@ set(UTIL_SOURCES
     ../src/utils/patch_registry.cpp
     ../src/utils/patch_helpers.cpp
     ../src/utils/geometry.cpp
+    ../src/tools/layout_checks.cpp
 )
 
 # Create test executable
@@ -82,6 +84,7 @@ set(TOOL_SOURCES
     ../src/tools/state_tools.cpp
     ../src/tools/hierarchy_tools.cpp
     ../src/tools/utility_tools.cpp
+    ../src/tools/layout_checks.cpp
     ../src/tools/layout_tools.cpp
     ../src/utils/patch_helpers.cpp
     ../src/utils/geometry.cpp
@@ -91,7 +94,6 @@ set(TOOL_SOURCES
 add_executable(test_tool_routing
     unit/test_tool_routing.cpp
     unit/test_avoid_rect_position.cpp
-    unit/test_layout_validate.cpp
     ${TOOL_SOURCES}
     ../src/utils/console_logger.cpp
     ../src/utils/patch_registry.cpp

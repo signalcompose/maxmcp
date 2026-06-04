@@ -79,6 +79,8 @@ set(TOOLS_SRC
     src/tools/hierarchy_tools.h
     src/tools/utility_tools.cpp
     src/tools/utility_tools.h
+    src/tools/layout_checks.cpp
+    src/tools/layout_checks.h
     src/tools/layout_tools.cpp
     src/tools/layout_tools.h
 )
