@@ -61,6 +61,8 @@ set(UTILS_SRC
     src/utils/patch_helpers.h
     src/utils/geometry.cpp
     src/utils/geometry.h
+    src/utils/io_geometry.cpp
+    src/utils/io_geometry.h
 )
 
 # MCP Tool implementation files (extracted from mcp_server.cpp)

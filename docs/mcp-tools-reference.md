@@ -1,6 +1,6 @@
 # MaxMCP MCP Tools Reference
 
-**Last Updated**: 2026-06-03
+**Last Updated**: 2026-06-04
 
 This document provides a complete reference for all MCP tools available in MaxMCP.
 
@@ -8,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 27 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 28 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -22,7 +22,7 @@ MaxMCP provides 27 MCP tools for controlling Max/MSP patches through natural lan
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
-| Layout Validation | 1 | Machine-check layout geometry (overlaps, crossings) |
+| Layout Validation | 2 | Machine-check layout geometry, compute inlet/outlet positions |
 
 ---
 
@@ -830,6 +830,48 @@ findings until `clean` is `true`.
 
 An empty `findings` array means `clean` is `true`. The intended loop is:
 validate → fix findings → re-validate until clean.
+
+---
+
+### `get_io_position`
+
+Return the pixel center `(x, y)` of each inlet (top edge) or outlet (bottom edge)
+of an object. **Read-only**. Max's SDK exposes no getter for per-inlet/outlet
+coordinates, so the positions are computed by reproducing Max's equal-spacing
+placement rule; the calibration constant is measured on a real device and pinned
+by unit tests (`tests/unit/test_io_geometry.cpp`). Use this instead of
+hand-computing nub positions when aligning an outlet over an inlet or sizing an
+object so a given inlet lands at a target x.
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true, "description": "Patch ID containing the object"},
+  "varname": {"type": "string", "required": true, "description": "Object varname to query"},
+  "side": {"type": "string", "required": true, "description": "'inlet' (top edge) or 'outlet' (bottom edge)"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "varname": "curve_scale",
+    "side": "inlet",
+    "count": 2,
+    "positions": [
+      {"index": 0, "x": 309.5, "y": 200.0},
+      {"index": 1, "x": 410.5, "y": 200.0}
+    ]
+  }
+}
+```
+
+**Notes**:
+- `index` is the **logical** inlet/outlet number — the same index `connect_max_objects` uses.
+- Inlets report `y = patching_rect.y`; outlets report `y = patching_rect.y + height`. This holds for tall objects (the height is already in the bottom edge).
+- The placement rule is exact for normal widths; for pathologically narrow objects (e.g. `gain~` at its native 22px width) Max rounds a nub by up to ~0.5px.
+- If the object's first inlet is not drawn (`jbox_get_drawfirstin` is false), that nub is omitted and the remaining inlets keep their logical indices (1..n-1).
 
 ---
 

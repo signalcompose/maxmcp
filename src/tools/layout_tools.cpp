@@ -29,6 +29,7 @@
 #include "maxmcp.h"
 #include "utils/console_logger.h"
 #include "utils/geometry.h"
+#include "utils/io_geometry.h"
 #include "utils/patch_helpers.h"
 #include "utils/patch_registry.h"
 
@@ -44,6 +45,13 @@ struct t_validate_layout_data {
     t_maxmcp* patch;
     LayoutCheckOptions options;
     std::vector<std::string> scope_varnames;
+    DeferredResult* deferred_result;
+};
+
+struct t_get_io_position_data {
+    t_maxmcp* patch;
+    std::string varname;
+    geometry::IoSide side;
     DeferredResult* deferred_result;
 };
 
@@ -243,6 +251,92 @@ static json execute_validate_layout(const json& params) {
     return {{"result", result}};
 }
 
+/**
+ * Deferred callback for get_io_position.
+ * Executes on the Max main thread via defer(). Reads the box rect, counts, and
+ * drawfirstin, then delegates to the pure placement rule in io_geometry.h.
+ */
+static void get_io_position_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("get_io_position_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_get_io_position_data, data, argv);
+
+    t_object* box = PatchHelpers::find_box_by_varname(data->patch->patcher, data->varname);
+    if (!box) {
+        COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(data->varname));
+        return;
+    }
+
+    t_rect rect;
+    jbox_get_patching_rect(box, &rect);
+    const geometry::Rect box_rect{rect.x, rect.y, rect.width, rect.height};
+
+    const bool is_inlet = (data->side == geometry::IoSide::Inlet);
+    const long logical_count =
+        is_inlet ? PatchHelpers::get_inlet_count(box) : PatchHelpers::get_outlet_count(box);
+    // drawfirstin only suppresses an inlet nub; outlets always draw every nub.
+    const bool draw_first_in = is_inlet ? (jbox_get_drawfirstin(box) != 0) : true;
+    const std::string maxclass = PatchHelpers::get_box_maxclass(box);
+
+    const std::vector<geometry::IoPosition> io = geometry::io_positions(
+        box_rect, static_cast<int>(logical_count), data->side, draw_first_in, maxclass);
+
+    json positions = json::array();
+    for (const geometry::IoPosition& p : io) {
+        positions.push_back({{"index", p.index}, {"x", p.center.x}, {"y", p.center.y}});
+    }
+
+    COMPLETE_DEFERRED(data, (json{{"varname", data->varname},
+                                  {"side", is_inlet ? "inlet" : "outlet"},
+                                  {"count", positions.size()},
+                                  {"positions", positions}}));
+}
+
+/**
+ * Execute get_io_position tool.
+ */
+static json execute_get_io_position(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string varname = params.value("varname", "");
+    std::string side_str = params.value("side", "");
+
+    if (patch_id.empty() || varname.empty() || side_str.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id, varname, and side");
+    }
+    if (side_str != "inlet" && side_str != "outlet") {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "side must be \"inlet\" or \"outlet\"");
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    const geometry::IoSide side =
+        (side_str == "inlet") ? geometry::IoSide::Inlet : geometry::IoSide::Outlet;
+
+    auto* deferred_result = new DeferredResult();
+    auto* data = new t_get_io_position_data{patch, varname, side, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)get_io_position_deferred, gensym("get_io_position"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("getting io position");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
 #endif  // MAXMCP_TEST_MODE
 
 // ============================================================================
@@ -283,7 +377,23 @@ json get_tool_schemas() {
               {"epsilon",
                {{"type", "number"},
                 {"description", "Tolerance in pixels for all checks (default: 2.0)."}}}}},
-            {"required", json::array({"patch_id"})}}}}});
+            {"required", json::array({"patch_id"})}}}},
+         {{"name", "get_io_position"},
+          {"description",
+           "Return the pixel center (x, y) of each inlet (top edge) or outlet (bottom edge) "
+           "of an object, computed with Max's calibrated equal-spacing rule. Use instead of "
+           "hand-computing nub x positions for width/alignment work. 'index' is the logical "
+           "inlet/outlet number (matches connect_max_objects)."},
+          {"inputSchema",
+           {{"type", "object"},
+            {"properties",
+             {{"patch_id", {{"type", "string"}, {"description", "Patch ID containing the object"}}},
+              {"varname", {{"type", "string"}, {"description", "Object varname to query"}}},
+              {"side",
+               {{"type", "string"},
+                {"enum", json::array({"inlet", "outlet"})},
+                {"description", "Which edge to compute: 'inlet' (top) or 'outlet' (bottom)."}}}}},
+            {"required", json::array({"patch_id", "varname", "side"})}}}}});
 }
 
 // ============================================================================
@@ -296,6 +406,14 @@ json execute(const std::string& tool, const json& params) {
         return ToolCommon::test_mode_error();
 #else
         return execute_validate_layout(params);
+#endif
+    }
+
+    if (tool == "get_io_position") {
+#ifdef MAXMCP_TEST_MODE
+        return ToolCommon::test_mode_error();
+#else
+        return execute_get_io_position(params);
 #endif
     }
 

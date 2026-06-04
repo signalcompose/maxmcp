@@ -2,7 +2,7 @@
 
 **作成日**: 2026-06-03
 **対象読者**: MaxMCP を開発する Claude / 開発者
-**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}` と Step 2 `validate_layout` は実装済み。Step 3 `get_io_position` 以降は未着手）
+**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}`、Step 2 `validate_layout`、Step 3 `get_io_position` は実装済み。Step 4 `suggest_alignment` 以降は未着手）
 
 ---
 
@@ -152,8 +152,15 @@ AI が毎回その場で計算している近似式 `pos_i = left + 9.5 + (w-19)
 - 計算: Max は inlet を上辺に、outlet を下辺に等間隔配置する。`n==1` は端から一定オフセット、`n>=2` は左端〜右端に等間隔。中心 x を算出して返す（上辺 y = `rect.y`、下辺 y = `rect.y + rect.height`）。
 - **定数の較正が必須**: inlet の視覚幅・端インセット（近似式の `9.5` / `19` に相当）は推測で固定せず、**代表的なオブジェクト（newobj、live.* UI、numbox 等）の実機 inlet 位置を測って決め、ユニットテストにフィクスチャとして焼き込む**。種別差（UI オブジェクトと newobj で見た目幅が違う）に注意。
 - `drawfirstin` が false の種別は視覚 inlet 数が論理数とずれるため補正する。
-- `validate_layout` の cord 端点座標も**この関数と同じ実装を共有**する（二重実装を避ける）。
+- `validate_layout` との関係（**実装時の確定事項**）: `validate_layout` は既存コードの cord 端点を `jpatchline_get_startpoint/endpoint`（Max の実座標＝グラウンドトゥルース）で取得しており、近似式より正確。よって**統合しない**。`get_io_position` の式は「未接続の nub の座標を算出する」用途のフォールバックであり、両者は `geometry::Rect/Point` という共通語彙を介して整合する。
 - 限界の明示: これは Max 内部描画の再現であり、Max 側の仕様変更で定数がずれる可能性がある。テストが回帰検出器になる。
+
+### 実装結果（2026-06-04, Max 9 で校正）
+
+- 代表 8 種（newobj `cycle~`/`pak`, `number`, `live.numbox`, `live.dial`, `gain~`, `slider`, `live.gain~`, `toggle`）をコード端点で実測した結果、**`edge_inset = single_inset = 9.5` が全種で普遍**。per-class テーブルは不要（`io_calibration_for` は将来の拡張フックとして空テーブルで保持）。
+- inlet y = `rect.y` / outlet y = `rect.bottom()` も普遍で、**縦長オブジェクトの特別扱いは不要**（高さは下辺に織り込まれる）。
+- 唯一の例外: 幅が極端に狭い場合（`gain~` 幅22px）に nub が ~0.5px 丸められる。幅を広げると消える。フィクスチャに記録済み。
+- 純粋実装は `src/utils/io_geometry.{h,cpp}`、フィクスチャは `tests/unit/test_io_geometry.cpp`、グルーは `src/tools/layout_tools.cpp`。
 
 ---
 
