@@ -8,7 +8,7 @@
     counters. The underlying geometry is covered separately in test_geometry.cpp.
 */
 
-#include "tools/layout_tools.h"
+#include "tools/layout_checks.h"
 
 #include <string>
 #include <vector>
