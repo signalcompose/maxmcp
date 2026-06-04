@@ -1,6 +1,6 @@
 # MCP Integration Test Checklist
 
-**Total Tools**: 28
+**Total Tools**: 29
 **Purpose**: Manual verification checklist for all MCP tools. Use before PR merges and releases.
 
 ---
@@ -78,7 +78,7 @@
 | 26c | `get_avoid_rect_position` | `width`/`height` of a large object    | Returned spot clears all objects by the gap for that size; rationale notes the size | [ ]  |
 | 26d | `get_avoid_rect_position` | Negative `near_x`/`near_y`            | Result clamped to non-negative coordinates (x ≥ 0, y ≥ 0)           | [ ]  |
 
-## Layout Validation (2)
+## Layout Validation (3)
 
 `validate_layout` is read-only. For each case, set up the patch state described, then run the tool and confirm the finding (or `clean`).
 
@@ -106,6 +106,16 @@
 | 28c | `get_io_position` | Tall object (`gain~`, `slider`)                                       | inlet y = top, outlet y = bottom (height handled); x uses the calibrated inset             | [ ]  |
 | 28d | `get_io_position` | Unknown `varname`                                                    | Error: "Object not found: <varname>"                                                        | [ ]  |
 | 28e | `get_io_position` | Invalid `side` (not inlet/outlet)                                    | Error: side must be "inlet" or "outlet"                                                      | [ ]  |
+
+`suggest_alignment` is read-only (returns a recommended rect; apply it with `set_object_attribute`). Verify by applying the rect, then `get_io_position` on both nubs to confirm they share x.
+
+| #   | Tool                | Test                                                                        | Expected                                                                                       | Pass |
+|-----|---------------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|------|
+| 29  | `suggest_alignment` | `adjust:"width"`: size a multi-outlet object so an outlet lands on an inlet  | `recommended_patching_rect` returned; after applying, `get_io_position` outlet x == anchor x   | [ ]  |
+| 29a | `suggest_alignment` | `adjust:"left"`: move a target so its inlet lands under an anchor outlet     | left changes, width unchanged; after applying, the two nubs share x                             | [ ]  |
+| 29b | `suggest_alignment` | `adjust:"width"` targeting the leftmost nub (index 0)                        | Error suggesting `adjust:"left"` (leftmost nub is width-independent)                            | [ ]  |
+| 29c | `suggest_alignment` | `adjust:"width"` on a single-nub side                                       | Error suggesting `adjust:"left"`                                                                | [ ]  |
+| 29d | `suggest_alignment` | Unknown `varname` (anchor or target), or bad `side`/`adjust`                | Appropriate error; patch is never modified                                                       | [ ]  |
 
 ---
 

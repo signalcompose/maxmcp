@@ -117,6 +117,63 @@ std::vector<IoPosition> compute_io_positions(const Rect& rect, int visual_count,
 std::vector<IoPosition> io_positions(const Rect& rect, int logical_count, IoSide side,
                                      bool draw_first_in, const std::string& maxclass);
 
+// ============================================================================
+// Alignment (inverse placement) — for suggest_alignment
+// ============================================================================
+
+/**
+ * @brief Which dimension of the target's rect to change to achieve alignment.
+ *
+ * @c Width keeps the left edge and resizes; @c Left keeps the width and shifts
+ * the object horizontally.
+ */
+enum class AlignAdjust { Width, Left };
+
+/**
+ * @brief Result of an alignment computation: either a recommended rect or a
+ *        reason it could not be solved.
+ *
+ * @c ok distinguishes the two: when true, @c rect is the recommended
+ * patching_rect; when false, @c reason explains why (e.g. the leftmost nub
+ * cannot be moved by width). @c reason also carries the human-readable rationale
+ * on success.
+ */
+struct AlignmentResult {
+    bool ok;
+    Rect rect;
+    std::string reason;
+};
+
+/**
+ * @brief Solve for a target rect so one of its nubs lands at a given x.
+ *
+ * Inverse of the placement rule: returns the patching_rect that puts the
+ * target's @p target_index nub (on @p side) at x == @p anchor_x, changing only
+ * the dimension named by @p adjust (Width keeps left; Left keeps width). The
+ * rect's y and height, and the dimension not being adjusted, are preserved.
+ *
+ * Indices are logical and the drawfirstin correction is applied (an undrawn
+ * first inlet shifts the visible nubs). Unsolvable cases return @c ok=false with
+ * an explanation:
+ *   - the leftmost visible nub, or a single-nub side, cannot be moved by Width;
+ *   - @p target_index is out of range or names an undrawn inlet;
+ *   - the solved width would be non-positive.
+ *
+ * @param target_rect        The target's current patching rectangle
+ * @param target_logical_count The target's logical inlet/outlet count on @p side
+ * @param side               Inlet (top edge) or Outlet (bottom edge)
+ * @param target_index       Logical index of the nub to align
+ * @param draw_first_in      Whether the target's first inlet is drawn (inlets only)
+ * @param maxclass           The target's maxclass, for calibration lookup
+ * @param anchor_x           The x the chosen nub should land on
+ * @param adjust             Whether to change width or left
+ * @return AlignmentResult with the recommended rect, or a failure reason
+ */
+AlignmentResult recommend_alignment_rect(const Rect& target_rect, int target_logical_count,
+                                         IoSide side, int target_index, bool draw_first_in,
+                                         const std::string& maxclass, double anchor_x,
+                                         AlignAdjust adjust);
+
 }  // namespace geometry
 
 #endif  // IO_GEOMETRY_H

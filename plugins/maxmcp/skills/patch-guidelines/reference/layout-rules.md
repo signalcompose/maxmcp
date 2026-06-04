@@ -470,8 +470,8 @@ size the source so its outlets line up over the destination inlets. **Do not
 hand-compute this with a `±9.5` inset formula** — the inset is calibrated and the
 spacing depends on the outlet count. Instead:
 
-1. Call **`get_io_position`** on each destination (`side:"inlet"`) to get the exact target X of each inlet.
-2. Call **`get_io_position`** on the source (`side:"outlet"`) and adjust the source's `patching_rect` width until the outlet X values land on those targets (re-query after resizing).
+- **Best**: call **`suggest_alignment`** with `adjust:"width"`, the source outlet as `target` and a destination inlet as `anchor`. It returns the exact `recommended_patching_rect` (the inverse is solved server-side); apply it with `set_object_attribute`. Use `adjust:"left"` to instead move an object so its single/leftmost nub lands on an anchor.
+- **Manual cross-check**: `get_io_position` gives each nub's exact x if you want to verify the result.
 
 This replaces the old approximation `width = (rightmost_dest_x + 9.5) - source_x + 9.5`, which ignored per-object inset differences.
 
