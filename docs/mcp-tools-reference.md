@@ -8,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 28 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 29 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -22,7 +22,7 @@ MaxMCP provides 28 MCP tools for controlling Max/MSP patches through natural lan
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
-| Layout Validation | 2 | Machine-check layout geometry, compute inlet/outlet positions |
+| Layout Validation | 3 | Machine-check layout geometry, compute inlet/outlet positions, suggest alignment |
 
 ---
 
@@ -872,6 +872,48 @@ object so a given inlet lands at a target x.
 - Inlets report `y = patching_rect.y`; outlets report `y = patching_rect.y + height`. This holds for tall objects (the height is already in the bottom edge).
 - The placement rule is exact for normal widths; for pathologically narrow objects (e.g. `gain~` at its native 22px width) Max rounds a nub by up to ~0.5px.
 - If the object's first inlet is not drawn (`jbox_get_drawfirstin` is false), that nub is omitted and the remaining inlets keep their logical indices (1..n-1).
+
+---
+
+### `suggest_alignment`
+
+Compute the `patching_rect` that makes a target object's chosen inlet/outlet
+share the **anchor** nub's x — i.e. so a patchcord between them is a vertical
+straight line. **Read-only**: it returns a recommendation; apply it yourself with
+`set_object_attribute patching_rect`. The geometry uses the same calibrated rule
+as `get_io_position`, so no hand-computed inset math is needed.
+
+`adjust` chooses what changes:
+- `"width"` — resize the target (keep its left edge). Used to size a multi-outlet object so an outlet lands over a destination inlet.
+- `"left"` — move the target horizontally (keep its width).
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true, "description": "Patch ID containing the objects"},
+  "anchor": {"type": "object", "required": true, "description": "{varname, side: inlet|outlet, index} — the reference nub"},
+  "target": {"type": "object", "required": true, "description": "{varname, side: inlet|outlet, index} — the object to reposition/resize"},
+  "adjust": {"type": "string", "required": true, "description": "'width' (resize, keep left) or 'left' (move, keep width)"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "anchor": {"varname": "curve_n", "side": "outlet", "index": 0, "x": 669.5},
+    "target": {"varname": "curve_scale", "side": "inlet", "index": 5},
+    "adjust": "width",
+    "recommended_patching_rect": [453.0, 1180.0, 226.0, 20.0],
+    "rationale": "inlet5 x must equal 669.5; with left=453.0 -> width=226.0"
+  }
+}
+```
+
+**Notes**:
+- Indices are logical (match `connect_max_objects` / `get_io_position`).
+- `adjust: "width"` cannot move the **leftmost** nub (index 0 of the visible nubs) or a **single-nub** side — those are independent of width; the tool returns an error suggesting `adjust: "left"`.
+- An anchor too far left for the chosen nub to reach by widening yields a non-positive width and is rejected (nothing is applied — the tool never mutates the patch).
 
 ---
 

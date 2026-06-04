@@ -59,6 +59,7 @@ set(UTILS_SRC
     src/utils/patch_registry.h
     src/utils/patch_helpers.cpp
     src/utils/patch_helpers.h
+    src/utils/format_util.h
     src/utils/geometry.cpp
     src/utils/geometry.h
     src/utils/io_geometry.cpp

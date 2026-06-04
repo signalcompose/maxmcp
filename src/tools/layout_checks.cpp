@@ -12,11 +12,10 @@
 
 #include "layout_checks.h"
 
+#include "utils/format_util.h"
 #include "utils/geometry.h"
 
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
 #include <set>
 #include <string>
 #include <utility>
@@ -24,24 +23,14 @@
 
 namespace LayoutTools {
 
+using fmtutil::fmt1;
+using fmtutil::fmti;
+
 // ============================================================================
 // Formatting helpers
 // ============================================================================
 
 namespace {
-
-// One-decimal coordinate, e.g. "876.8" — matches the precision used in spec
-// findings without dumping the full double precision.
-std::string fmt1(double v) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%.1f", v);
-    return buf;
-}
-
-// Rounded integer string, for areas and overlap-region bounds.
-std::string fmti(double v) {
-    return std::to_string(static_cast<long>(std::llround(v)));
-}
 
 // A human-readable label for an object: its varname, or maxclass#id when unnamed.
 std::string label_for(const LayoutObject& o) {

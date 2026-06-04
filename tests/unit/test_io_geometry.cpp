@@ -21,12 +21,15 @@
 
 #include <gtest/gtest.h>
 
+using geometry::AlignAdjust;
+using geometry::AlignmentResult;
 using geometry::compute_io_positions;
 using geometry::io_calibration_for;
 using geometry::io_positions;
 using geometry::IoCalibration;
 using geometry::IoPosition;
 using geometry::IoSide;
+using geometry::recommend_alignment_rect;
 using geometry::Rect;
 
 namespace {
@@ -236,4 +239,107 @@ TEST(IoCalibrationFixtures, ToggleSquareSingleNub) {
                      0.01);
     expect_positions(io_positions(rect, 1, IoSide::Outlet, true, "toggle"), {{0, 309.5, 224.0}},
                      0.01);
+}
+
+// ---------------------------------------------------------------------------
+// recommend_alignment_rect — inverse placement (suggest_alignment)
+// ---------------------------------------------------------------------------
+
+namespace {
+// Assert the recommended rect round-trips: the chosen nub lands on anchor_x.
+void expect_nub_at(const Rect& rect, int count, IoSide side, int index, bool draw_first_in,
+                   const std::string& maxclass, double anchor_x) {
+    auto pos = io_positions(rect, count, side, draw_first_in, maxclass);
+    bool found = false;
+    for (const auto& p : pos) {
+        if (p.index == index) {
+            EXPECT_NEAR(p.center.x, anchor_x, 1e-6);
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found) << "index " << index << " not present after alignment";
+}
+}  // namespace
+
+TEST(RecommendAlignment, WidthReproducesSpecExample) {
+    // Spec §4: 6-inlet target at left=453, align inlet 5 onto anchor x=669.5 by
+    // resizing -> width 226 (right - 9.5 == 669.5). Current width is irrelevant.
+    Rect target{453.0, 1180.0, 80.0, 20.0};
+    AlignmentResult r = recommend_alignment_rect(target, 6, IoSide::Inlet, 5, true, "newobj", 669.5,
+                                                 AlignAdjust::Width);
+    ASSERT_TRUE(r.ok) << r.reason;
+    EXPECT_DOUBLE_EQ(r.rect.origin.x, 453.0);
+    EXPECT_DOUBLE_EQ(r.rect.origin.y, 1180.0);
+    EXPECT_DOUBLE_EQ(r.rect.width, 226.0);
+    EXPECT_DOUBLE_EQ(r.rect.height, 20.0);
+    expect_nub_at(r.rect, 6, IoSide::Inlet, 5, true, "newobj", 669.5);
+}
+
+TEST(RecommendAlignment, LeftMovesSingleInlet) {
+    Rect target{100.0, 200.0, 50.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 1, IoSide::Inlet, 0, true, "number", 300.0,
+                                                 AlignAdjust::Left);
+    ASSERT_TRUE(r.ok) << r.reason;
+    EXPECT_DOUBLE_EQ(r.rect.origin.x, 290.5);  // 300 - 9.5
+    EXPECT_DOUBLE_EQ(r.rect.width, 50.0);      // width unchanged
+    expect_nub_at(r.rect, 1, IoSide::Inlet, 0, true, "number", 300.0);
+}
+
+TEST(RecommendAlignment, LeftMovesMultiNub) {
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 2, IoSide::Inlet, 1, true, "newobj", 500.0,
+                                                 AlignAdjust::Left);
+    ASSERT_TRUE(r.ok) << r.reason;
+    EXPECT_DOUBLE_EQ(r.rect.width, 120.0);  // width unchanged
+    expect_nub_at(r.rect, 2, IoSide::Inlet, 1, true, "newobj", 500.0);
+}
+
+TEST(RecommendAlignment, WidthCannotMoveLeftmostNub) {
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 4, IoSide::Inlet, 0, true, "newobj", 300.0,
+                                                 AlignAdjust::Width);
+    EXPECT_FALSE(r.ok);
+    EXPECT_NE(r.reason.find("leftmost"), std::string::npos);
+}
+
+TEST(RecommendAlignment, WidthCannotMoveSingleNub) {
+    Rect target{100.0, 200.0, 50.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 1, IoSide::Outlet, 0, true, "number",
+                                                 300.0, AlignAdjust::Width);
+    EXPECT_FALSE(r.ok);
+    EXPECT_NE(r.reason.find("single nub"), std::string::npos);
+}
+
+TEST(RecommendAlignment, WidthRejectsNonPositiveSolution) {
+    // anchor far left of where inlet 1 can reach -> solved width <= 0.
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 2, IoSide::Inlet, 1, true, "newobj", 50.0,
+                                                 AlignAdjust::Width);
+    EXPECT_FALSE(r.ok);
+    EXPECT_NE(r.reason.find("non-positive"), std::string::npos);
+}
+
+TEST(RecommendAlignment, IndexOutOfRangeFails) {
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(target, 2, IoSide::Inlet, 5, true, "newobj", 300.0,
+                                                 AlignAdjust::Left);
+    EXPECT_FALSE(r.ok);
+    EXPECT_NE(r.reason.find("out of range"), std::string::npos);
+}
+
+TEST(RecommendAlignment, DrawfirstinUndrawnInletZeroFails) {
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(
+        target, 3, IoSide::Inlet, 0, /*draw_first_in=*/false, "x", 300.0, AlignAdjust::Left);
+    EXPECT_FALSE(r.ok);
+    EXPECT_NE(r.reason.find("not drawn"), std::string::npos);
+}
+
+TEST(RecommendAlignment, DrawfirstinRenumberedNubAligns) {
+    // 3 logical inlets, first undrawn -> visible nubs at logical 1,2. Align nub 2.
+    Rect target{100.0, 200.0, 120.0, 22.0};
+    AlignmentResult r = recommend_alignment_rect(
+        target, 3, IoSide::Inlet, 2, /*draw_first_in=*/false, "x", 400.0, AlignAdjust::Left);
+    ASSERT_TRUE(r.ok) << r.reason;
+    expect_nub_at(r.rect, 3, IoSide::Inlet, 2, false, "x", 400.0);
 }

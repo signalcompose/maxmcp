@@ -2,7 +2,7 @@
 
 **作成日**: 2026-06-03
 **対象読者**: MaxMCP を開発する Claude / 開発者
-**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}`、Step 2 `validate_layout`、Step 3 `get_io_position` は実装済み。Step 4 `suggest_alignment` 以降は未着手）
+**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}`、Step 2 `validate_layout`、Step 3 `get_io_position`、Step 4 `suggest_alignment` は実装済み。`align_objects`（Step 4 併記）と Step 5 `render_patch_preview` 以降は未着手）
 
 ---
 
