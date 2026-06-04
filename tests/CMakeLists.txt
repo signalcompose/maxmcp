@@ -28,6 +28,7 @@ set(TEST_SOURCES
     unit/test_console_logger.cpp
     unit/test_mcp_server.cpp
     unit/test_geometry.cpp
+    unit/test_io_geometry.cpp
     unit/test_layout_validate.cpp
 )
 
@@ -38,6 +39,7 @@ set(UTIL_SOURCES
     ../src/utils/patch_registry.cpp
     ../src/utils/patch_helpers.cpp
     ../src/utils/geometry.cpp
+    ../src/utils/io_geometry.cpp
     ../src/tools/layout_checks.cpp
 )
 
@@ -88,6 +90,7 @@ set(TOOL_SOURCES
     ../src/tools/layout_tools.cpp
     ../src/utils/patch_helpers.cpp
     ../src/utils/geometry.cpp
+    ../src/utils/io_geometry.cpp
     ../src/mcp_server.cpp
 )
 

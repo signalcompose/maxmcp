@@ -1,6 +1,6 @@
 # MCP Integration Test Checklist
 
-**Total Tools**: 27
+**Total Tools**: 28
 **Purpose**: Manual verification checklist for all MCP tools. Use before PR merges and releases.
 
 ---
@@ -78,7 +78,7 @@
 | 26c | `get_avoid_rect_position` | `width`/`height` of a large object    | Returned spot clears all objects by the gap for that size; rationale notes the size | [ ]  |
 | 26d | `get_avoid_rect_position` | Negative `near_x`/`near_y`            | Result clamped to non-negative coordinates (x ≥ 0, y ≥ 0)           | [ ]  |
 
-## Layout Validation (1)
+## Layout Validation (2)
 
 `validate_layout` is read-only. For each case, set up the patch state described, then run the tool and confirm the finding (or `clean`).
 
@@ -95,6 +95,17 @@
 | 27h | `validate_layout` | `mode: "presentation"` with overlapping `presentation_rect`         | `presentation_overlap` finding; cord checks skipped                                         | [ ]  |
 | 27i | `validate_layout` | `checks` subset (e.g. `["overlap"]`)                                | Only the requested check runs; others stay 0                                               | [ ]  |
 | 27j | `validate_layout` | Fix a reported finding, then re-run                                  | The finding disappears; repeat until `clean: true` (validate → fix → re-validate loop)     | [ ]  |
+
+`get_io_position` is read-only. The ground-truth cross-check is a connected cord's real endpoint (`get_patchlines mode:"geometry"` `start_point` for an outlet, `end_point` for an inlet).
+
+| #   | Tool              | Test                                                                 | Expected                                                                                   | Pass |
+|-----|-------------------|----------------------------------------------------------------------|--------------------------------------------------------------------------------------------|------|
+| 28  | `get_io_position` | `side:"inlet"` on a 2+ inlet object (e.g. `cycle~`)                  | `count` matches inlet count; `positions[i].y` = object top; x values match cord endpoints  | [ ]  |
+| 28a | `get_io_position` | `side:"outlet"` on a multi-outlet object (e.g. `number`, `live.gain~`) | `positions[i].y` = object bottom; x equally spaced, matches cord `start_point`s            | [ ]  |
+| 28b | `get_io_position` | Cross-check: connect a cord to inlet `i`, compare to `end_point`      | `positions[i]` agrees with the cord endpoint within ~1px                                    | [ ]  |
+| 28c | `get_io_position` | Tall object (`gain~`, `slider`)                                       | inlet y = top, outlet y = bottom (height handled); x uses the calibrated inset             | [ ]  |
+| 28d | `get_io_position` | Unknown `varname`                                                    | Error: "Object not found: <varname>"                                                        | [ ]  |
+| 28e | `get_io_position` | Invalid `side` (not inlet/outlet)                                    | Error: side must be "inlet" or "outlet"                                                      | [ ]  |
 
 ---
 

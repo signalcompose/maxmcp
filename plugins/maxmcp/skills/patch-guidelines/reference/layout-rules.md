@@ -177,6 +177,8 @@ live.button (x=18)     trigger (x=18)
 
 **Rule**: Before adding midpoints, first try repositioning objects so that outlet and inlet share the same X coordinate.
 
+> **Do not hand-compute nub X positions.** The example's `x=27.5` is illustrative — actual inlet/outlet centers depend on the object's rect and nub count. Call the **`get_io_position`** MCP tool (`{patch_id, varname, side}`) to get the exact, calibrated `(x, y)` of each inlet/outlet instead of estimating with a formula.
+
 ### Width Adjustment for Straight Lines
 
 When two objects have multiple inlets/outlets connected (e.g., `filtercoeff~` → `biquad~`), adjust **object width** via `patching_rect` so that outlet and inlet X coordinates align, eliminating diagonal patchcords.
@@ -461,13 +463,17 @@ Example: t b i i, outlet 0 (near) and outlet 1 (far) expanding in the same direc
 
 This prevents horizontal segments from crossing each other.
 
-### Multi-Outlet Width Alignment Formula
+### Multi-Outlet Width Alignment
 
-When a multi-outlet object connects to multiple destinations, calculate the required width to align outlets with destination inlets:
+When a multi-outlet object connects to multiple destinations, you often want to
+size the source so its outlets line up over the destination inlets. **Do not
+hand-compute this with a `±9.5` inset formula** — the inset is calibrated and the
+spacing depends on the outlet count. Instead:
 
-```
-width = (rightmost_dest_x + 9.5) - source_x + 9.5
-```
+1. Call **`get_io_position`** on each destination (`side:"inlet"`) to get the exact target X of each inlet.
+2. Call **`get_io_position`** on the source (`side:"outlet"`) and adjust the source's `patching_rect` width until the outlet X values land on those targets (re-query after resizing).
+
+This replaces the old approximation `width = (rightmost_dest_x + 9.5) - source_x + 9.5`, which ignored per-object inset differences.
 
 - For `route` or other high-outlet-count objects, prioritize vertical alignment for the most connections. Accept diagonal for structurally unavoidable crossings.
 - The main flow's vertical alignment takes precedence — move downstream/branch objects to align, not the main flow objects.
