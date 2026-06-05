@@ -453,18 +453,9 @@ static json execute_connect_max_objects(const json& params) {
     auto* data =
         new t_connection_data(patch, src_varname, outlet, dst_varname, inlet, deferred_result);
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)connect_objects_deferred, gensym("connect_objects"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("connecting objects");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)connect_objects_deferred, "connect_objects",
+                                    data, ToolCommon::DEFAULT_DEFER_TIMEOUT, "connecting objects",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 /**
@@ -492,18 +483,9 @@ static json execute_disconnect_max_objects(const json& params) {
     auto* data =
         new t_connection_data(patch, src_varname, outlet, dst_varname, inlet, deferred_result);
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)disconnect_objects_deferred, gensym("disconnect_objects"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("disconnecting objects");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)disconnect_objects_deferred,
+                                    "disconnect_objects", data, ToolCommon::DEFAULT_DEFER_TIMEOUT,
+                                    "disconnecting objects", ToolCommon::DeferredWrap::Raw);
 }
 
 /**
@@ -526,18 +508,9 @@ static json execute_get_patchlines(const json& params) {
     auto* deferred_result = new DeferredResult();
     auto* data = new t_get_patchlines_data{patch, mode, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_patchlines_deferred, gensym("get_patchlines"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting patchlines");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_patchlines_deferred, "get_patchlines", data,
+                                    ToolCommon::HEAVY_OPERATION_TIMEOUT, "getting patchlines",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 /**
@@ -586,19 +559,10 @@ static json execute_set_patchline_midpoints(const json& params) {
     auto* data = new t_set_midpoints_data(patch, src_varname, outlet, dst_varname, inlet,
                                           deferred_result, std::move(coords));
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)set_patchline_midpoints_deferred, gensym("set_patchline_midpoints"), 1,
-          &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("setting patchline midpoints");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)set_patchline_midpoints_deferred,
+                                    "set_patchline_midpoints", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT,
+                                    "setting patchline midpoints", ToolCommon::DeferredWrap::Raw);
 }
 
 #endif  // MAXMCP_TEST_MODE

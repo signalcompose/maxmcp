@@ -35,9 +35,13 @@
 | 8  | `get_object_attribute` | Get patching_rect                 | Returns [x, y, width, height] array       | [ ]  |
 | 9  | `get_object_value`     | Get number box value              | Returns number (default: 0)               | [ ]  |
 | 10 | `get_object_io_info`   | Get IO info for cycle~            | inlet_count: 2, outlet_count: 1           | [ ]  |
+| 10a| `get_object_io_info`   | Unknown `varname`                 | Plain `Object not found: <varname>` error (not double-wrapped) | [ ]  |
 | 11 | `get_object_hidden`    | Get hidden state                  | hidden: false (default)                   | [ ]  |
+| 11a| `get_object_hidden`    | Unknown `varname`                 | Plain `Object not found: <varname>` error (not double-wrapped) | [ ]  |
 | 12 | `set_object_hidden`    | Hide then unhide                  | hidden: true then hidden: false           | [ ]  |
+| 12a| `set_object_hidden`    | Unknown `varname`                 | Plain `Object not found: <varname>` error (not double-wrapped) | [ ]  |
 | 13 | `redraw_object`        | Force redraw                      | success: true                             | [ ]  |
+| 13a| `redraw_object`        | Unknown `varname`                 | Plain `Object not found: <varname>` error (not double-wrapped) | [ ]  |
 | 14 | `replace_object_text`  | Change `cycle~ 440` to `cycle~ 880` | old_text/new_text returned correctly   | [ ]  |
 | 15 | `assign_varnames`      | Assign varname to unnamed object  | assigned: 1, varname set                  | [ ]  |
 
@@ -151,4 +155,5 @@
 - `get_subpatchers` returns an empty array when no subpatchers exist — this is expected behavior
 - Full hierarchy testing requires a patch containing subpatchers (p, poly~, bpatcher, etc.)
 - `validate_layout` is read-only (never moves objects or cords); it only reports findings. The intended workflow is validate → fix → re-validate until `clean: true`
-- `validate_layout` cord endpoints use the patchline's real start/end points (`jpatchline_get_startpoint/endpoint`); per-inlet/outlet pixel positions (`get_io_position`) are a separate future tool (see `docs/layout-validation-tools-spec.md`)
+- `validate_layout` cord endpoints use the patchline's real start/end points (`jpatchline_get_startpoint/endpoint`); per-inlet/outlet pixel positions are provided separately by `get_io_position` (tested at #28)
+- All 26 deferred tools share the `ToolCommon::run_deferred` helper (#89). It reproduces three response envelopes — raw (e.g. `add_max_object`), always-wrapped `{"result": ...}` (e.g. `get_objects_in_patch`), and error-passthrough-on-success (e.g. `get_object_io_info`, `redraw_object`). The unknown-`varname` rows above (10a–13a, 28d, and the unknown-`varname` cases of 29d/30f) exercise the passthrough branch — the error is raised inside the deferred callback, so it must surface as a plain `error` object, never wrapped inside `result`. By contrast, the parameter-validation errors (28e, and the invalid `side`/`adjust`/`mode` cases of 29d/30f) are rejected *before* deferral, so they never reach the wrap logic
