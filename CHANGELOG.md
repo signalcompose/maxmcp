@@ -5,6 +5,34 @@ All notable changes to MaxMCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/signalcompose/maxmcp/compare/v1.1.0...v1.2.0) (2026-06-05)
+
+
+### Features
+
+* **tools:** add align_objects MCP tool for aligning/distributing object groups ([197d165](https://github.com/signalcompose/maxmcp/commit/197d165c6258365e7c03309d42732bff42956052))
+* **tools:** add align_objects MCP tool for aligning/distributing object groups ([d314723](https://github.com/signalcompose/maxmcp/commit/d31472354d25191eaf60989a313d8dd277fb5543)), closes [#76](https://github.com/signalcompose/maxmcp/issues/76)
+* **tools:** add geometry/connections modes to get_patchlines ([55f3fe9](https://github.com/signalcompose/maxmcp/commit/55f3fe9b9dbee68c1f83b74095029432e52a65fa))
+* **tools:** add geometry/connections modes to get_patchlines ([3541c1a](https://github.com/signalcompose/maxmcp/commit/3541c1ae44a9a60dc969b5eb5b95db5ed1b77cb5))
+* **tools:** add get_io_position MCP tool for inlet/outlet pixel positions ([f1afa54](https://github.com/signalcompose/maxmcp/commit/f1afa54fc351ae1ca21aa2ef3f6b33befb985f33))
+* **tools:** add get_io_position MCP tool for inlet/outlet pixel positions ([4574484](https://github.com/signalcompose/maxmcp/commit/4574484049604ec668f049d5edb79826842209fe))
+* **tools:** add layout/identity modes to get_objects_in_patch ([4f86b68](https://github.com/signalcompose/maxmcp/commit/4f86b68688524ed26d455a024fcfd7baa959fd86))
+* **tools:** add layout/identity modes to get_objects_in_patch ([1a095af](https://github.com/signalcompose/maxmcp/commit/1a095af4f2cc4611a72035786010cb1e996c15a3))
+* **tools:** add near_x/near_y to get_avoid_rect_position ([#72](https://github.com/signalcompose/maxmcp/issues/72)) ([6289dde](https://github.com/signalcompose/maxmcp/commit/6289ddee41fe587edce558ffaf04ce61be4298d5))
+* **tools:** add near_x/near_y to get_avoid_rect_position ([#72](https://github.com/signalcompose/maxmcp/issues/72)) ([570116c](https://github.com/signalcompose/maxmcp/commit/570116c295dddacdfaf18930a2de120169a6f7bf))
+* **tools:** add suggest_alignment MCP tool (Issue [#76](https://github.com/signalcompose/maxmcp/issues/76) Step 4) ([3e14710](https://github.com/signalcompose/maxmcp/commit/3e1471058493ac6e47e873a21b7762366f5d222f))
+* **tools:** add suggest_alignment MCP tool for nub-aligned patching_rect ([ef8084a](https://github.com/signalcompose/maxmcp/commit/ef8084a6d78d0e511fdabd3798e9f8a636960a25)), closes [#76](https://github.com/signalcompose/maxmcp/issues/76)
+* **tools:** add validate_layout tool and geometry primitives ([a13dfc5](https://github.com/signalcompose/maxmcp/commit/a13dfc5bb3177d0a3753bbf59a7952006365fe4e))
+* **tools:** add validate_layout tool and geometry primitives ([e2ba9d4](https://github.com/signalcompose/maxmcp/commit/e2ba9d42fed3e0c602d34da8613ebdc35b9fa07c)), closes [#76](https://github.com/signalcompose/maxmcp/issues/76)
+
+
+### Bug Fixes
+
+* **tools:** add JSON Schema type constraints to add_max_object params ([be7f9d3](https://github.com/signalcompose/maxmcp/commit/be7f9d318fd58d3c4f280f8064c0f0c22e1bc442))
+* **tools:** add JSON Schema type constraints to add_max_object params ([ba1a4d0](https://github.com/signalcompose/maxmcp/commit/ba1a4d0490ef4a9e6b27f44de6eacc177a7512b0))
+* **tools:** add oneOf type constraint to set_object_attribute value param ([857788e](https://github.com/signalcompose/maxmcp/commit/857788ed05fb4b6ffc7e5d3ee529e01c287e6d06))
+* **tools:** add oneOf type constraint to set_object_attribute value param ([1d5d06e](https://github.com/signalcompose/maxmcp/commit/1d5d06e10637a71d54919a22795c7044d85c8d61))
+
 ## [1.1.0](https://github.com/signalcompose/maxmcp/compare/v1.0.2...v1.1.0) (2026-03-04)
 
 
@@ -189,4 +217,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * wrap Max API access in test mode guards ([2e5c0bc](https://github.com/signalcompose/maxmcp/commit/2e5c0bc3366175c740559a577302372d1617500f))
 * wrap Max API access in test mode guards ([68fb11f](https://github.com/signalcompose/maxmcp/commit/68fb11ffac681382140fd7d473421debf1386261))
 * 非UIオブジェクト作成のためのnewobj対応 ([dff4b77](https://github.com/signalcompose/maxmcp/commit/dff4b777cd47576e47a9df2c984bf21c96dca097))
-
