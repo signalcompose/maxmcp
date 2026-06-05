@@ -94,7 +94,7 @@ npm run format:check
 - **`src/utils/`**: Shared utilities (UUID generator, console logger, patch registry, patch helpers)
 - *Note*: Legacy files `maxmcp_server.cpp`, `udp_server.cpp` from the earlier separate-external architecture have been removed
 
-### MCP Tools (29 total)
+### MCP Tools (30 total)
 
 Full tool reference with parameters and response formats: [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md)
 
@@ -106,7 +106,7 @@ Full tool reference with parameters and response formats: [docs/mcp-tools-refere
 | Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
 | Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
 | Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
-| Layout Validation | 3 | `validate_layout`, `get_io_position`, `suggest_alignment` |
+| Layout Validation | 4 | `validate_layout`, `get_io_position`, `suggest_alignment`, `align_objects` |
 
 ### Threading Model
 

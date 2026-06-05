@@ -8,7 +8,7 @@ This document provides a complete reference for all MCP tools available in MaxMC
 
 ## Overview
 
-MaxMCP provides 29 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
+MaxMCP provides 30 MCP tools for controlling Max/MSP patches through natural language commands. Tools are organized into categories based on their functionality.
 
 ---
 
@@ -22,7 +22,7 @@ MaxMCP provides 29 MCP tools for controlling Max/MSP patches through natural lan
 | Patch State | 3 | Lock state and dirty flag management |
 | Hierarchy | 2 | Parent/child patcher navigation |
 | Utilities | 2 | Console logging and positioning |
-| Layout Validation | 3 | Machine-check layout geometry, compute inlet/outlet positions, suggest alignment |
+| Layout Validation | 4 | Machine-check layout geometry, compute inlet/outlet positions, suggest alignment, align/distribute object groups |
 
 ---
 
@@ -914,6 +914,54 @@ as `get_io_position`, so no hand-computed inset math is needed.
 - Indices are logical (match `connect_max_objects` / `get_io_position`).
 - `adjust: "width"` cannot move the **leftmost** nub (index 0 of the visible nubs) or a **single-nub** side — those are independent of width; the tool returns an error suggesting `adjust: "left"`.
 - An anchor too far left for the chosen nub to reach by widening yields a non-positive width and is rejected (nothing is applied — the tool never mutates the patch).
+
+---
+
+### `align_objects`
+
+Align or distribute a group of objects relative to their shared bounding box.
+**Read-only**: it returns recommended `patching_rect` values for the objects that
+move; apply them yourself with `set_object_attribute patching_rect`. Objects that
+are already in position are omitted from the response.
+
+`mode` selects the operation:
+
+| Mode | Effect |
+|------|--------|
+| `align_left` / `align_right` | Snap every object's left/right edge to the bounding box's leftmost/rightmost edge |
+| `align_top` / `align_bottom` | Snap every object's top/bottom edge to the bounding box's topmost/bottommost edge |
+| `align_hcenter` | Center every object on the bounding box's vertical center axis (x) |
+| `align_vcenter` | Center every object on the bounding box's horizontal center axis (y) |
+| `distribute_h` | Equalize horizontal gaps between objects (extremes pinned) |
+| `distribute_v` | Equalize vertical gaps between objects (extremes pinned) |
+
+**Parameters**:
+```json
+{
+  "patch_id": {"type": "string", "required": true, "description": "Patch ID containing the objects"},
+  "varnames": {"type": "array", "required": true, "description": "Object varnames to align (>= 2; distribute_* needs >= 3)"},
+  "mode": {"type": "string", "required": true, "description": "align_left|align_right|align_top|align_bottom|align_hcenter|align_vcenter|distribute_h|distribute_v"}
+}
+```
+
+**Response**:
+```json
+{
+  "result": {
+    "mode": "align_left",
+    "moves": [
+      {"varname": "obj_b", "recommended_patching_rect": [100.0, 240.0, 80.0, 20.0]},
+      {"varname": "obj_c", "recommended_patching_rect": [100.0, 320.0, 120.0, 20.0]}
+    ],
+    "rationale": "align_left: left x=100.0 (2 of 3 objects move)"
+  }
+}
+```
+
+**Notes**:
+- Edge/center modes need at least **2** objects; `distribute_*` needs at least **3**.
+- Only the objects that actually move appear in `moves`; an already-aligned group yields an empty array.
+- The bounding box is computed from the current `patching_rect` of every listed object; widths/heights are preserved (only origin shifts).
 
 ---
 

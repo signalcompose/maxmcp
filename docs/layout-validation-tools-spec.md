@@ -2,7 +2,7 @@
 
 **作成日**: 2026-06-03
 **対象読者**: MaxMCP を開発する Claude / 開発者
-**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}`、Step 2 `validate_layout`、Step 3 `get_io_position`、Step 4 `suggest_alignment` は実装済み。`align_objects`（Step 4 併記）と Step 5 `render_patch_preview` 以降は未着手）
+**ステータス**: 実装中（Section 7 の Step 1 `geometry.{h,cpp}`、Step 2 `validate_layout`、Step 3 `get_io_position`、Step 4 `suggest_alignment` / `align_objects` は実装済み。Step 5 `render_patch_preview` 以降は未着手）
 
 ---
 
@@ -180,7 +180,7 @@ AI が毎回その場で計算している近似式 `pos_i = left + 9.5 + (w-19)
  "rationale":"inlet5 x must equal 669.5; with left=453 → width=226"}
 ```
 - 内部で `get_io_position` を使い、target の inlet index が anchor.x に一致する width（または left）を逆算して返す。
-- 付随して `align_objects`（left/right/top/center 揃え・等間隔分配）も同系統で有用。
+- 付随する `align_objects`（`align_left`/`align_right`/`align_top`/`align_bottom`、`align_hcenter`/`align_vcenter` 揃え・`distribute_h`/`distribute_v` 等間隔分配）も実装済み。複数オブジェクトの共有 bounding box を基準に、移動するオブジェクトの推奨 `patching_rect` のみを read-only で返す。
 
 ---
 

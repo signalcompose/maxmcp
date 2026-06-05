@@ -13,6 +13,8 @@
 #include "utils/geometry.h"
 
 #include <cmath>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -20,8 +22,13 @@
 using geometry::aabb_intersection;
 using geometry::aabb_overlap;
 using geometry::aabb_overlap_area;
+using geometry::align_mode_name_list;
+using geometry::AlignMode;
+using geometry::AlignResult;
+using geometry::parse_align_mode;
 using geometry::Point;
 using geometry::polyline_to_segments;
+using geometry::recommend_alignment;
 using geometry::Rect;
 using geometry::Segment;
 using geometry::segment_intersects_rect;
@@ -265,4 +272,182 @@ TEST(PolylineToSegments, MidpointsProduceChainedSegments) {
     EXPECT_DOUBLE_EQ(segs[1].b.y, 100.0);
     EXPECT_DOUBLE_EQ(segs[2].b.x, 100.0);
     EXPECT_DOUBLE_EQ(segs[2].b.y, 100.0);
+}
+
+// ---------------------------------------------------------------------------
+// recommend_alignment
+// ---------------------------------------------------------------------------
+
+// Find the recommended rect for input index i, or nullptr if it does not move.
+static const Rect* move_for(const AlignResult& res, int i) {
+    for (const auto& m : res.moves) {
+        if (m.index == i) {
+            return &m.rect;
+        }
+    }
+    return nullptr;
+}
+
+TEST(ComputeAlignment, NeedsAtLeastTwoObjects) {
+    std::vector<Rect> one{{10.0, 20.0, 50.0, 22.0}};
+    AlignResult res = recommend_alignment(one, AlignMode::Left);
+    EXPECT_FALSE(res.ok);
+    EXPECT_TRUE(res.moves.empty());
+}
+
+TEST(ComputeAlignment, LeftSnapsToMinLeft) {
+    std::vector<Rect> rects{
+        {100.0, 0.0, 50.0, 22.0}, {30.0, 40.0, 80.0, 22.0}, {70.0, 80.0, 50.0, 22.0}};
+    AlignResult res = recommend_alignment(rects, AlignMode::Left);
+    ASSERT_TRUE(res.ok);
+    // The leftmost object (index 1, x=30) does not move; the others snap to x=30.
+    EXPECT_EQ(move_for(res, 1), nullptr);
+    ASSERT_NE(move_for(res, 0), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(res, 0)->origin.x, 30.0);
+    EXPECT_DOUBLE_EQ(move_for(res, 2)->origin.x, 30.0);
+    // Other dimensions are preserved.
+    EXPECT_DOUBLE_EQ(move_for(res, 0)->origin.y, 0.0);
+    EXPECT_DOUBLE_EQ(move_for(res, 0)->width, 50.0);
+}
+
+TEST(ComputeAlignment, RightSnapsRightEdges) {
+    std::vector<Rect> rects{{100.0, 0.0, 50.0, 22.0},   // right=150
+                            {30.0, 40.0, 80.0, 22.0}};  // right=110
+    AlignResult res = recommend_alignment(rects, AlignMode::Right);
+    ASSERT_TRUE(res.ok);
+    // max right is 150; object 1 moves so its right edge is 150 -> x = 150-80 = 70.
+    EXPECT_EQ(move_for(res, 0), nullptr);
+    ASSERT_NE(move_for(res, 1), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(res, 1)->origin.x, 70.0);
+    EXPECT_DOUBLE_EQ(move_for(res, 1)->right(), 150.0);
+}
+
+TEST(ComputeAlignment, TopAndBottom) {
+    std::vector<Rect> rects{{0.0, 100.0, 50.0, 20.0},  // bottom=120
+                            {0.0, 40.0, 50.0, 60.0}};  // bottom=100
+    AlignResult top = recommend_alignment(rects, AlignMode::Top);
+    ASSERT_TRUE(top.ok);
+    EXPECT_EQ(move_for(top, 1), nullptr);  // y=40 is the min top
+    ASSERT_NE(move_for(top, 0), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(top, 0)->origin.y, 40.0);
+
+    AlignResult bottom = recommend_alignment(rects, AlignMode::Bottom);
+    ASSERT_TRUE(bottom.ok);
+    EXPECT_EQ(move_for(bottom, 0), nullptr);  // bottom=120 is the max bottom
+    ASSERT_NE(move_for(bottom, 1), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(bottom, 1)->bottom(), 120.0);
+}
+
+TEST(ComputeAlignment, HCenterUsesBoundingBoxCenter) {
+    // Bounding box x spans [0, 200] -> center x = 100.
+    std::vector<Rect> rects{{0.0, 0.0, 40.0, 22.0}, {160.0, 50.0, 40.0, 22.0}};
+    AlignResult res = recommend_alignment(rects, AlignMode::HCenter);
+    ASSERT_TRUE(res.ok);
+    // Each 40-wide object centered on x=100 -> origin.x = 80.
+    ASSERT_NE(move_for(res, 0), nullptr);
+    ASSERT_NE(move_for(res, 1), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(res, 0)->origin.x, 80.0);
+    EXPECT_DOUBLE_EQ(move_for(res, 1)->origin.x, 80.0);
+}
+
+TEST(ComputeAlignment, AlreadyAlignedYieldsNoMoves) {
+    std::vector<Rect> rects{{50.0, 0.0, 30.0, 22.0}, {50.0, 40.0, 30.0, 22.0}};
+    AlignResult res = recommend_alignment(rects, AlignMode::Left);
+    EXPECT_TRUE(res.ok);
+    EXPECT_TRUE(res.moves.empty());
+}
+
+TEST(ComputeAlignment, DistributeHNeedsThree) {
+    std::vector<Rect> two{{0.0, 0.0, 20.0, 20.0}, {100.0, 0.0, 20.0, 20.0}};
+    AlignResult res = recommend_alignment(two, AlignMode::DistributeH);
+    EXPECT_FALSE(res.ok);
+}
+
+TEST(ComputeAlignment, DistributeHEqualGaps) {
+    // Three 20-wide objects spanning [0, 200]: span=200, extent=60,
+    // gap = (200-60)/2 = 70. Sorted by x: 0, then 70+20=90, then 180.
+    std::vector<Rect> rects{
+        {0.0, 0.0, 20.0, 20.0}, {50.0, 0.0, 20.0, 20.0}, {180.0, 0.0, 20.0, 20.0}};
+    AlignResult res = recommend_alignment(rects, AlignMode::DistributeH);
+    ASSERT_TRUE(res.ok);
+    // Endpoints (index 0 at x=0, index 2 at x=180) stay; the middle moves to x=90.
+    EXPECT_EQ(move_for(res, 0), nullptr);
+    EXPECT_EQ(move_for(res, 2), nullptr);
+    ASSERT_NE(move_for(res, 1), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(res, 1)->origin.x, 90.0);
+}
+
+TEST(ComputeAlignment, DistributeVEqualGaps) {
+    // Three 20-tall objects spanning [0, 200]: gap = (200-60)/2 = 70.
+    std::vector<Rect> rects{
+        {0.0, 0.0, 20.0, 20.0}, {0.0, 30.0, 20.0, 20.0}, {0.0, 180.0, 20.0, 20.0}};
+    AlignResult res = recommend_alignment(rects, AlignMode::DistributeV);
+    ASSERT_TRUE(res.ok);
+    EXPECT_EQ(move_for(res, 0), nullptr);
+    EXPECT_EQ(move_for(res, 2), nullptr);
+    ASSERT_NE(move_for(res, 1), nullptr);
+    EXPECT_DOUBLE_EQ(move_for(res, 1)->origin.y, 90.0);
+}
+
+// ---------------------------------------------------------------------------
+// AlignMode name table (parse_align_mode / align_mode_name_list / mode_name)
+// ---------------------------------------------------------------------------
+
+TEST(AlignModeNames, ParseAcceptsEveryKnownName) {
+    // Each wire-format name must map to its enum. This pins the shared kModeNames
+    // table so a rename or a missing entry is caught here, not only in the field.
+    const std::pair<const char*, AlignMode> cases[] = {
+        {"align_left", AlignMode::Left},
+        {"align_right", AlignMode::Right},
+        {"align_top", AlignMode::Top},
+        {"align_bottom", AlignMode::Bottom},
+        {"align_hcenter", AlignMode::HCenter},
+        {"align_vcenter", AlignMode::VCenter},
+        {"distribute_h", AlignMode::DistributeH},
+        {"distribute_v", AlignMode::DistributeV},
+    };
+    for (const auto& [name, expected] : cases) {
+        AlignMode mode;
+        EXPECT_TRUE(parse_align_mode(name, mode)) << "should parse " << name;
+        EXPECT_EQ(mode, expected) << "wrong enum for " << name;
+    }
+}
+
+TEST(AlignModeNames, ParseRejectsUnknownName) {
+    AlignMode mode = AlignMode::Right;
+    EXPECT_FALSE(parse_align_mode("align_diagonal", mode));
+    EXPECT_FALSE(parse_align_mode("", mode));
+    // The out-parameter is left untouched on failure.
+    EXPECT_EQ(mode, AlignMode::Right);
+}
+
+TEST(AlignModeNames, NameListMatchesEnumOrder) {
+    EXPECT_EQ(align_mode_name_list(), "align_left, align_right, align_top, align_bottom, "
+                                      "align_hcenter, align_vcenter, distribute_h, distribute_v");
+}
+
+TEST(AlignModeNames, EveryListedNameParsesBack) {
+    // The error-message name list and the parser must never drift apart: every
+    // name advertised in align_mode_name_list() round-trips through the parser.
+    const std::string list = align_mode_name_list();
+    size_t start = 0;
+    int counted = 0;
+    while (start < list.size()) {
+        size_t comma = list.find(", ", start);
+        const size_t end = (comma == std::string::npos) ? list.size() : comma;
+        const std::string name = list.substr(start, end - start);
+        AlignMode mode;
+        EXPECT_TRUE(parse_align_mode(name, mode)) << "listed name does not parse: " << name;
+        ++counted;
+        start = (comma == std::string::npos) ? list.size() : comma + 2;
+    }
+    EXPECT_EQ(counted, 8) << "expected all 8 modes in the list";
+}
+
+TEST(AlignModeNames, ReasonStringCarriesModeName) {
+    // recommend_alignment embeds mode_name() in its rationale; assert it so the
+    // enum->string direction of the table is covered, not just executed.
+    std::vector<Rect> rects{{100.0, 0.0, 50.0, 22.0}, {30.0, 40.0, 80.0, 22.0}};
+    EXPECT_EQ(recommend_alignment(rects, AlignMode::Left).reason.rfind("align_left:", 0), 0u);
+    EXPECT_EQ(recommend_alignment(rects, AlignMode::Bottom).reason.rfind("align_bottom:", 0), 0u);
 }

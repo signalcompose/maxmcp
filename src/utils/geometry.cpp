@@ -10,8 +10,11 @@
 
 #include "geometry.h"
 
+#include "format_util.h"
+
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace geometry {
 
@@ -176,6 +179,211 @@ std::vector<Segment> polyline_to_segments(const Point& start, const std::vector<
     }
     segments.push_back({prev, end});
     return segments;
+}
+
+namespace {
+// Moves smaller than this are sub-pixel no-ops (the object is already on target).
+constexpr double kMoveEps = 0.01;
+
+// A computed placement: the new rects (caller order) plus a human-readable detail
+// describing the target line/gap, for the rationale string.
+struct Solution {
+    std::vector<Rect> rects;
+    std::string detail;
+};
+
+// Single source of truth for the AlignMode⇄string mapping, in enum order. Both
+// directions (mode_name, parse_align_mode) and the accepted-name list derive from
+// this, so adding a mode means touching exactly one table.
+struct ModeName {
+    AlignMode mode;
+    const char* name;
+};
+constexpr ModeName kModeNames[] = {
+    {AlignMode::Left, "align_left"},
+    {AlignMode::Right, "align_right"},
+    {AlignMode::Top, "align_top"},
+    {AlignMode::Bottom, "align_bottom"},
+    {AlignMode::HCenter, "align_hcenter"},
+    {AlignMode::VCenter, "align_vcenter"},
+    {AlignMode::DistributeH, "distribute_h"},
+    {AlignMode::DistributeV, "distribute_v"},
+};
+
+std::string mode_name(AlignMode m) {
+    for (const ModeName& e : kModeNames) {
+        if (e.mode == m) {
+            return e.name;
+        }
+    }
+    return "align";
+}
+
+bool is_distribute(AlignMode m) {
+    return m == AlignMode::DistributeH || m == AlignMode::DistributeV;
+}
+
+// The smallest rect enclosing every input rect.
+Rect bounding_box(const std::vector<Rect>& rects) {
+    double min_left = rects[0].origin.x, max_right = rects[0].right();
+    double min_top = rects[0].origin.y, max_bottom = rects[0].bottom();
+    for (const Rect& r : rects) {
+        min_left = std::min(min_left, r.origin.x);
+        max_right = std::max(max_right, r.right());
+        min_top = std::min(min_top, r.origin.y);
+        max_bottom = std::max(max_bottom, r.bottom());
+    }
+    return {min_left, min_top, max_right - min_left, max_bottom - min_top};
+}
+
+// Edge and center modes. Each reduces to a single formula: move one axis of the
+// origin so a chosen reference point of the object — its near edge (factor 0),
+// far edge (factor 1), or center (factor 0.5) — lands on a group-wide target
+// line taken from the bounding box.
+Solution solve_edge_center(const std::vector<Rect>& rects, AlignMode mode) {
+    const Rect bb = bounding_box(rects);
+    const bool x_axis =
+        (mode == AlignMode::Left || mode == AlignMode::Right || mode == AlignMode::HCenter);
+
+    double target = 0.0;
+    double factor = 0.0;
+    const char* label = "";
+    switch (mode) {
+    case AlignMode::Left:
+        target = bb.origin.x;
+        factor = 0.0;
+        label = "left x";
+        break;
+    case AlignMode::Right:
+        target = bb.right();
+        factor = 1.0;
+        label = "right x";
+        break;
+    case AlignMode::Top:
+        target = bb.origin.y;
+        factor = 0.0;
+        label = "top y";
+        break;
+    case AlignMode::Bottom:
+        target = bb.bottom();
+        factor = 1.0;
+        label = "bottom y";
+        break;
+    case AlignMode::HCenter:
+        target = bb.origin.x + bb.width / 2;
+        factor = 0.5;
+        label = "center x";
+        break;
+    case AlignMode::VCenter:
+        target = bb.origin.y + bb.height / 2;
+        factor = 0.5;
+        label = "center y";
+        break;
+    default:
+        break;
+    }
+
+    Solution sol{rects, std::string(label) + "=" + fmtutil::fmt1(target)};
+    for (Rect& r : sol.rects) {
+        if (x_axis) {
+            r.origin.x = target - factor * r.width;
+        } else {
+            r.origin.y = target - factor * r.height;
+        }
+    }
+    return sol;
+}
+
+// Distribute modes. Sort along the axis, pin the two extreme objects, and lay the
+// interior ones out so every adjacent gap is equal.
+Solution solve_distribute(const std::vector<Rect>& rects, AlignMode mode) {
+    const bool horizontal = (mode == AlignMode::DistributeH);
+    const int n = static_cast<int>(rects.size());
+
+    // Axis selectors keep the placement logic free of per-axis branching.
+    auto lead = [&](const Rect& r) { return horizontal ? r.origin.x : r.origin.y; };
+    auto size = [&](const Rect& r) { return horizontal ? r.width : r.height; };
+    auto far = [&](const Rect& r) { return horizontal ? r.right() : r.bottom(); };
+
+    std::vector<int> order(n);
+    for (int i = 0; i < n; ++i) {
+        order[i] = i;
+    }
+    std::sort(order.begin(), order.end(),
+              [&](int a, int b) { return lead(rects[a]) < lead(rects[b]); });
+
+    double extent = 0.0;  // total object size along the axis
+    for (const Rect& r : rects) {
+        extent += size(r);
+    }
+    const double span = far(rects[order.back()]) - lead(rects[order.front()]);
+    const double gap = (span - extent) / (n - 1);
+
+    Solution sol{rects, "equal gap=" + fmtutil::fmt1(gap)};
+    double cursor = lead(rects[order.front()]);
+    for (int idx : order) {
+        Rect& r = sol.rects[idx];
+        if (horizontal) {
+            r.origin.x = cursor;
+        } else {
+            r.origin.y = cursor;
+        }
+        cursor += size(r) + gap;
+    }
+    return sol;
+}
+}  // namespace
+
+AlignResult recommend_alignment(const std::vector<Rect>& rects, AlignMode mode) {
+    const int n = static_cast<int>(rects.size());
+    if (n < 2) {
+        return {false, {}, "alignment needs at least 2 objects (got " + std::to_string(n) + ")"};
+    }
+    if (is_distribute(mode) && n < 3) {
+        return {false,
+                {},
+                mode_name(mode) + " needs at least 3 objects (got " + std::to_string(n) + ")"};
+    }
+
+    const Solution sol =
+        is_distribute(mode) ? solve_distribute(rects, mode) : solve_edge_center(rects, mode);
+
+    // Report only the objects that actually move (already-on-target objects are
+    // omitted), so an already-aligned group yields ok=true with no moves.
+    AlignResult result;
+    result.ok = true;
+    for (int i = 0; i < n; ++i) {
+        if (std::abs(sol.rects[i].origin.x - rects[i].origin.x) > kMoveEps ||
+            std::abs(sol.rects[i].origin.y - rects[i].origin.y) > kMoveEps) {
+            result.moves.push_back({i, sol.rects[i]});
+        }
+    }
+
+    result.reason =
+        mode_name(mode) + ": " + (result.moves.empty() ? "already aligned" : sol.detail) + " (" +
+        std::to_string(result.moves.size()) + " of " + std::to_string(n) + " objects move)";
+    return result;
+}
+
+bool parse_align_mode(const std::string& name, AlignMode& out) {
+    for (const ModeName& e : kModeNames) {
+        if (name == e.name) {
+            out = e.mode;
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string align_mode_name_list() {
+    std::string list;
+    for (const ModeName& e : kModeNames) {
+        if (!list.empty()) {
+            list += ", ";
+        }
+        list += e.name;
+    }
+    return list;
 }
 
 }  // namespace geometry

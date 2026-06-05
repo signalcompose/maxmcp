@@ -1,6 +1,6 @@
 # MCP Integration Test Checklist
 
-**Total Tools**: 29
+**Total Tools**: 30
 **Purpose**: Manual verification checklist for all MCP tools. Use before PR merges and releases.
 
 ---
@@ -78,7 +78,7 @@
 | 26c | `get_avoid_rect_position` | `width`/`height` of a large object    | Returned spot clears all objects by the gap for that size; rationale notes the size | [ ]  |
 | 26d | `get_avoid_rect_position` | Negative `near_x`/`near_y`            | Result clamped to non-negative coordinates (x ≥ 0, y ≥ 0)           | [ ]  |
 
-## Layout Validation (3)
+## Layout Validation (4)
 
 `validate_layout` is read-only. For each case, set up the patch state described, then run the tool and confirm the finding (or `clean`).
 
@@ -116,6 +116,18 @@
 | 29b | `suggest_alignment` | `adjust:"width"` targeting the leftmost nub (index 0)                        | Error suggesting `adjust:"left"` (leftmost nub is width-independent)                            | [ ]  |
 | 29c | `suggest_alignment` | `adjust:"width"` on a single-nub side                                       | Error suggesting `adjust:"left"`                                                                | [ ]  |
 | 29d | `suggest_alignment` | Unknown `varname` (anchor or target), or bad `side`/`adjust`                | Appropriate error; patch is never modified                                                       | [ ]  |
+
+`align_objects` is read-only (returns recommended rects for the objects that move; apply them with `set_object_attribute`). Verify by applying the rects, then re-running the tool — already-aligned objects drop out of `moves`.
+
+| #   | Tool            | Test                                                                        | Expected                                                                                       | Pass |
+|-----|-----------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|------|
+| 30  | `align_objects` | `align_left` on 3 objects at different x                                     | `moves` lists the objects whose left x != min; each `recommended_patching_rect` shares that x   | [ ]  |
+| 30a | `align_objects` | `align_right` / `align_top` / `align_bottom`                                 | Objects snap to the bounding box's right/top/bottom edge; widths/heights preserved              | [ ]  |
+| 30b | `align_objects` | `align_hcenter` / `align_vcenter`                                            | Object centers land on the bounding box's center axis (x / y)                                   | [ ]  |
+| 30c | `align_objects` | `distribute_h` / `distribute_v` on 3+ objects                               | Extremes pinned; inner gaps equalized; after applying, gaps are uniform                         | [ ]  |
+| 30d | `align_objects` | An already-aligned group                                                    | `moves` is empty; `rationale` says "already aligned"                                            | [ ]  |
+| 30e | `align_objects` | Fewer than 2 objects (align) / fewer than 3 (distribute)                    | Error stating the minimum object count                                                          | [ ]  |
+| 30f | `align_objects` | Unknown `varname`, or an invalid `mode`                                     | Appropriate error; patch is never modified                                                       | [ ]  |
 
 ---
 

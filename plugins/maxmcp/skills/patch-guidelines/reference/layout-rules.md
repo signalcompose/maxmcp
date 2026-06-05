@@ -475,6 +475,14 @@ spacing depends on the outlet count. Instead:
 
 This replaces the old approximation `width = (rightmost_dest_x + 9.5) - source_x + 9.5`, which ignored per-object inset differences.
 
+To tidy a **group** of objects (rather than a single nub-to-nub alignment), call
+**`align_objects`** with the objects' varnames and a `mode`: `align_left` /
+`align_right` / `align_top` / `align_bottom` snap edges to the group's bounding
+box, `align_hcenter` / `align_vcenter` center them on an axis, and `distribute_h`
+/ `distribute_v` equalize the gaps between them. It is read-only — it returns the
+recommended `patching_rect` for each object that moves; apply them with
+`set_object_attribute`. Objects already in position are omitted.
+
 - For `route` or other high-outlet-count objects, prioritize vertical alignment for the most connections. Accept diagonal for structurally unavoidable crossings.
 - The main flow's vertical alignment takes precedence — move downstream/branch objects to align, not the main flow objects.
 
