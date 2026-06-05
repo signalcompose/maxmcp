@@ -175,22 +175,9 @@ json execute(const std::string& tool, const json& params) {
         DeferredResult* deferred_result = new DeferredResult();
         t_get_parent_data* data = new t_get_parent_data{patch, deferred_result};
 
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_parent_deferred, gensym("get_parent"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("getting parent patcher");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-
-        if (result.contains("error")) {
-            return result;
-        }
-        return {{"result", result}};
+        return ToolCommon::run_deferred(patch, (method)get_parent_deferred, "get_parent", data,
+                                        ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting parent patcher",
+                                        ToolCommon::DeferredWrap::OnSuccess);
 
     } else if (tool == "get_subpatchers") {
         std::string patch_id = params.value("patch_id", "");
@@ -207,18 +194,9 @@ json execute(const std::string& tool, const json& params) {
         DeferredResult* deferred_result = new DeferredResult();
         t_get_subpatchers_data* data = new t_get_subpatchers_data{patch, deferred_result};
 
-        t_atom a;
-        atom_setobj(&a, data);
-        defer(patch, (method)get_subpatchers_deferred, gensym("get_subpatchers"), 1, &a);
-
-        if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-            delete deferred_result;
-            return ToolCommon::timeout_error("getting subpatchers");
-        }
-
-        json result = deferred_result->result;
-        delete deferred_result;
-        return {{"result", result}};
+        return ToolCommon::run_deferred(patch, (method)get_subpatchers_deferred, "get_subpatchers",
+                                        data, ToolCommon::HEAVY_OPERATION_TIMEOUT,
+                                        "getting subpatchers", ToolCommon::DeferredWrap::Always);
     }
 
     // Unknown tool - return nullptr to signal not handled

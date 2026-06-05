@@ -897,18 +897,9 @@ json execute_add_max_object(const json& params) {
     auto* data = new t_add_object_data{patch,   obj_type,  x,          y,
                                        varname, arguments, attributes, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)add_object_deferred, gensym("add_object"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("creating object");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)add_object_deferred, "add_object", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "creating object",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_remove_max_object(const json& params) {
@@ -928,18 +919,9 @@ json execute_remove_max_object(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_remove_object_data{patch, varname, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)remove_object_deferred, gensym("remove_object"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("removing object");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)remove_object_deferred, "remove_object", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "removing object",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_get_objects_in_patch(const json& params) {
@@ -959,18 +941,10 @@ json execute_get_objects_in_patch(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     t_get_objects_data* data = new t_get_objects_data{patch, mode, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_objects_deferred, gensym("get_objects"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("waiting for patch object list");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_objects_deferred, "get_objects", data,
+                                    ToolCommon::HEAVY_OPERATION_TIMEOUT,
+                                    "waiting for patch object list",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 json execute_set_object_attribute(const json& params) {
@@ -998,18 +972,9 @@ json execute_set_object_attribute(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_set_attribute_data{patch, varname, attribute, value, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)set_attribute_deferred, gensym("set_attribute"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("setting attribute");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)set_attribute_deferred, "set_attribute", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "setting attribute",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_get_object_attribute(const json& params) {
@@ -1031,18 +996,9 @@ json execute_get_object_attribute(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_get_attribute_data{patch, varname, attribute, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_attribute_deferred, gensym("get_attribute"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting attribute");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)get_attribute_deferred, "get_attribute", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting attribute",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_get_object_io_info(const json& params) {
@@ -1062,22 +1018,9 @@ json execute_get_object_io_info(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     t_get_io_info_data* data = new t_get_io_info_data{patch, varname, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_io_info_deferred, gensym("get_io_info"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting I/O info");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_io_info_deferred, "get_io_info", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting I/O info",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 json execute_get_object_hidden(const json& params) {
@@ -1097,22 +1040,9 @@ json execute_get_object_hidden(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     t_get_hidden_data* data = new t_get_hidden_data{patch, varname, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_hidden_deferred, gensym("get_hidden"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting hidden state");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_hidden_deferred, "get_hidden", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting hidden state",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 json execute_set_object_hidden(const json& params) {
@@ -1138,22 +1068,9 @@ json execute_set_object_hidden(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     t_set_hidden_data* data = new t_set_hidden_data{patch, varname, hidden, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)set_hidden_deferred, gensym("set_hidden"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("setting hidden state");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)set_hidden_deferred, "set_hidden", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "setting hidden state",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 json execute_redraw_object(const json& params) {
@@ -1173,22 +1090,9 @@ json execute_redraw_object(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     t_redraw_data* data = new t_redraw_data{patch, varname, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)redraw_deferred, gensym("redraw"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("redrawing object");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)redraw_deferred, "redraw", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "redrawing object",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 json execute_replace_object_text(const json& params) {
@@ -1210,18 +1114,9 @@ json execute_replace_object_text(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_replace_text_data{patch, varname, new_text, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)replace_object_text_deferred, gensym("replace_object_text"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("replacing object text");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)replace_object_text_deferred,
+                                    "replace_object_text", data, ToolCommon::DEFAULT_DEFER_TIMEOUT,
+                                    "replacing object text", ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_assign_varnames(const json& params) {
@@ -1270,18 +1165,9 @@ json execute_assign_varnames(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_assign_varnames_data{patch, assignments, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)assign_varnames_deferred, gensym("assign_varnames"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("assigning varnames");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)assign_varnames_deferred, "assign_varnames",
+                                    data, ToolCommon::HEAVY_OPERATION_TIMEOUT, "assigning varnames",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 json execute_get_object_value(const json& params) {
@@ -1301,18 +1187,9 @@ json execute_get_object_value(const json& params) {
     auto* deferred_result = new ToolCommon::DeferredResult();
     auto* data = new t_get_value_data{patch, varname, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_value_deferred, gensym("get_value"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting object value");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return result;
+    return ToolCommon::run_deferred(patch, (method)get_value_deferred, "get_value", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting object value",
+                                    ToolCommon::DeferredWrap::Raw);
 }
 
 #endif  // MAXMCP_TEST_MODE

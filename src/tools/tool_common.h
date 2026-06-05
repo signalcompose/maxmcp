@@ -403,4 +403,95 @@ inline std::string get_patch_id(const json& params) {
 
 }  // namespace ToolCommon
 
+// ============================================================================
+// Deferred Executor Helper (Max SDK only)
+// ============================================================================
+//
+// run_deferred() consolidates the defer -> wait_for -> unwrap tail shared by
+// every tool executor. It touches Max SDK symbols (defer/gensym/atom_setobj),
+// so it is excluded from MAXMCP_TEST_MODE builds, where the executors that
+// would instantiate it are replaced by stubs.
+//
+// This block self-includes "ext.h" (rather than relying on include order in
+// each .cpp) and is placed last so the Max SDK macros cannot leak into the
+// pure definitions above.
+// ============================================================================
+
+#ifndef MAXMCP_TEST_MODE
+
+#include "ext.h"
+
+namespace ToolCommon {
+
+/**
+ * How run_deferred() shapes a successful callback result.
+ *
+ * Each mode mirrors a pre-existing executor tail so the refactor preserves
+ * behavior exactly:
+ *   - Raw:       return the result unchanged.
+ *   - Always:    always wrap success as {"result": result}.
+ *   - OnSuccess: pass {"error": ...} through unchanged, otherwise wrap.
+ */
+enum class DeferredWrap {
+    Raw,
+    Always,
+    OnSuccess,
+};
+
+/**
+ * Defer a payload to the Max main thread, wait for the callback, and return
+ * the unwrapped result.
+ *
+ * Ownership: the callback owns @p data and deletes it (via COMPLETE_DEFERRED);
+ * this helper owns only the DeferredResult and deletes it after the wait. On
+ * timeout the DeferredResult is deleted and a timeout_error is returned, while
+ * @p data is intentionally left for the still-pending callback. This preserves
+ * the existing (and existing-races-on-timeout) ownership split.
+ *
+ * @tparam DataT  Deferred data struct; must expose a `deferred_result` member.
+ * @param patch   Owning patch (defer target object).
+ * @param cb      Deferred callback, cast to method by the caller.
+ * @param name    gensym name for the deferred message.
+ * @param data    Heap-allocated payload; ownership passes to the callback.
+ * @param timeout Maximum time to wait for the callback.
+ * @param action  Description used in the timeout error message.
+ * @param wrap    How to shape a successful result.
+ */
+template <typename DataT>
+json run_deferred(t_maxmcp* patch, method cb, const char* name, DataT* data,
+                  std::chrono::milliseconds timeout, const char* action,
+                  DeferredWrap wrap = DeferredWrap::Raw) {
+    // Capture before defer(): the callback may delete `data` once it runs.
+    DeferredResult* deferred_result = data->deferred_result;
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, cb, gensym(name), 1, &a);
+
+    if (!deferred_result->wait_for(timeout)) {
+        delete deferred_result;
+        return timeout_error(action);
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    switch (wrap) {
+    case DeferredWrap::Always:
+        return {{"result", result}};
+    case DeferredWrap::OnSuccess:
+        if (result.contains("error")) {
+            return result;
+        }
+        return {{"result", result}};
+    case DeferredWrap::Raw:
+    default:
+        return result;
+    }
+}
+
+}  // namespace ToolCommon
+
+#endif  // MAXMCP_TEST_MODE
+
 #endif  // TOOL_COMMON_H

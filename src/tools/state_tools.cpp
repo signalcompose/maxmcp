@@ -155,18 +155,9 @@ static json execute_get_patch_lock_state(const json& params) {
     DeferredResult* deferred_result = new DeferredResult();
     t_get_lock_state_data* data = new t_get_lock_state_data{patch, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_lock_state_deferred, gensym("get_lock_state"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting lock state");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_lock_state_deferred, "get_lock_state", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting lock state",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 static json execute_set_patch_lock_state(const json& params) {
@@ -190,18 +181,9 @@ static json execute_set_patch_lock_state(const json& params) {
     DeferredResult* deferred_result = new DeferredResult();
     t_set_lock_state_data* data = new t_set_lock_state_data{patch, locked, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)set_lock_state_deferred, gensym("set_lock_state"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("setting lock state");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)set_lock_state_deferred, "set_lock_state", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "setting lock state",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 static json execute_get_patch_dirty(const json& params) {
@@ -219,18 +201,9 @@ static json execute_get_patch_dirty(const json& params) {
     DeferredResult* deferred_result = new DeferredResult();
     t_get_dirty_data* data = new t_get_dirty_data{patch, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_dirty_deferred, gensym("get_dirty"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting dirty state");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_dirty_deferred, "get_dirty", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting dirty state",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 #endif  // MAXMCP_TEST_MODE
