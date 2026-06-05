@@ -194,7 +194,7 @@ cd build && ctest --output-on-failure
 **Test mode macro**: `MAXMCP_TEST_MODE` enables compilation without Max SDK.
 
 ### E2E Tests
-Manual testing with Claude Code — see [manual-test-new-tools.md](manual-test-new-tools.md).
+Manual testing with Claude Code — see [integration-test-checklist.md](integration-test-checklist.md).
 
 ---
 

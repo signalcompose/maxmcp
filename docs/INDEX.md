@@ -91,17 +91,10 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 ## 📖 Testing Documentation
 
-### [Manual Test Guide - All Tools](manual-test-new-tools.md)
-**Purpose**: Manual testing procedures for all 26 MCP tools
-**Contents**:
-- Complete test cases for all MCP tools
-- Claude Code prompts for testing
-- Expected results and error scenarios
-
 ### [Integration Test Checklist](integration-test-checklist.md)
-**Purpose**: Manual verification checklist for all 26 MCP tools
+**Purpose**: Manual verification checklist for all 30 MCP tools
 **Contents**:
-- Table-format checklist covering all 26 tools
+- Table-format checklist covering all 30 tools
 - Recommended test flow
 - For use before PR merges and releases
 
