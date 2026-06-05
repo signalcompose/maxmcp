@@ -382,8 +382,9 @@ set_patchline_midpoints({
 
 **Spacing rules**:
 - Outside lane X: Use negative X (e.g., `-1.5`) for left-side routing, or `rightmost_object_x + 20` for right-side. Typical offset from nearest object: 18-28px
-- Source-side clearance (M0): 10-17px below the source outlet (`source_y + 10~17`)
-- Destination-side clearance (M3): 11-15px above the destination inlet (`dest_y - 11~15`)
+- Source-side clearance (M1): 10-17px below the source outlet (`source_y + 10~17`)
+- Destination-side clearance (M4): 11-15px above the destination inlet (`dest_y - 11~15`)
+- The two middle points (M2, M3) carry the cord up/down the outside lane at the lane X. Always use all four points — placing only the two lane points next to the nubs looks cramped; the source-side and destination-side clearance points are what make the loop readable.
 
 ### Diagonal Line Tolerance
 
