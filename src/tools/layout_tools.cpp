@@ -267,18 +267,9 @@ static json execute_validate_layout(const json& params) {
     auto* data =
         new t_validate_layout_data{patch, options, std::move(scope_varnames), deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)validate_layout_deferred, gensym("validate_layout"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::HEAVY_OPERATION_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("validating layout");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)validate_layout_deferred, "validate_layout",
+                                    data, ToolCommon::HEAVY_OPERATION_TIMEOUT, "validating layout",
+                                    ToolCommon::DeferredWrap::Always);
 }
 
 /**
@@ -349,22 +340,9 @@ static json execute_get_io_position(const json& params) {
     auto* deferred_result = new DeferredResult();
     auto* data = new t_get_io_position_data{patch, varname, side, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)get_io_position_deferred, gensym("get_io_position"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("getting io position");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)get_io_position_deferred, "get_io_position",
+                                    data, ToolCommon::DEFAULT_DEFER_TIMEOUT, "getting io position",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 // Resolve one alignment endpoint to the pixel x of its nub. On failure, writes a
@@ -519,22 +497,9 @@ static json execute_suggest_alignment(const json& params) {
     auto* deferred_result = new DeferredResult();
     auto* data = new t_suggest_alignment_data{patch, anchor, target, adjust, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)suggest_alignment_deferred, gensym("suggest_alignment"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("suggesting alignment");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)suggest_alignment_deferred, "suggest_alignment",
+                                    data, ToolCommon::DEFAULT_DEFER_TIMEOUT, "suggesting alignment",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 // Map an align/distribute mode string to the enum. Returns false on an unknown
@@ -630,22 +595,9 @@ static json execute_align_objects(const json& params) {
     auto* deferred_result = new DeferredResult();
     auto* data = new t_align_objects_data{patch, varnames, mode, mode_str, deferred_result};
 
-    t_atom a;
-    atom_setobj(&a, data);
-    defer(patch, (method)align_objects_deferred, gensym("align_objects"), 1, &a);
-
-    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
-        delete deferred_result;
-        return ToolCommon::timeout_error("aligning objects");
-    }
-
-    json result = deferred_result->result;
-    delete deferred_result;
-
-    if (result.contains("error")) {
-        return result;
-    }
-    return {{"result", result}};
+    return ToolCommon::run_deferred(patch, (method)align_objects_deferred, "align_objects", data,
+                                    ToolCommon::DEFAULT_DEFER_TIMEOUT, "aligning objects",
+                                    ToolCommon::DeferredWrap::OnSuccess);
 }
 
 #endif  // MAXMCP_TEST_MODE
