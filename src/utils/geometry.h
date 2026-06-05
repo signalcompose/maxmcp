@@ -17,6 +17,7 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
+#include <string>
 #include <vector>
 
 namespace geometry {
@@ -161,6 +162,92 @@ bool segment_is_upward(const Segment& s, double eps);
  */
 std::vector<Segment> polyline_to_segments(const Point& start, const std::vector<Point>& mids,
                                           const Point& end);
+
+// ============================================================================
+// Object alignment (recommend_alignment)
+// ============================================================================
+
+/**
+ * @brief How a set of object rects should be aligned or distributed.
+ *
+ * Edge modes snap one edge of every object to the group's extreme of that edge
+ * (e.g. @c Left snaps every left edge to the minimum left). Center modes snap
+ * each object's center onto the group's bounding-box center axis. Distribute
+ * modes keep the two extreme objects fixed and spread the rest so the *gaps*
+ * between adjacent objects (sorted along the axis) are equal.
+ */
+enum class AlignMode {
+    Left,         ///< align left edges to the minimum left
+    Right,        ///< align right edges to the maximum right
+    Top,          ///< align top edges to the minimum top
+    Bottom,       ///< align bottom edges to the maximum bottom
+    HCenter,      ///< align horizontal centers onto the bounding-box center x
+    VCenter,      ///< align vertical centers onto the bounding-box center y
+    DistributeH,  ///< equalize horizontal gaps (endpoints fixed)
+    DistributeV,  ///< equalize vertical gaps (endpoints fixed)
+};
+
+/**
+ * @brief A single recommended move produced by @ref recommend_alignment.
+ *
+ * @c index is the position of the object in the input @c rects vector, so the
+ * caller can map it back to its varname. @c rect is the recommended new rect
+ * (only the changed dimension differs from the input; the rest is preserved).
+ */
+struct AlignMove {
+    int index;
+    Rect rect;
+};
+
+/**
+ * @brief Result of an alignment computation.
+ *
+ * @c ok is false (with @c reason set) for unsatisfiable requests — fewer than
+ * two objects, or a distribute with fewer than three. @c moves lists only the
+ * objects whose rect actually changes (objects already at the target are
+ * omitted), so an already-aligned group yields @c ok=true with no moves.
+ */
+struct AlignResult {
+    bool ok;
+    std::vector<AlignMove> moves;
+    std::string reason;
+};
+
+/**
+ * @brief Compute recommended rects that align or distribute a set of objects.
+ *
+ * Pure and Max-independent: it neither reads nor mutates any patch, it just
+ * solves the geometry. Objects keep every dimension except the one the mode
+ * changes (edge/center modes move one axis of the origin; distribute moves one
+ * axis of the origin of the interior objects). An object already at its target
+ * (within a sub-pixel tolerance) is not included in @c moves.
+ *
+ * @param rects The object rects in caller order (varname order)
+ * @param mode  Which alignment/distribution to apply
+ * @return Recommended moves, or @c ok=false with a reason if unsatisfiable
+ */
+AlignResult recommend_alignment(const std::vector<Rect>& rects, AlignMode mode);
+
+/**
+ * @brief Parse a wire-format mode name (e.g. @c "align_left") into an AlignMode.
+ *
+ * The string⇄enum mapping lives here as the single source of truth, shared with
+ * the solver's rationale strings; the tool layer parses through this instead of
+ * keeping its own table.
+ *
+ * @param name Wire-format mode name
+ * @param out  Set to the parsed mode on success (untouched on failure)
+ * @return true if @p name is a known mode, false otherwise
+ */
+bool parse_align_mode(const std::string& name, AlignMode& out);
+
+/**
+ * @brief The accepted mode names, comma-separated, in enum order.
+ *
+ * Intended for "mode must be one of …" error messages so the accepted set never
+ * drifts from @ref parse_align_mode.
+ */
+std::string align_mode_name_list();
 
 }  // namespace geometry
 

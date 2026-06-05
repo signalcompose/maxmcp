@@ -18,6 +18,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #ifndef MAXMCP_TEST_MODE
 #include "ext.h"
@@ -70,11 +71,25 @@ struct t_suggest_alignment_data {
     DeferredResult* deferred_result;
 };
 
+struct t_align_objects_data {
+    t_maxmcp* patch;
+    std::vector<std::string> varnames;
+    geometry::AlignMode mode;
+    std::string mode_str;  // echoed back in the response
+    DeferredResult* deferred_result;
+};
+
 // ============================================================================
 // Production Code (Max SDK required)
 // ============================================================================
 
 #ifndef MAXMCP_TEST_MODE
+
+// Serialize a geometry::Rect as the [x, y, w, h] JSON array used by patching_rect
+// payloads, so the alignment tools share one source for the rect encoding.
+static json rect_to_json(const geometry::Rect& r) {
+    return json::array({r.origin.x, r.origin.y, r.width, r.height});
+}
 
 // Walk the patcher and collect the objects participating in the checks, filtered
 // by mode (presentation only considers objects shown in presentation) and by
@@ -439,8 +454,7 @@ static void suggest_alignment_deferred(t_maxmcp* patch, t_symbol* s, long argc, 
                   {"side", target_is_inlet ? "inlet" : "outlet"},
                   {"index", data->target.index}}},
                 {"adjust", data->adjust == geometry::AlignAdjust::Width ? "width" : "left"},
-                {"recommended_patching_rect", json::array({rec.rect.origin.x, rec.rect.origin.y,
-                                                           rec.rect.width, rec.rect.height})},
+                {"recommended_patching_rect", rect_to_json(rec.rect)},
                 {"rationale", rec.reason}};
     COMPLETE_DEFERRED(data, out);
 }
@@ -512,6 +526,117 @@ static json execute_suggest_alignment(const json& params) {
     if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
         delete deferred_result;
         return ToolCommon::timeout_error("suggesting alignment");
+    }
+
+    json result = deferred_result->result;
+    delete deferred_result;
+
+    if (result.contains("error")) {
+        return result;
+    }
+    return {{"result", result}};
+}
+
+// Map an align/distribute mode string to the enum. Returns false on an unknown
+// value, writing the accepted set to @p err_out. The mapping itself lives in
+// geometry (single source of truth); this only adds the tool-layer error text.
+static bool parse_align_mode(const std::string& s, geometry::AlignMode& mode_out,
+                             std::string& err_out) {
+    if (geometry::parse_align_mode(s, mode_out)) {
+        return true;
+    }
+    err_out = "mode must be one of " + geometry::align_mode_name_list();
+    return false;
+}
+
+/**
+ * Deferred callback for align_objects.
+ * Resolves each varname to its patching_rect, runs the pure alignment solver,
+ * and returns the recommended rects for the objects that move. Read-only.
+ */
+static void align_objects_deferred(t_maxmcp* patch, t_symbol* s, long argc, t_atom* argv) {
+    VALIDATE_DEFERRED_ARGS("align_objects_deferred");
+    EXTRACT_DEFERRED_DATA_WITH_RESULT(t_align_objects_data, data, argv);
+
+    t_object* patcher = data->patch->patcher;
+
+    std::vector<geometry::Rect> rects;
+    rects.reserve(data->varnames.size());
+    for (const std::string& varname : data->varnames) {
+        t_object* box = PatchHelpers::find_box_by_varname(patcher, varname);
+        if (!box) {
+            COMPLETE_DEFERRED(data, ToolCommon::object_not_found_error(varname));
+            return;
+        }
+        t_rect rect;
+        jbox_get_patching_rect(box, &rect);
+        rects.push_back({rect.x, rect.y, rect.width, rect.height});
+    }
+
+    const geometry::AlignResult rec = geometry::recommend_alignment(rects, data->mode);
+    if (!rec.ok) {
+        COMPLETE_DEFERRED(
+            data, ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, rec.reason));
+        return;
+    }
+
+    json moves = json::array();
+    for (const geometry::AlignMove& m : rec.moves) {
+        moves.push_back({{"varname", data->varnames[m.index]},
+                         {"recommended_patching_rect", rect_to_json(m.rect)}});
+    }
+
+    json out = {{"mode", data->mode_str}, {"moves", moves}, {"rationale", rec.reason}};
+    COMPLETE_DEFERRED(data, out);
+}
+
+/**
+ * Execute align_objects tool.
+ */
+static json execute_align_objects(const json& params) {
+    std::string patch_id = params.value("patch_id", "");
+    std::string mode_str = params.value("mode", "");
+    if (patch_id.empty() || mode_str.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "Missing required parameters: patch_id and mode");
+    }
+
+    geometry::AlignMode mode;
+    std::string err;
+    if (!parse_align_mode(mode_str, mode, err)) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS, err);
+    }
+
+    const json& varnames_json = params.value("varnames", json::array());
+    if (!varnames_json.is_array() || varnames_json.empty()) {
+        return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                      "varnames must be a non-empty array of object varnames");
+    }
+    std::vector<std::string> varnames;
+    varnames.reserve(varnames_json.size());
+    for (const json& v : varnames_json) {
+        if (!v.is_string()) {
+            return ToolCommon::make_error(ToolCommon::ErrorCode::INVALID_PARAMS,
+                                          "varnames must contain only strings");
+        }
+        varnames.push_back(v.get<std::string>());
+    }
+
+    t_maxmcp* patch = PatchRegistry::find_patch(patch_id);
+    if (!patch) {
+        return ToolCommon::patch_not_found_error(patch_id);
+    }
+
+    auto* deferred_result = new DeferredResult();
+    auto* data = new t_align_objects_data{patch, varnames, mode, mode_str, deferred_result};
+
+    t_atom a;
+    atom_setobj(&a, data);
+    defer(patch, (method)align_objects_deferred, gensym("align_objects"), 1, &a);
+
+    if (!deferred_result->wait_for(ToolCommon::DEFAULT_DEFER_TIMEOUT)) {
+        delete deferred_result;
+        return ToolCommon::timeout_error("aligning objects");
     }
 
     json result = deferred_result->result;
@@ -634,6 +759,35 @@ json get_tool_schemas() {
                 {"required", json::array({"patch_id", "anchor", "target", "adjust"})},
             }},
         },
+        {
+            {"name", "align_objects"},
+            {"description",
+             "Compute recommended patching_rects that align or distribute a set of objects "
+             "(read-only; apply each with set_object_attribute). Edge modes snap one edge to "
+             "the group's extreme; center modes snap centers onto the bounding-box axis; "
+             "distribute modes keep the two extreme objects fixed and equalize the gaps "
+             "between the rest. Only objects that actually move are returned."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"patch_id", {{"type", "string"},
+                                  {"description", "Patch ID containing the objects"}}},
+                    {"varnames", {
+                        {"type", "array"},
+                        {"items", {{"type", "string"}}},
+                        {"description", "Varnames of the objects to align (at least 2; "
+                                        "distribute modes need at least 3)."}}},
+                    {"mode", {
+                        {"type", "string"},
+                        {"enum", json::array({"align_left", "align_right", "align_top",
+                                              "align_bottom", "align_hcenter", "align_vcenter",
+                                              "distribute_h", "distribute_v"})},
+                        {"description", "Which alignment to apply. align_* snap edges/centers; "
+                                        "distribute_h/v equalize gaps along that axis."}}},
+                }},
+                {"required", json::array({"patch_id", "varnames", "mode"})},
+            }},
+        },
     });
 }
 // clang-format on
@@ -664,6 +818,14 @@ json execute(const std::string& tool, const json& params) {
         return ToolCommon::test_mode_error();
 #else
         return execute_suggest_alignment(params);
+#endif
+    }
+
+    if (tool == "align_objects") {
+#ifdef MAXMCP_TEST_MODE
+        return ToolCommon::test_mode_error();
+#else
+        return execute_align_objects(params);
 #endif
     }
 

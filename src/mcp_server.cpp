@@ -93,7 +93,7 @@ void MCPServer::stop() {
  * - StateTools (3 tools)
  * - HierarchyTools (2 tools)
  * - UtilityTools (2 tools)
- * - LayoutTools (3 tools)
+ * - LayoutTools (4 tools)
  *
  * @return JSON array of all tool schemas
  */
