@@ -14,7 +14,7 @@ MaxMCP is a native C++ external object for Max/MSP that acts as an MCP (Model Co
 - ✅ **Automatic patch detection**: Auto-generated patch IDs
 - ✅ **Natural language control**: "Add a 440Hz oscillator to synth patch"
 - ✅ **Multi-patch support**: Control multiple patches simultaneously
-- ✅ **Complete MCP toolset**: 26 tools for comprehensive patch control
+- ✅ **Complete MCP toolset**: 30 tools for comprehensive patch control
 - ✅ **Auto-cleanup**: Lifecycle management on patch close
 
 ## Architecture
@@ -171,7 +171,7 @@ In Claude Code, say:
 
 ## Available MCP Tools
 
-MaxMCP provides 26 tools across 6 categories:
+MaxMCP provides 30 tools across 7 categories:
 
 | Category | Count | Tools |
 |----------|-------|-------|
@@ -181,6 +181,7 @@ MaxMCP provides 26 tools across 6 categories:
 | Patch State | 3 | `get_patch_lock_state`, `set_patch_lock_state`, `get_patch_dirty` |
 | Hierarchy | 2 | `get_parent_patcher`, `get_subpatchers` |
 | Utilities | 2 | `get_console_log`, `get_avoid_rect_position` |
+| Layout Validation | 4 | `validate_layout`, `get_io_position`, `suggest_alignment`, `align_objects` |
 
 See [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) for full parameter and response documentation.
 
@@ -210,7 +211,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and `docs/` for detailed sp
 
 ## Claude Code Plugin
 
-MaxMCP provides a Claude Code plugin with four skills for Max/MSP development.
+MaxMCP provides a Claude Code plugin with 5 skills for Max/MSP development.
 
 ### Installation
 
@@ -234,6 +235,20 @@ Provides:
 - Varname naming conventions
 - JavaScript (v8/v8ui) best practices
 - MCP tools quick reference
+
+#### organize-patch
+
+Organize and tidy up Max/MSP patch layout:
+
+```bash
+/maxmcp:organize-patch
+```
+
+Provides:
+- 8-phase layout organization workflow
+- Object sizing, repositioning, and patchcord routing
+- Section detection and header placement
+- Overlap, crossing, and upward-connection verification (`validate_layout`)
 
 #### max-techniques
 

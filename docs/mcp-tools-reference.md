@@ -710,4 +710,4 @@ All MCP tools execute on the Max main thread using `defer()`. This ensures threa
 
 - [MaxMCP Architecture](./architecture.md)
 - [MaxMCP Specifications](./specifications.md)
-- [Manual Testing Guide](./manual-test-new-tools.md)
+- [Integration Test Checklist](./integration-test-checklist.md)

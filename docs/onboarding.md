@@ -91,6 +91,7 @@ If you're using Claude Code:
 
 **Available Skills**:
 - `/maxmcp:patch-guidelines` - Guidelines for creating Max patches
+- `/maxmcp:organize-patch` - Organize and tidy up Max patch layout
 - `/maxmcp:max-techniques` - Max/MSP implementation techniques (poly~, pattr, etc.)
 - `/maxmcp:m4l-techniques` - Max for Live development techniques
 - `/maxmcp:max-resources` - Access Max.app built-in documentation
@@ -106,11 +107,11 @@ MaxMCP/
 │   └── ...                 # Specifications, architecture, guides
 ├── src/                    # C++ source code
 │   ├── maxmcp.cpp         # Unified external (agent + patch modes)
-│   ├── tools/             # MCP tool implementations (7 files, 26 tools)
+│   ├── tools/             # MCP tool implementations (9 files, 30 tools)
 │   └── utils/             # Helper utilities (4 files)
 ├── tests/unit/             # Unit tests (Google Test)
 ├── package/MaxMCP/         # Distributable Max package
-├── plugins/maxmcp/         # Claude Code plugin (4 skills)
+├── plugins/maxmcp/         # Claude Code plugin (5 skills)
 ├── build.sh                # Build script
 ├── deploy.sh               # Deploy to Max 9 Packages
 └── CMakeLists.txt          # Build configuration

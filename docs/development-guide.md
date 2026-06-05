@@ -338,7 +338,7 @@ object_error((t_object*)x, "Failed to create object: %s", obj_type.c_str());
 ### 5.1 Test Strategy
 
 **Primary**: Unit tests (Google Test) — covers logic without Max SDK dependency.
-**E2E**: Manual testing with Claude Code — see [manual-test-new-tools.md](manual-test-new-tools.md).
+**E2E**: Manual testing with Claude Code — see [integration-test-checklist.md](integration-test-checklist.md).
 
 ### 5.2 Unit Tests
 
@@ -400,7 +400,7 @@ tests/
 
 ### 5.4 E2E Tests
 
-E2E testing is performed manually with Claude Code. See [manual-test-new-tools.md](manual-test-new-tools.md) for procedures.
+E2E testing is performed manually with Claude Code. See [integration-test-checklist.md](integration-test-checklist.md) for procedures.
 
 ---
 

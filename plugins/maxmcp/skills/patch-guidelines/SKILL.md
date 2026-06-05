@@ -63,6 +63,16 @@ Align objects to a consistent grid:
 - **Vertical spacing**: 40-60 pixels between rows
 - **Section gaps**: 80-100 pixels between logical sections
 
+**整列・分配・nub 合わせは手計算しない**。座標を暗算するのではなく、専用ツールに任せる（いずれも読み取り専用で推奨 `patching_rect` を返すだけなので、`set_object_attribute` で適用する）:
+
+| やりたいこと | 使うツール |
+|---|---|
+| 複数オブジェクトの端／中心を揃える、間隔を均等化する | `align_objects`（`align_left`/`align_hcenter`/`distribute_v` など） |
+| パッチコードが垂直一直線になるよう片方の幅・位置を決める | `suggest_alignment`（anchor の nub に target の nub を合わせる） |
+| inlet/outlet の実ピクセル位置を知る | `get_io_position`（Max の等間隔ルールで nub 中心を算出） |
+
+これらは Max の nub 配置（端インセット・等間隔）をサーバ側の実寸で計算するため、手計算より速く正確。詳細は `organize-patch` スキル参照。
+
 ### 4. Section Organization
 
 Group related objects into functional sections:
@@ -117,7 +127,7 @@ Group related objects into functional sections:
    - オブジェクト追加（Operation Checklists の「add_max_object の後」を実行）
    - セクション内接続（Operation Checklists の「connect_max_objects の前」を実行）
    - `organize-patch`（セクション内モード）でレイアウト整理
-   - **Phase 8 検証を実行**（上向き接続・オブジェクト重複・パッチコード交差を検出・修正）
+   - **Phase 8 検証を実行**（`validate_layout` で上向き接続・オブジェクト重複・パッチコード交差を機械判定 → `error` を解消）
    - **セクションのサイズ（幅・高さ）が確定する**
 3. **次のセクションへ**: 現セクションが確定してから次に着手
 
@@ -127,7 +137,7 @@ Group related objects into functional sections:
 
 **前提条件**:
 - □ Phase 1 で全セクションの内部レイアウトが確定しているか？
-- □ 各セクションの Phase 8 検証（上向き接続・重複・交差）が完了しているか？
+- □ 各セクションで `validate_layout` を実行し、`error` を解消したか（残る `upward` warning は整形・記録済みの意図的区間のみ）？
 → 未完了なら Phase 2 に進まない
 
 **⚠ Phase 1 未完了で Phase 2 に進んだ場合**: セクション単位でまとめておけばグループとして移動するだけで済むが、セクションが未確定だと個々のオブジェクトの座標を1つずつ計算・移動することになる。セクションは簡易なグループ化であり、これを飛ばすとレイアウト作業の複雑さが爆発する。
@@ -175,13 +185,13 @@ flowchart TD
 
 1. **セクション間接続を実行**: `connect_max_objects` でセクション間の patchcord を追加
 2. **midpoints 設定**: 必要に応じて `set_patchline_midpoints` で経路を最適化
-3. **最終検証**: `organize-patch`（Phase 8 検証）で重複・交差がないか確認
+3. **最終検証**: `validate_layout`（Phase 8 検証）で重複・交差・上向きを機械判定し、`error` を解消
 
 ### Phase 4: 完成検証
 
 **前提条件**:
 - □ Phase 3 でセクション間接続が完了しているか？
-- □ Phase 3 の最終検証（Phase 8: 重複・交差）が完了しているか？
+- □ Phase 3 の最終検証で `validate_layout` を実行し、`error` を解消したか？
 → 未完了なら Phase 4 に進まない
 
 **⚠ Phase 4 を飛ばした場合**: 生成時のチェックリスト（add_max_object の後）は個々のオブジェクトを対象とするため、パッチ全体での一貫性（ペア間の設定整合、_parameter_order の依存チェーン整合）は検出できない。これらの問題はユーザーが実際に保存・復元を試すまで発覚せず、原因の特定が極めて困難になる。
@@ -223,12 +233,9 @@ flowchart TD
 
 #### 4-4. レイアウト最終検証（Phase 8）
 
-パッチ全体を対象とした最終レイアウト検証:
-- 上向き接続の検出
-- オブジェクト重複の検出
-- パッチコードとオブジェクトの交差検出
+パッチ全体を対象に `validate_layout({patch_id})` を実行し、`error`（上向き接続・オブジェクト重複・パッチコードとオブジェクトの交差）を全て解消する。残る `upward` warning は U 字に整形済み＋ comment で記録された意図的区間のみ許容する（[Phase 8 検証](#レイアウト変更の後phase-8-検証) の完了条件に従う）。`presentation` を使うパッチは `mode: "presentation"` でも実行する。
 
-（Phase 1 の各セクションで実施済みの Phase 8 検証を、パッチ全体で再度実行）
+（Phase 1 の各セクションで実施済みの検証を、パッチ全体で再度実行）
 
 ### Phase 5: 実信号検証（Empirical Verification）
 
@@ -379,17 +386,33 @@ flowchart TD
 
 ### レイアウト変更の後（Phase 8 検証）
 
-**⚠ この検証を飛ばした場合**: 上向き接続、オブジェクト重複、パッチコードとオブジェクトの交差がユーザーの目視確認まで検出されない。全て座標データから機械的に検出可能な問題であり、ユーザーに指摘される前に自分で修正すべき問題。
+**⚠ この検証を飛ばした／手計算で代替した場合**: 上向き接続、オブジェクト重複、パッチコードとオブジェクトの交差がユーザーの目視確認まで検出されない。さらに **`get_objects_in_patch` / `get_patchlines` の座標を読んで矩形交差を暗算するのは禁止**——手計算は実レンダリング寸法を反映できず誤判定する。実例: `comment` の実高さは指定した 20px ではなく約 33px（フォント分だけ背が高い）になり、下端が想定外まで伸びて隣接オブジェクトと数 px 重なる。「高さ＝指定値」を前提にした暗算ではこの種の重なりを構造的に見逃す。これらは `validate_layout` がサーバ側の実寸で機械判定する種類の問題である。
 
-一連のレイアウト操作が完了した後に**必ず**実行する:
+一連のレイアウト操作が完了した後に**必ず `validate_layout` を呼ぶ**。これがこのプロジェクトのレイアウト検証の唯一の正規手段であり、Phase 8 検証そのものである。
 
-1. `get_objects_in_patch({mode: "layout"})` で全オブジェクトの矩形 (position + size) を取得 — text/maxclass を省略してトークン削減
-2. `get_patchlines({mode: "geometry"})` で全パッチコードの start_point, end_point, midpoints を取得 (color/hidden を省略してトークン削減)
-3. 以下を検出・修正:
-   - **上向き接続**: `start_point.y > end_point.y` かつミッドポイントなし → オブジェクト移動または U-shape ミッドポイント追加
-   - **オブジェクト重複**: 矩形同士の交差 → 位置調整
-   - **パッチコードとオブジェクトの交差**: セグメントがオブジェクト矩形を通過 → ミッドポイント追加またはオブジェクト移動
-   - **ミッドポイント付き接続**: セグメント単位で上向き区間がないか確認
+1. `validate_layout({patch_id})` を呼ぶ（セクション内検証は `scope_varnames` に対象 varname を渡して範囲限定）
+2. `findings` を `type` と `severity` に応じて修正する:
+   - **`upward`（上向き接続）**: `severity: error`（ミッドポイント無しの直線上向き）は事故とみなし、オブジェクト移動で解消するか U 字ミッドポイントで外側レーンへ逃がす。`severity: warning`（ミッドポイント付き）は迂回意図ありの区間なので、意図通りか確認する
+   - **`overlap`（オブジェクト重複）**: いずれかを移動／リサイズして分離
+   - **`cord_object`（パッチコードがオブジェクトを横切る）**: 横切られたオブジェクトを移動（優先）またはミッドポイントで迂回
+   - **`cord_cord`（パッチコード同士の重複）**: 一方のミッドポイントを 5px 以上ずらす
+3. `validate_layout` を再実行し、**`error` を全て解消するまでループ**する。`presentation` を使うパッチは `validate_layout({patch_id, mode: "presentation"})` も実行する（presentation_rect の重複のみ判定、パッチコード関連はスキップ）
+
+**完了条件**: `clean: true` を目指す。ただし下記の「意図的な上向き接続」は例外で、整形・記録済みであれば残ってよい。
+
+#### 意図的な上向き接続（フィードバックループ等）
+
+目的は「上向きをゼロにする」ことではなく「**事故の上向きを無くし、意図的な上向きはそれと分かる形に整える**」こと。フィードバックループのように構造上どうしても上向きになる接続は、以下のように扱う:
+
+1. **U 字ミッドポイント（4 点）で外側レーンを通す**。直線の事故上向き（`error`）と視覚的に区別でき、`validate_layout` 上も `warning` に落ちる。経路の作り方は [Layout Rules](reference/layout-rules.md) の「Pattern 2: U-Shape (4 midpoints)」に従う:
+   - アウトレットの **10〜17px 下** に 1 点（`source_y + 10~17`）
+   - インレットの **11〜15px 上** に 1 点（`dest_y - 11~15`）
+   - 残り 2 点で外側レーン（負の X、または最右オブジェクト +20px）を上下に通す
+   - インレット/アウトレットのすぐ隣に 2 点だけ置くと見づらいので、**必ずこの上下クリアランスを含む 4 点**にする
+2. **近くに `comment` で意図を明記**する（例: `// feedback: filt_out → delay_in（意図的）`）。次回セッションで誤って「直す対象」と判定されるのを防ぐ
+3. これらを満たした `warning` は解消対象から外す。Phase 8 の完了条件は「**`error` を全て解消し、残る `upward` warning は U 字に整形済み＋ comment で記録された意図的な区間だけ**」である
+
+> 補足（レイアウト外の注意）: MSP の音声フィードバックはレイアウト以前に、1 サンプル遅延（`tapin~`/`tapout~`、`send~`/`receive~`、`gen~` 等）を挟まないと Max がループを切る／エラーになる。信号設計面は `max-techniques`（feedback loop prevention）を参照する。
 
 ### _parameter_order の設計
 
@@ -528,4 +551,8 @@ See [Object Text Conventions Reference](reference/object-text-conventions.md)
 | `set_patchline_midpoints` | Add/remove midpoints to fold patchcords |
 | `remove_max_object` | Delete an object |
 | `get_avoid_rect_position` | Find safe position |
+| `validate_layout` | Phase 8 検証: 重複・交差・上向き・presentation 重複を実寸で機械判定（手計算の代替。`error` を `clean` まで解消） |
+| `align_objects` | 複数オブジェクトの端／中心揃え・間隔均等化の `patching_rect` を算出（手計算の代替） |
+| `suggest_alignment` | パッチコードが垂直一直線になる `patching_rect` を算出（nub 合わせの代替） |
+| `get_io_position` | inlet/outlet の実ピクセル中心を算出（nub x の手計算の代替） |
 | `get_console_log` | Retrieve Max console messages |

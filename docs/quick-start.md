@@ -30,7 +30,7 @@ Node.js Bridge (websocket-mcp-bridge.js)
 ### Architecture Approach
 - ✅ **Unified C++ external object** (`@mode agent` / `@mode patch`)
 - ✅ **WebSocket + stdio bridge** (Node.js bridge translates stdio to WebSocket)
-- ✅ **26 MCP tools** across 6 categories
+- ✅ **30 MCP tools** across 7 categories
 
 ---
 
@@ -85,7 +85,7 @@ MaxMCP/
 │   ├── maxmcp.cpp              # Unified external (@mode agent / @mode patch)
 │   ├── mcp_server.cpp          # MCP protocol handler
 │   ├── websocket_server.cpp    # WebSocket server
-│   ├── tools/                  # MCP tool implementations (7 files, 26 tools)
+│   ├── tools/                  # MCP tool implementations (9 files, 30 tools)
 │   └── utils/                  # Shared utilities (4 files)
 ├── tests/unit/                 # Google Test unit tests
 ├── package/MaxMCP/             # Max Package (build output)
@@ -123,8 +123,8 @@ For detailed source file organization, see [development-guide.md](development-gu
 ### Post-Phase 2: Tool Expansion ✅ Complete
 **Goal**: Comprehensive tool coverage
 
-- [x] 26 MCP tools across 6 categories
-- [x] Claude Code plugin with 4 skills
+- [x] 30 MCP tools across 7 categories
+- [x] Claude Code plugin with 5 skills
 - [x] Build/deploy scripts (`build.sh`, `deploy.sh`)
 
 ### Phase 3: Package Distribution (Planned)
@@ -229,6 +229,7 @@ Follow this exact order to reproduce the working installation from our latest de
     ```
     **Skills**:
     - `/maxmcp:patch-guidelines` - Patch creation guidelines
+    - `/maxmcp:organize-patch` - Organize and tidy up patch layout
     - `/maxmcp:max-techniques` - Max/MSP implementation techniques
     - `/maxmcp:m4l-techniques` - Max for Live development techniques
     - `/maxmcp:max-resources` - Access Max.app documentation
@@ -238,7 +239,7 @@ Follow this exact order to reproduce the working installation from our latest de
     echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | \
       node package/MaxMCP/support/bridge/websocket-mcp-bridge.js ws://localhost:7400
     ```
-    - Expect a JSON response listing all 26 MCP tools.
+    - Expect a JSON response listing all 30 MCP tools.
 
 12. **Troubleshooting commands**
     - Port status: `lsof -i :7400`

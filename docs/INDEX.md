@@ -91,17 +91,10 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 
 ## 📖 Testing Documentation
 
-### [Manual Test Guide - All Tools](manual-test-new-tools.md)
-**Purpose**: Manual testing procedures for all 26 MCP tools
-**Contents**:
-- Complete test cases for all MCP tools
-- Claude Code prompts for testing
-- Expected results and error scenarios
-
 ### [Integration Test Checklist](integration-test-checklist.md)
-**Purpose**: Manual verification checklist for all 26 MCP tools
+**Purpose**: Manual verification checklist for all 30 MCP tools
 **Contents**:
-- Table-format checklist covering all 26 tools
+- Table-format checklist covering all 30 tools
 - Recommended test flow
 - For use before PR merges and releases
 
@@ -128,10 +121,10 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 | Skill | Command | Purpose |
 |-------|---------|---------|
 | patch-guidelines | `/maxmcp:patch-guidelines` | Layout rules, naming conventions, JavaScript guide |
+| organize-patch | `/maxmcp:organize-patch` | Layout organization workflow, repositioning, patchcord routing, overlap/crossing checks |
 | max-techniques | `/maxmcp:max-techniques` | poly~, bpatcher, pattr, signal processing patterns |
 | m4l-techniques | `/maxmcp:m4l-techniques` | Live Object Model, device namespaces, M4L patterns |
 | max-resources | `/maxmcp:max-resources` | Access Max.app built-in resources (references, examples, snippets) |
-| organize-patch | `/maxmcp:organize-patch` | Organize and tidy up Max patch layout |
 
 ---
 
