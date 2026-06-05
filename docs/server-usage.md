@@ -100,7 +100,7 @@ Expected response lists any `[maxmcp @mode patch]` instances currently registere
 
 ## Communication Protocol Summary
 
-The bridge speaks standard MCP (JSON-RPC over stdio). The Max agent exposes 26 MCP tools via WebSocket across 6 categories: Patch Management, Object Operations, Connection Operations, Patch State, Hierarchy, and Utilities.
+The bridge speaks standard MCP (JSON-RPC over stdio). The Max agent exposes 30 MCP tools via WebSocket across 7 categories: Patch Management, Object Operations, Connection Operations, Patch State, Hierarchy, Utilities, and Layout Validation.
 
 For a complete tool reference with parameters and response formats, see [MCP Tools Reference](./mcp-tools-reference.md).
 

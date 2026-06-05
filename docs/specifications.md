@@ -1,7 +1,7 @@
 # MaxMCP - Complete Design Specification
 
 **Last Updated**: 2026-02-22
-**Status**: 26 MCP Tools Implemented
+**Status**: 30 MCP Tools Implemented
 
 > **Comprehensive specification for the project.**
 > A new Claude Code instance can read this document and immediately understand the system.
@@ -119,9 +119,9 @@ After:  [maxmcp @mode patch]                   ← No arguments!
 
 ---
 
-### 3. MCP Tools (26 total)
+### 3. MCP Tools (30 total)
 
-26 MCP tools across 6 categories: Patch Management (3), Object Operations (12), Connection Operations (4), Patch State (3), Hierarchy (2), Utilities (2).
+30 MCP tools across 7 categories: Patch Management (3), Object Operations (12), Connection Operations (4), Patch State (3), Hierarchy (2), Utilities (2), Layout Validation (4).
 
 Complete tool reference with parameters and response formats: [mcp-tools-reference.md](mcp-tools-reference.md).
 
@@ -213,8 +213,8 @@ Manual testing with Claude Code — see [manual-test-new-tools.md](manual-test-n
 - [x] stdio-to-WebSocket bridge
 
 ### Post-Phase 2: Tool Expansion ✅ Complete
-- [x] 26 MCP tools across 6 categories
-- [x] Claude Code plugin with 4 skills
+- [x] 30 MCP tools across 7 categories
+- [x] Claude Code plugin with 5 skills
 - [x] Build/deploy scripts
 
 ### Phase 3: Package Distribution (Planned)

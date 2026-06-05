@@ -128,10 +128,10 @@ This index provides a comprehensive overview of all MaxMCP documentation.
 | Skill | Command | Purpose |
 |-------|---------|---------|
 | patch-guidelines | `/maxmcp:patch-guidelines` | Layout rules, naming conventions, JavaScript guide |
+| organize-patch | `/maxmcp:organize-patch` | Layout organization workflow, repositioning, patchcord routing, overlap/crossing checks |
 | max-techniques | `/maxmcp:max-techniques` | poly~, bpatcher, pattr, signal processing patterns |
 | m4l-techniques | `/maxmcp:m4l-techniques` | Live Object Model, device namespaces, M4L patterns |
 | max-resources | `/maxmcp:max-resources` | Access Max.app built-in resources (references, examples, snippets) |
-| organize-patch | `/maxmcp:organize-patch` | Organize and tidy up Max patch layout |
 
 ---
 

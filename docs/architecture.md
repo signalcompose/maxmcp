@@ -1,7 +1,7 @@
 # MaxMCP Architecture
 
 **Last Updated**: 2026-02-22
-**Status**: 26 MCP Tools Implemented
+**Status**: 30 MCP Tools Implemented
 
 ---
 
@@ -230,7 +230,7 @@ public:
 
 ### 3.4 MCP Tools
 
-**Responsibility**: Implement 26 MCP tool endpoints across 6 categories
+**Responsibility**: Implement 30 MCP tool endpoints across 7 categories
 
 **Organization**:
 ```
